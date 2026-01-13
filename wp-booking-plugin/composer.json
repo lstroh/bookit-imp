@@ -1,0 +1,5 @@
+{
+    "name": "booking-plugin/booking-plugin",
+    "description": "WordPress booking plugin",
+    "type": "wordpress-plugin"
+}
