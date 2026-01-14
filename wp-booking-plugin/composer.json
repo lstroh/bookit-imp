@@ -1,5 +1,10 @@
 {
     "name": "booking-plugin/booking-plugin",
     "description": "WordPress booking plugin",
-    "type": "wordpress-plugin"
+    "type": "wordpress-plugin",
+    "autoload": {
+        "psr-4": {
+            "BookingPlugin\\": "src/"
+        }
+    }
 }
