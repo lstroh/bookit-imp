@@ -3,6 +3,7 @@
     <testsuites>
         <testsuite name="Booking Plugin">
             <directory>tests</directory>
+            <file>tests/rest/auth/test-auth-login-route.php</file>
         </testsuite>
         <testsuite name="WordPress">
             <file>tests/Infrastructure/WPEnvironmentTest.php</file>
