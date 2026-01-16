@@ -19,6 +19,7 @@ class Test_Auth_Login_Route_Integration extends \WP_UnitTestCase
      */
     private $server;
 
+
     /**
      * Set up test environment.
      */
@@ -142,4 +143,5 @@ class Test_Auth_Login_Route_Integration extends \WP_UnitTestCase
             sprintf('DELETE should return 404 or 405, got %d', $status)
         );
     }
+
 }

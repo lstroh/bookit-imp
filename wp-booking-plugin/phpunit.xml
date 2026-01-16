@@ -10,6 +10,7 @@
         <testsuite name="REST API">
             <file>tests/rest/auth/test-auth-login-route.php</file>
             <file>tests/rest/auth/test-auth-login-route-integration.php</file>
+            <file>tests/rest/auth/test-login-rate-limiter.php</file>
         </testsuite>
     </testsuites>
 </phpunit>

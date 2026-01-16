@@ -20,7 +20,7 @@ class AuthController
             [
                 'methods'             => ['POST'],
                 'permission_callback' => function () {
-                    return true;
+                    return \BookingPlugin\Security\LoginRateLimiter::check();
                 },
                 'callback'            => function () {
                     return new \WP_Error(
