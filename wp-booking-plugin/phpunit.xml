@@ -7,5 +7,9 @@
         <testsuite name="WordPress">
             <file>tests/Infrastructure/WPEnvironmentTest.php</file>
         </testsuite>
+        <testsuite name="REST API">
+            <file>tests/rest/auth/test-auth-login-route.php</file>
+            <file>tests/rest/auth/test-auth-login-route-integration.php</file>
+        </testsuite>
     </testsuites>
 </phpunit>

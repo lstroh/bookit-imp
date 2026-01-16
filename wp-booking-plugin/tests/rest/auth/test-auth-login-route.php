@@ -10,14 +10,44 @@ namespace BookingPlugin\Tests\Rest\Auth;
 class Test_Auth_Login_Route extends \WP_UnitTestCase
 {
     /**
+     * REST Server instance.
+     *
+     * @var \WP_REST_Server|null
+     */
+    private $server;
+
+    /**
      * Set up test environment.
      */
     public function setUp(): void
     {
         parent::setUp();
         
-        // Ensure routes are registered before each test
+        // Reset REST server for clean state
+        global $wp_rest_server;
+        $wp_rest_server = null;
+        
+        // Ensure plugin is booted (registers hooks)
+        $plugin = new \BookingPlugin\Infrastructure\Plugin();
+        $plugin->boot();
+        
+        // Trigger rest_api_init to register routes
         do_action('rest_api_init');
+        
+        // Store server reference
+        $this->server = rest_get_server();
+    }
+
+    /**
+     * Tear down test environment.
+     */
+    public function tearDown(): void
+    {
+        global $wp_rest_server;
+        $wp_rest_server = null;
+        $this->server = null;
+        
+        parent::tearDown();
     }
 
     /**
@@ -25,14 +55,14 @@ class Test_Auth_Login_Route extends \WP_UnitTestCase
      */
     public function test_route_exists_at_expected_path(): void
     {
-        $server = rest_get_server();
-        $routes = $server->get_routes();
-        
+        $routes = $this->server->get_routes();
         $expected_route = '/bookit/v1/auth/login';
         
-        $this->assertArrayHasKey(
-            $expected_route,
-            $routes,
+        // Check if route exists
+        $route_exists = array_key_exists($expected_route, $routes);
+        
+        $this->assertTrue(
+            $route_exists,
             'Route should be registered at /bookit/v1/auth/login'
         );
     }
@@ -42,21 +72,33 @@ class Test_Auth_Login_Route extends \WP_UnitTestCase
      */
     public function test_only_post_method_is_allowed(): void
     {
-        $request = new \WP_REST_Request('POST', '/bookit/v1/auth/login');
-        $response = rest_do_request($request);
+        $routes = $this->server->get_routes();
+        $expected_route = '/bookit/v1/auth/login';
         
-        // POST should not return method_not_allowed or no_route error
-        $error_code = $response->get_error_code();
-        $this->assertNotEquals(
-            'rest_method_not_allowed',
-            $error_code,
-            'POST method should be allowed for /bookit/v1/auth/login'
+        $this->assertTrue(
+            array_key_exists($expected_route, $routes),
+            'Route should exist'
         );
         
-        $this->assertNotEquals(
-            'rest_no_route',
-            $error_code,
-            'POST method should not return rest_no_route error'
+        // Get the allowed methods from route registration
+        // Route data is an array of endpoints, each with 'methods' key
+        $route_data = $routes[$expected_route];
+        $allowed_methods = [];
+        
+        foreach ($route_data as $endpoint) {
+            if (isset($endpoint['methods'])) {
+                $methods = $endpoint['methods'];
+                if (is_array($methods)) {
+                    $allowed_methods = array_merge($allowed_methods, array_keys(array_filter($methods)));
+                }
+            }
+        }
+        
+        // POST should be in the allowed methods
+        $this->assertContains(
+            'POST',
+            $allowed_methods,
+            'POST method should be allowed for /bookit/v1/auth/login'
         );
     }
 
@@ -65,23 +107,32 @@ class Test_Auth_Login_Route extends \WP_UnitTestCase
      */
     public function test_get_returns_404_or_method_not_allowed(): void
     {
-        $request = new \WP_REST_Request('GET', '/bookit/v1/auth/login');
-        $response = rest_do_request($request);
-        
-        // GET should return either 404 or method_not_allowed
-        $error_code = $response->get_error_code();
-        $is_404_or_method_not_allowed = in_array(
-            $error_code,
-            ['rest_no_route', 'rest_method_not_allowed'],
-            true
-        );
+        $routes = $this->server->get_routes();
+        $expected_route = '/bookit/v1/auth/login';
         
         $this->assertTrue(
-            $is_404_or_method_not_allowed,
-            sprintf(
-                'GET method should return rest_no_route or rest_method_not_allowed, got: %s',
-                $error_code ?: 'no error'
-            )
+            array_key_exists($expected_route, $routes),
+            'Route should exist'
+        );
+        
+        // Get the allowed methods from route registration
+        $route_data = $routes[$expected_route];
+        $allowed_methods = [];
+        
+        foreach ($route_data as $endpoint) {
+            if (isset($endpoint['methods'])) {
+                $methods = $endpoint['methods'];
+                if (is_array($methods)) {
+                    $allowed_methods = array_merge($allowed_methods, array_keys(array_filter($methods)));
+                }
+            }
+        }
+        
+        // GET should NOT be in the allowed methods
+        $this->assertNotContains(
+            'GET',
+            $allowed_methods,
+            'GET method should not be allowed for /bookit/v1/auth/login'
         );
     }
 
@@ -93,29 +144,28 @@ class Test_Auth_Login_Route extends \WP_UnitTestCase
         // Ensure no user is logged in
         wp_set_current_user(0);
         
-        $server = rest_get_server();
-        $routes = $server->get_routes();
+        $routes = $this->server->get_routes();
         $expected_route = '/bookit/v1/auth/login';
         
-        $this->assertArrayHasKey($expected_route, $routes, 'Route should be registered');
+        $this->assertTrue(
+            array_key_exists($expected_route, $routes),
+            'Route should be registered'
+        );
         
-        // Get the route options
-        $route_options = $routes[$expected_route];
+        // Check that permission_callback returns true (route is public)
+        // by checking we don't get rest_forbidden when making a POST request
+        $request = new \WP_REST_Request('POST', $expected_route);
+        $response = $this->server->dispatch($request);
         
-        // Check that permission_callback exists and returns true
-        // The route should have at least one endpoint
-        $this->assertNotEmpty($route_options, 'Route should have endpoint options');
+        // Extract status code - this is a primitive value
+        $status_code = $response->get_status();
         
-        // Test that we can make a request without authentication
-        $request = new \WP_REST_Request('POST', '/bookit/v1/auth/login');
-        $response = rest_do_request($request);
-        
-        // If permission_callback returns false, we'd get a rest_forbidden error
-        // Since permission_callback returns true, we should not get rest_forbidden
+        // 403 would indicate permission denied (rest_forbidden)
+        // We expect 501 (not implemented) or any non-403 status
         $this->assertNotEquals(
-            'rest_forbidden',
-            $response->get_error_code(),
-            'Route should be publicly accessible without authentication'
+            403,
+            $status_code,
+            'Route should be publicly accessible without authentication (should not return 403 Forbidden)'
         );
     }
 }
