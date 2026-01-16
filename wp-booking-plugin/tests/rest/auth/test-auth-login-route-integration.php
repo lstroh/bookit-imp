@@ -60,13 +60,23 @@ class Test_Auth_Login_Route_Integration extends \WP_UnitTestCase
     public function test_post_request_returns_response(): void
     {
         $request = new \WP_REST_Request('POST', '/bookit/v1/auth/login');
+        $request->set_header('Content-Type', 'application/json');
+        $request->set_body(
+            json_encode(
+                [
+                    'identifier'  => 'test_id',
+                    'secret'      => 'test_secret',
+                    'client_type' => 'web',
+                ]
+            )
+        );
         $response = $this->server->dispatch($request);
 
         // Extract primitive values immediately
         $status = $response->get_status();
         $data = $response->get_data();
 
-        // Route returns 501 Not Implemented currently
+        // Route returns 501 Not Implemented currently (after validation passes)
         $this->assertEquals(501, $status, 'POST should return 501 (not implemented)');
         $this->assertIsArray($data);
     }
@@ -98,14 +108,26 @@ class Test_Auth_Login_Route_Integration extends \WP_UnitTestCase
         wp_set_current_user(0);
 
         $request = new \WP_REST_Request('POST', '/bookit/v1/auth/login');
+        $request->set_header('Content-Type', 'application/json');
+        $request->set_body(
+            json_encode(
+                [
+                    'identifier'  => 'test_id',
+                    'secret'      => 'test_secret',
+                    'client_type' => 'web',
+                ]
+            )
+        );
         $response = $this->server->dispatch($request);
 
         // Extract status immediately
         $status = $response->get_status();
 
-        // Should not be 401 or 403 - route is publicly accessible
-        $this->assertNotEquals(401, $status, 'Should not require authentication');
+        // Should not be 403 - route is publicly accessible (no WP auth required)
+        // Note: 401 from validation failure is different from 401 rest_forbidden
         $this->assertNotEquals(403, $status, 'Should not be forbidden');
+        // With valid body, should get 501 (not implemented) not auth error
+        $this->assertEquals(501, $status, 'Should return 501 with valid credentials');
     }
 
     /**

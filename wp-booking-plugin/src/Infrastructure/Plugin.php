@@ -46,6 +46,19 @@ class Plugin
             return $rest_response;
         }
 
+        // Check if this is an invalid credentials error
+        if (is_wp_error($response) && $response->get_error_code() === 'invalid_credentials') {
+            // Create a new response with the exact format specified
+            $rest_response = new \WP_REST_Response(
+                [
+                    'error' => 'invalid_credentials',
+                ],
+                401
+            );
+
+            return $rest_response;
+        }
+
         return $response;
     }
 
