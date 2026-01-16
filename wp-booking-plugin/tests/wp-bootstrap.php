@@ -18,5 +18,11 @@ echo "Loading WordPress tests from: " . $_tests_dir . "\n";
 // Load the helper functions
 require_once $_tests_dir . '/includes/functions.php';
 
+
 // Load WordPress test bootstrap
 require_once $_tests_dir . '/includes/bootstrap.php';
+
+// Load the plugin main file
+require_once __DIR__ . '/../booking-plugin.php';
+
+

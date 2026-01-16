@@ -26,6 +26,7 @@ $is_wordpress_suite = should_load_wp_suite();
 echo 'is_wordpress_suite: ' . ($is_wordpress_suite ? 'YES' : 'NO') . "\n";
 // If WordPress suite, load WordPress bootstrap instead
 if ($is_wordpress_suite) {
+    
     require_once __DIR__ . '/wp-bootstrap.php';
     return;
 }

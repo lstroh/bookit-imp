@@ -13,6 +13,16 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+register_activation_hook(__FILE__, function (): void {
+    $plugin = new \BookingPlugin\Infrastructure\Plugin();
+    $plugin->activate();
+});
+
+register_deactivation_hook(__FILE__, function (): void {
+    $plugin = new \BookingPlugin\Infrastructure\Plugin();
+    $plugin->deactivate();
+});
+
 add_action('plugins_loaded', function (): void {
     $plugin = new \BookingPlugin\Infrastructure\Plugin();
     $plugin->boot();

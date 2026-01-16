@@ -2,6 +2,9 @@
     "name": "booking-plugin/booking-plugin",
     "description": "WordPress booking plugin",
     "type": "wordpress-plugin",
+    "require": {
+        "firebase/php-jwt": "6.10.0"
+    },
     "autoload": {
         "psr-4": {
             "BookingPlugin\\": "src/"
