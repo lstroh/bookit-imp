@@ -14,7 +14,7 @@ class Plugin
      */
     public function boot(): void
     {
-        // Bootstrap only - no business logic
+        add_action('rest_api_init', [new \BookingPlugin\API\AuthController(), 'register_routes']);
     }
 
     /**
