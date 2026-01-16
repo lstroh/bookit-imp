@@ -8,6 +8,7 @@
             <file>tests/Infrastructure/WPEnvironmentTest.php</file>
         </testsuite>
         <testsuite name="REST API">
+            <file>tests/rest/auth/test-auth-login-errors.php</file>
             <file>tests/rest/auth/test-auth-login-route.php</file>
             <file>tests/rest/auth/test-auth-login-route-integration.php</file>
             <file>tests/rest/auth/test-auth-login-validation.php</file>

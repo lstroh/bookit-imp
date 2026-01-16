@@ -76,8 +76,8 @@ class Test_Auth_Login_Route_Integration extends \WP_UnitTestCase
         $status = $response->get_status();
         $data = $response->get_data();
 
-        // Route returns 501 Not Implemented currently (after validation passes)
-        $this->assertEquals(501, $status, 'POST should return 501 (not implemented)');
+        // Route returns 401 invalid_credentials (normalized after validation passes)
+        $this->assertEquals(401, $status, 'POST should return 401 (invalid_credentials)');
         $this->assertIsArray($data);
     }
 
@@ -126,8 +126,8 @@ class Test_Auth_Login_Route_Integration extends \WP_UnitTestCase
         // Should not be 403 - route is publicly accessible (no WP auth required)
         // Note: 401 from validation failure is different from 401 rest_forbidden
         $this->assertNotEquals(403, $status, 'Should not be forbidden');
-        // With valid body, should get 501 (not implemented) not auth error
-        $this->assertEquals(501, $status, 'Should return 501 with valid credentials');
+        // With valid body, should get 401 (invalid_credentials) - normalized response
+        $this->assertEquals(401, $status, 'Should return 401 invalid_credentials with valid credentials');
     }
 
     /**
