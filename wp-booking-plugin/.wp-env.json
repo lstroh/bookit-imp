@@ -1,0 +1,13 @@
+{
+    "core": "https://wordpress.org/wordpress-6.9.zip",
+    "phpVersion": "8.2",
+    "plugins": [ "." ],
+    "themes": [ "https://downloads.wordpress.org/theme/twentytwentyfour.zip" ],
+    "config": {
+      "WP_DEBUG": true,
+      "SCRIPT_DEBUG": true
+    },
+    "mappings": {
+      "wp-content/uploads": "./uploads"
+    }
+  }
