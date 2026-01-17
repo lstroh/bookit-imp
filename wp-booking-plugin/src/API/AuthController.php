@@ -30,6 +30,18 @@ class AuthController
                 ],
             ]
         );
+
+        register_rest_route(
+            'bookit/v1',
+            'auth/refresh',
+            [
+                'methods'             => ['POST'],
+                'permission_callback' => function () {
+                    return true;
+                },
+                'callback'            => [$this, 'handle_refresh'],
+            ]
+        );
     }
 
     /**
@@ -90,5 +102,20 @@ class AuthController
                 ['status' => 401]
             );
         }
+    }
+
+    /**
+     * Handle refresh request (stub).
+     *
+     * @param \WP_REST_Request $request The request object.
+     * @return \WP_Error|\WP_REST_Response Response object.
+     */
+    public function handle_refresh(\WP_REST_Request $request)
+    {
+        return new \WP_Error(
+            'not_implemented',
+            'Not implemented',
+            ['status' => 501]
+        );
     }
 }

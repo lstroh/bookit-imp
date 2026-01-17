@@ -13,6 +13,7 @@
             <file>tests/rest/auth/test-auth-login-route-integration.php</file>
             <file>tests/rest/auth/test-auth-login-success-shape.php</file>
             <file>tests/rest/auth/test-auth-login-validation.php</file>
+            <file>tests/rest/auth/test-auth-refresh-route.php</file>
             <file>tests/rest/auth/test-login-rate-limiter.php</file>
         </testsuite>
     </testsuites>
