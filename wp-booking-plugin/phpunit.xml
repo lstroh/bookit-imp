@@ -11,6 +11,7 @@
             <file>tests/rest/auth/test-auth-login-errors.php</file>
             <file>tests/rest/auth/test-auth-login-route.php</file>
             <file>tests/rest/auth/test-auth-login-route-integration.php</file>
+            <file>tests/rest/auth/test-auth-login-success-shape.php</file>
             <file>tests/rest/auth/test-auth-login-validation.php</file>
             <file>tests/rest/auth/test-login-rate-limiter.php</file>
         </testsuite>

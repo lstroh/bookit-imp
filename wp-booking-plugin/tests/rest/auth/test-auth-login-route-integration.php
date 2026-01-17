@@ -76,8 +76,8 @@ class Test_Auth_Login_Route_Integration extends \WP_UnitTestCase
         $status = $response->get_status();
         $data = $response->get_data();
 
-        // Route returns 401 invalid_credentials (normalized after validation passes)
-        $this->assertEquals(401, $status, 'POST should return 401 (invalid_credentials)');
+        // Route returns 200 success response when validation passes
+        $this->assertEquals(200, $status, 'POST should return 200 (success)');
         $this->assertIsArray($data);
     }
 
@@ -124,10 +124,9 @@ class Test_Auth_Login_Route_Integration extends \WP_UnitTestCase
         $status = $response->get_status();
 
         // Should not be 403 - route is publicly accessible (no WP auth required)
-        // Note: 401 from validation failure is different from 401 rest_forbidden
         $this->assertNotEquals(403, $status, 'Should not be forbidden');
-        // With valid body, should get 401 (invalid_credentials) - normalized response
-        $this->assertEquals(401, $status, 'Should return 401 invalid_credentials with valid credentials');
+        // With valid credentials, should get 200 (success response)
+        $this->assertEquals(200, $status, 'Should return 200 success with valid credentials');
     }
 
     /**

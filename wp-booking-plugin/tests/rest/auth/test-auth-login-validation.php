@@ -165,8 +165,7 @@ class Test_Auth_Login_Validation extends \WP_UnitTestCase
     /**
      * Test all fields present passes validation.
      *
-     * Note: Even when validation passes, the endpoint returns 401 invalid_credentials
-     * (normalized response since login is not yet implemented).
+     * When validation passes, the endpoint returns 200 with success response structure.
      */
     public function test_all_fields_present_passes_validation(): void
     {
@@ -188,16 +187,10 @@ class Test_Auth_Login_Validation extends \WP_UnitTestCase
         $status = $response->get_status();
         $data = $response->get_data();
 
-        // Validation passes, but endpoint returns normalized 401 invalid_credentials response
-        $this->assertEquals(401, $status, 'All fields present should return 401 (normalized response)');
+        // Validation passes, endpoint returns 200 success response
+        $this->assertEquals(200, $status, 'All fields present should return 200 (success response)');
         $this->assertIsArray($data);
-        // Response may use 'error' key (normalized WP_REST_Response format) or 'code' key (WP_Error format)
-        // Check for either format to ensure normalization is working
-        $has_normalized_format = isset($data['error']) && $data['error'] === 'invalid_credentials';
-        $has_error_code_format = isset($data['code']) && $data['code'] === 'invalid_credentials';
-        $this->assertTrue(
-            $has_normalized_format || $has_error_code_format,
-            'Response should indicate invalid_credentials either via "error" or "code" key'
-        );
+        // Response should contain success response keys (access_token, expires_in, etc.)
+        $this->assertArrayHasKey('access_token', $data, 'Success response should contain access_token');
     }
 }
