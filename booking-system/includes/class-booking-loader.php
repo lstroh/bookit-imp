@@ -40,6 +40,7 @@ class Booking_Loader {
 		$this->plugin_name = 'booking-system';
 
 		$this->load_dependencies();
+		$this->define_rewrite_rules();
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
 	}
@@ -53,11 +54,96 @@ class Booking_Loader {
 		// Database management.
 		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-database.php';
 
+		// Dashboard authentication/session.
+		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-session.php';
+		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-auth.php';
+
 		// Admin-specific functionality.
 		require_once BOOKING_SYSTEM_PATH . 'admin/class-booking-admin.php';
 
 		// Public-facing functionality.
 		require_once BOOKING_SYSTEM_PATH . 'public/class-booking-public.php';
+	}
+
+	/**
+	 * Register custom rewrite rules for dashboard.
+	 *
+	 * @return void
+	 */
+	private function define_rewrite_rules() {
+		add_action( 'init', array( $this, 'add_dashboard_rewrite_rules' ) );
+		add_filter( 'query_vars', array( $this, 'add_dashboard_query_vars' ) );
+		add_action( 'template_redirect', array( $this, 'dashboard_template_redirect' ) );
+	}
+
+	/**
+	 * Add dashboard rewrite rules.
+	 *
+	 * @return void
+	 */
+	public function add_dashboard_rewrite_rules() {
+		// Dashboard login page.
+		add_rewrite_rule(
+			'^booking-dashboard/?$',
+			'index.php?booking_dashboard_page=login',
+			'top'
+		);
+
+		// Dashboard home page.
+		add_rewrite_rule(
+			'^booking-dashboard/home/?$',
+			'index.php?booking_dashboard_page=home',
+			'top'
+		);
+
+		// Dashboard logout.
+		add_rewrite_rule(
+			'^booking-dashboard/logout/?$',
+			'index.php?booking_dashboard_page=logout',
+			'top'
+		);
+	}
+
+	/**
+	 * Add dashboard query vars.
+	 *
+	 * @param array $vars Query vars.
+	 * @return array Modified query vars.
+	 */
+	public function add_dashboard_query_vars( $vars ) {
+		$vars[] = 'booking_dashboard_page';
+		return $vars;
+	}
+
+	/**
+	 * Handle dashboard template redirects.
+	 *
+	 * @return void
+	 */
+	public function dashboard_template_redirect() {
+		$page = get_query_var( 'booking_dashboard_page', '' );
+
+		if ( empty( $page ) ) {
+			return;
+		}
+
+		switch ( $page ) {
+			case 'login':
+				require_once BOOKING_SYSTEM_PATH . 'dashboard/index.php';
+				exit;
+
+			case 'home':
+				require_once BOOKING_SYSTEM_PATH . 'dashboard/dashboard-home.php';
+				exit;
+
+			case 'logout':
+				require_once BOOKING_SYSTEM_PATH . 'dashboard/logout.php';
+				exit;
+
+			default:
+				wp_redirect( home_url( '/booking-dashboard/' ) );
+				exit;
+		}
 	}
 
 	/**
