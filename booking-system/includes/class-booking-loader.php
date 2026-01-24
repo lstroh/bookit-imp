@@ -50,6 +50,9 @@ class Booking_Loader {
 	 * @return void
 	 */
 	private function load_dependencies() {
+		// Database management.
+		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-database.php';
+
 		// Admin-specific functionality.
 		require_once BOOKING_SYSTEM_PATH . 'admin/class-booking-admin.php';
 

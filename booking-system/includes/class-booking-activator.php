@@ -81,8 +81,15 @@ class Booking_Activator {
 
 		add_option( 'booking_system_settings', $default_settings );
 
-		// Database setup will be added in Tasks 2 & 3.
-		update_option( 'booking_system_db_version', '1.0' );
+		// Create database tables (Part 1: Tables 1-5).
+		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-database.php';
+		Booking_Database::create_tables();
+
+		// Debug log activation (only when WP_DEBUG_LOG is enabled).
+		if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( '[Booking System] Plugin activated; database tables created/verified (Part 1).' );
+		}
 
 		// Flush rewrite rules (for dashboard endpoints).
 		flush_rewrite_rules();
