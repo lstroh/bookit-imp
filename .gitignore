@@ -1,0 +1,35 @@
+# WordPress
+wp-config.php
+wp-content/advanced-cache.php
+wp-content/backup-db/
+wp-content/backups/
+wp-content/blogs.dir/
+wp-content/cache/
+wp-content/upgrade/
+wp-content/uploads/
+wp-content/mu-plugins/
+wp-content/wp-cache-config.php
+wp-content/plugins/hello.php
+
+# Plugin-specific
+*.log
+.DS_Store
+Thumbs.db
+
+# Composer
+/vendor/
+composer.lock
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Node (if added later)
+node_modules/
+package-lock.json
+
+# Environment
+.env
+.env.local
