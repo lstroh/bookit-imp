@@ -157,7 +157,12 @@ class Booking_Loader {
 		add_action( 'admin_enqueue_scripts', array( $plugin_admin, 'enqueue_styles' ) );
 		add_action( 'admin_enqueue_scripts', array( $plugin_admin, 'enqueue_scripts' ) );
 
-		// Admin menu will be added in Task 5.
+		// Load admin menu class
+		require_once BOOKING_SYSTEM_PATH . 'admin/class-booking-admin-menu.php';
+		$admin_menu = new Booking_Admin_Menu();
+
+		// Register admin menu
+		add_action( 'admin_menu', array( $admin_menu, 'register_menu' ) );
 	}
 
 	/**
