@@ -13,17 +13,26 @@
         "php": ">=8.0"
     },
     "require-dev": {
-        "phpunit/phpunit": "^9.5",
-        "wp-coding-standards/wpcs": "^2.3"
+        "phpunit/phpunit": "^9.6",
+        "yoast/phpunit-polyfills": "^2.0"
     },
     "autoload": {
         "psr-4": {
-            "BookingSystem\\\\": "includes/"
+            "BookingSystem\\": "includes/"
         }
     },
     "scripts": {
         "test": "phpunit",
-        "phpcs": "phpcs --standard=WordPress --extensions=php .",
-        "phpcbf": "phpcbf --standard=WordPress --extensions=php ."
+        "test:unit": "phpunit --testsuite 'Booking System Test Suite'",
+        "test:coverage": "phpunit --coverage-html coverage",
+        "test:verbose": "phpunit --verbose"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
+        "platform": {
+            "php": "8.2"
+        }
     }
 }

@@ -16,9 +16,19 @@ wp-content/plugins/hello.php
 .DS_Store
 Thumbs.db
 
+# wp-env
+.wp-env.override.json
+
 # Composer
 /vendor/
+booking-system/vendor/
 composer.lock
+
+# PHPUnit
+/coverage/
+booking-system/coverage/
+.phpunit.result.cache
+booking-system/.phpunit.result.cache
 
 # IDE
 .vscode/
@@ -26,7 +36,7 @@ composer.lock
 *.sublime-project
 *.sublime-workspace
 
-# Node (if added later)
+# Node
 node_modules/
 package-lock.json
 

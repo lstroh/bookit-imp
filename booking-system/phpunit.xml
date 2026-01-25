@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<phpunit
+    bootstrap="tests/bootstrap.php"
+    backupGlobals="false"
+    colors="true"
+    convertErrorsToExceptions="true"
+    convertNoticesToExceptions="true"
+    convertWarningsToExceptions="true"
+    verbose="true"
+    beStrictAboutOutputDuringTests="false"
+>
+    <testsuites>
+        <testsuite name="Booking System Test Suite">
+            <file>./tests/test-admin-menu.php</file>
+            <file>./tests/test-auth.php</file>
+            <file>./tests/test-database.php</file>
+            <file>./tests/test-logger.php</file>
+            <file>./tests/test-plugin-activation.php</file>
+            <file>./tests/test-session.php</file>
+        </testsuite>
+    </testsuites>
+
+    <coverage processUncoveredFiles="true">
+        <include>
+            <directory suffix=".php">./includes/</directory>
+            <directory suffix=".php">./admin/</directory>
+            <directory suffix=".php">./public/</directory>
+        </include>
+        <exclude>
+            <directory>./vendor/</directory>
+            <directory>./tests/</directory>
+        </exclude>
+    </coverage>
+
+    <php>
+        <env name="WP_TESTS_DIR" value="/tmp/wordpress-tests-lib" />
+        <env name="WP_CORE_DIR" value="/var/www/html" />
+        <const name="WP_TESTS_PHPUNIT_POLYFILLS_PATH" value="./vendor/yoast/phpunit-polyfills" />
+    </php>
+</phpunit>
