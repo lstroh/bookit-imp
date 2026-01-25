@@ -50,20 +50,6 @@ class Booking_Activator {
 			);
 		}
 
-		// Create log directory.
-		$upload_dir = wp_upload_dir();
-		$base_dir   = isset( $upload_dir['basedir'] ) ? $upload_dir['basedir'] : '';
-		$log_dir    = trailingslashit( $base_dir ) . 'bookings/logs';
-
-		if ( ! empty( $base_dir ) && ! file_exists( $log_dir ) ) {
-			wp_mkdir_p( $log_dir );
-
-			// Add .htaccess to protect logs.
-			$htaccess_content = "Deny from all\n";
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-			@file_put_contents( trailingslashit( $log_dir ) . '.htaccess', $htaccess_content );
-		}
-
 		// Set plugin version option.
 		update_option( 'booking_system_version', BOOKING_SYSTEM_VERSION );
 
@@ -90,18 +76,23 @@ class Booking_Activator {
 			wp_schedule_event( strtotime( '03:00:00' ), 'daily', 'booking_system_cleanup_logs' );
 		}
 
-		// Test logging system
+		// Initialize logger (creates log directory in best location)
 		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-logger.php';
+		Booking_Logger::init();
+
+		// Migrate existing logs if needed
+		Booking_Logger::migrate_logs_if_needed();
+
+		// Test logging system
+		global $wp_version;
 		if ( Booking_Logger::test_logging() ) {
-			global $wp_version;
-			Booking_Logger::info(
-				'Plugin activated successfully',
-				array(
-					'version'     => BOOKING_SYSTEM_VERSION,
-					'php_version' => PHP_VERSION,
-					'wp_version'  => $wp_version,
-				)
-			);
+			Booking_Logger::info( 'Plugin activated successfully', array(
+				'version'       => BOOKING_SYSTEM_VERSION,
+				'php_version'   => PHP_VERSION,
+				'wp_version'    => $wp_version,
+				'log_directory' => Booking_Logger::get_log_directory(),
+				'is_secure'     => Booking_Logger::is_secure_location() ? 'YES (outside web root)' : 'NO (inside uploads)',
+			) );
 		} else {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( '[Booking System] WARNING: Log directory not writable' );

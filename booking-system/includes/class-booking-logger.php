@@ -29,18 +29,68 @@ class Booking_Logger {
 	 * @return void
 	 */
 	public static function init() {
-		$upload_dir    = wp_upload_dir();
-		self::$log_dir = $upload_dir['basedir'] . '/bookings/logs';
+		// Try to store logs OUTSIDE web root for maximum security
+		// WP_CONTENT_DIR = /path/to/site/app/public/wp-content
+		// dirname(WP_CONTENT_DIR) = /path/to/site/app/public
+		// We want /path/to/site/app/booking-logs (outside public directory)
+		
+		$outside_root   = dirname( WP_CONTENT_DIR ) . '/booking-logs';
+		$inside_uploads = wp_upload_dir()['basedir'] . '/bookings/logs';
+		
+		// Determine best log location
+		if ( self::can_create_directory( dirname( $outside_root ) ) ) {
+			// Preferred: Outside web root (not accessible via HTTP)
+			self::$log_dir = $outside_root;
+		} else {
+			// Fallback: Inside uploads directory with protection
+			self::$log_dir = $inside_uploads;
+		}
 
 		// Ensure log directory exists
 		if ( ! file_exists( self::$log_dir ) ) {
 			wp_mkdir_p( self::$log_dir );
-
-			// Add .htaccess to protect logs
-			$htaccess_content = "Deny from all\n";
+			
+			// Add .htaccess for Apache servers
+			$htaccess_content  = "# Booking System - Deny all access to log files\n";
+			$htaccess_content .= "Order deny,allow\n";
+			$htaccess_content .= "Deny from all\n";
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 			@file_put_contents( self::$log_dir . '/.htaccess', $htaccess_content );
+			
+			// Add index.php to prevent directory listing
+			$index_content = "<?php\n// Silence is golden.\n";
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			@file_put_contents( self::$log_dir . '/index.php', $index_content );
+			
+			// Add README for documentation
+			$readme_content  = "# Booking System Log Files\n\n";
+			$readme_content .= "This directory contains log files for the Booking System plugin.\n";
+			$readme_content .= "Log files are retained for 28 days and automatically cleaned up.\n\n";
+			$readme_content .= "SECURITY: These files should NOT be accessible via HTTP.\n";
+			$readme_content .= "Location: " . self::$log_dir . "\n";
+			$readme_content .= "Created: " . date( 'Y-m-d H:i:s' ) . "\n";
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			@file_put_contents( self::$log_dir . '/README.txt', $readme_content );
 		}
+	}
+
+	/**
+	 * Check if we can create a directory in the given parent path.
+	 *
+	 * @param string $parent_path Parent directory path.
+	 * @return bool True if writable.
+	 */
+	private static function can_create_directory( $parent_path ) {
+		// Check if parent directory exists and is writable
+		if ( ! file_exists( $parent_path ) ) {
+			return false;
+		}
+		
+		if ( ! is_writable( $parent_path ) ) {
+			return false;
+		}
+		
+		return true;
 	}
 
 	/**
@@ -280,5 +330,97 @@ class Booking_Logger {
 		$result = @file_put_contents( $log_file, $test_message . "\n", FILE_APPEND );
 
 		return $result !== false;
+	}
+
+	/**
+	 * Get log directory path.
+	 *
+	 * @return string Log directory path.
+	 */
+	public static function get_log_directory() {
+		self::init();
+		return self::$log_dir;
+	}
+
+	/**
+	 * Check if logs are stored outside web root (secure).
+	 *
+	 * @return bool True if outside web root.
+	 */
+	public static function is_secure_location() {
+		self::init();
+		
+		// Check if log directory is outside ABSPATH (WordPress root)
+		$log_dir_real = realpath( self::$log_dir );
+		$abspath_real = realpath( ABSPATH );
+		
+		// If log directory is NOT inside ABSPATH, it's secure
+		return strpos( $log_dir_real, $abspath_real ) === false;
+	}
+
+	/**
+	 * Migrate logs from old location to new location.
+	 *
+	 * Called during plugin activation if needed.
+	 *
+	 * @return void
+	 */
+	public static function migrate_logs_if_needed() {
+		self::init();
+		
+		// Old location: wp-content/uploads/bookings/logs
+		$old_location = wp_upload_dir()['basedir'] . '/bookings/logs';
+		$new_location = self::$log_dir;
+		
+		// If already using the same location, nothing to do
+		if ( $old_location === $new_location ) {
+			return;
+		}
+		
+		// If old location doesn't exist, nothing to migrate
+		if ( ! file_exists( $old_location ) ) {
+			return;
+		}
+		
+		// Get all log files from old location
+		$old_files = glob( $old_location . '/bookings-*.log' );
+		
+		if ( empty( $old_files ) ) {
+			return;
+		}
+		
+		$migrated_count = 0;
+		
+		foreach ( $old_files as $old_file ) {
+			$filename = basename( $old_file );
+			$new_file = $new_location . '/' . $filename;
+			
+			// Copy file to new location
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_copy
+			if ( @copy( $old_file, $new_file ) ) {
+				// Preserve file modification time
+				$old_time = filemtime( $old_file );
+				touch( $new_file, $old_time );
+				
+				// Delete old file after successful copy
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+				@unlink( $old_file );
+				$migrated_count++;
+			}
+		}
+		
+		if ( $migrated_count > 0 ) {
+			self::info( "Migrated {$migrated_count} log files to new secure location", array(
+				'old_location' => $old_location,
+				'new_location' => $new_location,
+				'is_secure'    => self::is_secure_location(),
+			) );
+		}
+		
+		// Try to remove old directory (only if empty)
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+		@rmdir( $old_location );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+		@rmdir( dirname( $old_location ) ); // Try to remove parent /bookings/ if empty
 	}
 }
