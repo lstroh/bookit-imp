@@ -23,18 +23,6 @@ class Booking_Database {
 	 */
 	const DB_VERSION = '1.0';
 
-	/**
-	 * Log a debug message (only when WP_DEBUG_LOG is enabled).
-	 *
-	 * @param string $message Log message.
-	 * @return void
-	 */
-	private static function log_debug( $message ) {
-		if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( '[Booking System][DB] ' . $message );
-		}
-	}
 
 	/**
 	 * Create all database tables.
@@ -52,46 +40,48 @@ class Booking_Database {
 		// Get current database version.
 		$installed_version = get_option( 'booking_system_db_version', '0' );
 
-		self::log_debug( 'create_tables() start. Installed version: ' . $installed_version . '. Target version: ' . self::DB_VERSION . '.' );
+		Booking_Logger::info(
+			'Database tables creation started',
+			array(
+				'db_version' => self::DB_VERSION,
+			)
+		);
 
 		// Only create tables if not already at current version.
 		if ( version_compare( $installed_version, self::DB_VERSION, '<' ) ) {
-			self::log_debug( 'Version upgrade needed. Loading upgrade functions.' );
-
 			// Load WordPress upgrade functions.
 			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 			// Create tables.
-			self::log_debug( 'Creating table: bookings_services.' );
 			self::create_services_table( $table_prefix, $charset_collate );
-			self::log_debug( 'Creating table: bookings_categories.' );
 			self::create_categories_table( $table_prefix, $charset_collate );
-			self::log_debug( 'Creating table: bookings_service_categories.' );
 			self::create_service_categories_table( $table_prefix, $charset_collate );
-			self::log_debug( 'Creating table: bookings_staff.' );
 			self::create_staff_table( $table_prefix, $charset_collate );
-			self::log_debug( 'Creating table: bookings_staff_services.' );
 			self::create_staff_services_table( $table_prefix, $charset_collate );
 
 			// Part 2: Tables 6-10
-			self::log_debug( 'Creating table: bookings_customers.' );
 			self::create_customers_table( $table_prefix, $charset_collate );
-			self::log_debug( 'Creating table: bookings.' );
 			self::create_bookings_table( $table_prefix, $charset_collate );
-			self::log_debug( 'Creating table: bookings_payments.' );
 			self::create_payments_table( $table_prefix, $charset_collate );
-			self::log_debug( 'Creating table: bookings_working_hours.' );
 			self::create_working_hours_table( $table_prefix, $charset_collate );
-			self::log_debug( 'Creating table: bookings_settings.' );
 			self::create_settings_table( $table_prefix, $charset_collate );
 
 			// Update database version.
-			self::log_debug( 'Updating booking_system_db_version option to ' . self::DB_VERSION . '.' );
 			update_option( 'booking_system_db_version', self::DB_VERSION );
 
-			self::log_debug( 'create_tables() complete.' );
+			Booking_Logger::info(
+				'Database tables created successfully',
+				array(
+					'tables_created' => 10,
+				)
+			);
 		} else {
-			self::log_debug( 'No upgrade needed. Skipping table creation.' );
+			Booking_Logger::info(
+				'Database already at current version, skipping table creation',
+				array(
+					'current_version' => $installed_version,
+				)
+			);
 		}
 	}
 

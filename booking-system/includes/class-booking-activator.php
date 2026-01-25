@@ -85,10 +85,26 @@ class Booking_Activator {
 		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-database.php';
 		Booking_Database::create_tables();
 
-		// Debug log activation (only when WP_DEBUG_LOG is enabled).
-		if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+		// Schedule log cleanup (daily at 3 AM)
+		if ( ! wp_next_scheduled( 'booking_system_cleanup_logs' ) ) {
+			wp_schedule_event( strtotime( '03:00:00' ), 'daily', 'booking_system_cleanup_logs' );
+		}
+
+		// Test logging system
+		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-logger.php';
+		if ( Booking_Logger::test_logging() ) {
+			global $wp_version;
+			Booking_Logger::info(
+				'Plugin activated successfully',
+				array(
+					'version'     => BOOKING_SYSTEM_VERSION,
+					'php_version' => PHP_VERSION,
+					'wp_version'  => $wp_version,
+				)
+			);
+		} else {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( '[Booking System] Plugin activated; database tables created/verified (Part 1).' );
+			error_log( '[Booking System] WARNING: Log directory not writable' );
 		}
 
 		// Flush rewrite rules (for dashboard endpoints).

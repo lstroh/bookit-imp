@@ -43,6 +43,7 @@ class Booking_Loader {
 		$this->define_rewrite_rules();
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
+		$this->define_cron_hooks();
 	}
 
 	/**
@@ -51,6 +52,9 @@ class Booking_Loader {
 	 * @return void
 	 */
 	private function load_dependencies() {
+		// Logger (load early for use in other classes).
+		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-logger.php';
+
 		// Database management.
 		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-database.php';
 
@@ -177,6 +181,16 @@ class Booking_Loader {
 		add_action( 'wp_enqueue_scripts', array( $plugin_public, 'enqueue_scripts' ) );
 
 		// Public hooks will be added in later sprints.
+	}
+
+	/**
+	 * Register cron hooks.
+	 *
+	 * @return void
+	 */
+	private function define_cron_hooks() {
+		// Log cleanup cron
+		add_action( 'booking_system_cleanup_logs', array( 'Booking_Logger', 'cleanup_old_logs' ) );
 	}
 
 	/**

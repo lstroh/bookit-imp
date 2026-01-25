@@ -38,8 +38,12 @@ class Booking_Session {
 			session_name( 'booking_dashboard_session' );
 			session_start();
 
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( '[Booking System][Session] Session started. ID: ' . session_id() );
+			Booking_Logger::info(
+				'Session started',
+				array(
+					'session_id' => session_id(),
+				)
+			);
 		}
 	}
 
@@ -128,8 +132,7 @@ class Booking_Session {
 
 		session_destroy();
 
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-		error_log( '[Booking System][Session] Session destroyed' );
+		Booking_Logger::info( 'Session destroyed' );
 	}
 
 	/**
@@ -141,8 +144,7 @@ class Booking_Session {
 		self::init();
 		session_regenerate_id( true );
 
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-		error_log( '[Booking System][Session] Session ID regenerated' );
+		Booking_Logger::info( 'Session ID regenerated' );
 	}
 
 	/**

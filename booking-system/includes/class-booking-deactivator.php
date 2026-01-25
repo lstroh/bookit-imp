@@ -37,7 +37,7 @@ class Booking_Deactivator {
 		flush_rewrite_rules();
 
 		// Log deactivation.
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-		error_log( '[Booking System] Plugin deactivated at ' . current_time( 'mysql' ) );
+		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-logger.php';
+		Booking_Logger::info( 'Plugin deactivated', array( 'deactivated_at' => current_time( 'mysql' ) ) );
 	}
 }

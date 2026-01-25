@@ -38,19 +38,33 @@ class Booking_Auth {
 		);
 
 		if ( ! $staff ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( '[Booking System][Auth] Login failed: Email not found - ' . $email );
+			Booking_Logger::warning(
+				'Login failed: Email not found',
+				array(
+					'email' => $email,
+				)
+			);
 			return false;
 		}
 
 		if ( empty( $staff['password_hash'] ) || ! password_verify( $password, $staff['password_hash'] ) ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( '[Booking System][Auth] Login failed: Invalid password for - ' . $email );
+			Booking_Logger::warning(
+				'Login failed: Invalid password',
+				array(
+					'email' => $email,
+				)
+			);
 			return false;
 		}
 
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-		error_log( '[Booking System][Auth] Login successful: ' . $email . ' (ID: ' . $staff['id'] . ')' );
+		Booking_Logger::info(
+			'User login successful',
+			array(
+				'staff_id' => $staff['id'],
+				'email'    => $email,
+				'role'     => $staff['role'],
+			)
+		);
 		return $staff;
 	}
 
@@ -73,9 +87,6 @@ class Booking_Auth {
 		);
 		Booking_Session::set( 'is_logged_in', true );
 		Booking_Session::update_activity();
-
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-		error_log( '[Booking System][Auth] Session created for staff ID: ' . (int) $staff['id'] );
 	}
 
 	/**
@@ -87,8 +98,12 @@ class Booking_Auth {
 		$staff_id = Booking_Session::get( 'staff_id', 'unknown' );
 		Booking_Session::destroy();
 
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-		error_log( '[Booking System][Auth] User logged out: ' . $staff_id );
+		Booking_Logger::info(
+			'User logged out',
+			array(
+				'staff_id' => $staff_id,
+			)
+		);
 	}
 
 	/**
