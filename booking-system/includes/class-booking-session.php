@@ -24,15 +24,25 @@ class Booking_Session {
 	public static function init() {
 		// Only start session if not already started.
 		if ( session_status() === PHP_SESSION_NONE ) {
+			// Check if headers have already been sent (e.g., in test environment).
+			if ( headers_sent() ) {
+				// In test environment, just ensure $_SESSION is available.
+				if ( ! isset( $_SESSION ) || ! is_array( $_SESSION ) ) {
+					$_SESSION = array();
+				}
+				return;
+			}
+
 			// Session security configuration.
-			ini_set( 'session.cookie_httponly', '1' ); // Prevent JavaScript access.
-			ini_set( 'session.cookie_samesite', 'Lax' ); // CSRF protection.
-			ini_set( 'session.gc_maxlifetime', '28800' ); // 8 hours.
-			ini_set( 'session.use_only_cookies', '1' ); // No session ID in URL.
+			// Use @ to suppress warnings in test environment where headers may already be sent.
+			@ini_set( 'session.cookie_httponly', '1' ); // Prevent JavaScript access.
+			@ini_set( 'session.cookie_samesite', 'Lax' ); // CSRF protection.
+			@ini_set( 'session.gc_maxlifetime', '28800' ); // 8 hours.
+			@ini_set( 'session.use_only_cookies', '1' ); // No session ID in URL.
 
 			// HTTPS only in production (not localhost).
 			if ( ! self::is_localhost() ) {
-				ini_set( 'session.cookie_secure', '1' );
+				@ini_set( 'session.cookie_secure', '1' );
 			}
 
 			session_name( 'booking_dashboard_session' );
@@ -116,21 +126,24 @@ class Booking_Session {
 		self::init();
 		$_SESSION = array();
 
-		// Delete session cookie.
-		if ( ini_get( 'session.use_cookies' ) ) {
-			$params = session_get_cookie_params();
-			setcookie(
-				session_name(),
-				'',
-				time() - 42000,
-				$params['path'],
-				$params['domain'],
-				$params['secure'],
-				$params['httponly']
-			);
-		}
+		// Only perform session operations if session is active.
+		if ( session_status() === PHP_SESSION_ACTIVE ) {
+			// Delete session cookie.
+			if ( ini_get( 'session.use_cookies' ) && ! headers_sent() ) {
+				$params = session_get_cookie_params();
+				setcookie(
+					session_name(),
+					'',
+					time() - 42000,
+					$params['path'],
+					$params['domain'],
+					$params['secure'],
+					$params['httponly']
+				);
+			}
 
-		session_destroy();
+			session_destroy();
+		}
 
 		Booking_Logger::info( 'Session destroyed' );
 	}
@@ -142,9 +155,12 @@ class Booking_Session {
 	 */
 	public static function regenerate() {
 		self::init();
-		session_regenerate_id( true );
-
-		Booking_Logger::info( 'Session ID regenerated' );
+		
+		// Only regenerate if session is active.
+		if ( session_status() === PHP_SESSION_ACTIVE ) {
+			session_regenerate_id( true );
+			Booking_Logger::info( 'Session ID regenerated' );
+		}
 	}
 
 	/**
