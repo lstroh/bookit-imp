@@ -13,11 +13,44 @@ use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 class Test_Admin_Menu extends TestCase {
 
 	/**
+	 * Admin user ID for testing.
+	 *
+	 * @var int
+	 */
+	private $admin_user_id;
+
+	/**
 	 * Set up test.
 	 */
 	public function setUp(): void {
 		parent::setUp();
 		require_once BOOKING_SYSTEM_PATH . 'admin/class-booking-admin-menu.php';
+		
+		// Create an admin user and set as current user for capability checks.
+		$this->admin_user_id = wp_insert_user(
+			array(
+				'user_login' => 'test_admin_' . wp_generate_password( 6, false ),
+				'user_pass'  => wp_generate_password(),
+				'user_email' => 'test_admin_' . wp_generate_password( 6, false ) . '@example.com',
+				'role'       => 'administrator',
+			)
+		);
+		
+		if ( ! is_wp_error( $this->admin_user_id ) ) {
+			wp_set_current_user( $this->admin_user_id );
+		}
+	}
+
+	/**
+	 * Tear down test.
+	 */
+	public function tearDown(): void {
+		// Clean up test user.
+		if ( $this->admin_user_id && ! is_wp_error( $this->admin_user_id ) ) {
+			wp_delete_user( $this->admin_user_id );
+		}
+		wp_set_current_user( 0 );
+		parent::tearDown();
 	}
 
 	/**
