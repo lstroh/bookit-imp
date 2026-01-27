@@ -10,26 +10,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-session.php';
-require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-auth.php';
+require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-session.php';
+require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-auth.php';
 
-Booking_Auth::require_auth();
+Bookit_Auth::require_auth();
 
-$staff = Booking_Auth::get_current_staff();
+$staff = Bookit_Auth::get_current_staff();
 
 get_header();
 ?>
 
 <div class="booking-dashboard-wrapper">
 	<div class="booking-dashboard-header">
-		<h1><?php echo esc_html__( 'Booking System Dashboard', 'booking-system' ); ?></h1>
+		<h1><?php echo esc_html__( 'Booking System Dashboard', 'bookit-booking-system' ); ?></h1>
 		<div class="booking-dashboard-user">
 			<span>
 				<?php
 				echo esc_html(
 					sprintf(
 						/* translators: %s: staff display name */
-						__( 'Welcome, %s', 'booking-system' ),
+						__( 'Welcome, %s', 'bookit-booking-system' ),
 						isset( $staff['name'] ) ? $staff['name'] : ''
 					)
 				);
@@ -38,36 +38,36 @@ get_header();
 			<span class="booking-user-role">
 				<?php echo esc_html( isset( $staff['role'] ) ? '(' . ucfirst( $staff['role'] ) . ')' : '' ); ?>
 			</span>
-			<a href="<?php echo esc_url( home_url( '/booking-dashboard/logout/' ) ); ?>" class="booking-logout-link">
-				<?php echo esc_html__( 'Logout', 'booking-system' ); ?>
+			<a href="<?php echo esc_url( home_url( '/bookit-dashboard/logout/' ) ); ?>" class="booking-logout-link">
+				<?php echo esc_html__( 'Logout', 'bookit-booking-system' ); ?>
 			</a>
 		</div>
 	</div>
 
 	<div class="booking-dashboard-content">
-		<h2><?php echo esc_html__( 'Dashboard Home', 'booking-system' ); ?></h2>
-		<p><?php echo esc_html__( 'You are successfully logged into the dashboard!', 'booking-system' ); ?></p>
+		<h2><?php echo esc_html__( 'Dashboard Home', 'bookit-booking-system' ); ?></h2>
+		<p><?php echo esc_html__( 'You are successfully logged into the dashboard!', 'bookit-booking-system' ); ?></p>
 
 		<div class="booking-dashboard-stats">
 			<div class="booking-stat-card">
-				<h3><?php echo esc_html__( "Today's Bookings", 'booking-system' ); ?></h3>
+				<h3><?php echo esc_html__( "Today's Bookings", 'bookit-booking-system' ); ?></h3>
 				<p class="stat-number">0</p>
 			</div>
 			<div class="booking-stat-card">
-				<h3><?php echo esc_html__( 'Pending Bookings', 'booking-system' ); ?></h3>
+				<h3><?php echo esc_html__( 'Pending Bookings', 'bookit-booking-system' ); ?></h3>
 				<p class="stat-number">0</p>
 			</div>
 			<div class="booking-stat-card">
-				<h3><?php echo esc_html__( 'Total Revenue (This Month)', 'booking-system' ); ?></h3>
+				<h3><?php echo esc_html__( 'Total Revenue (This Month)', 'bookit-booking-system' ); ?></h3>
 				<p class="stat-number">£0.00</p>
 			</div>
 		</div>
 
-		<p><em><?php echo esc_html__( 'Note: Dashboard features will be implemented in Sprint 4. This is the authentication foundation.', 'booking-system' ); ?></em></p>
+		<p><em><?php echo esc_html__( 'Note: Dashboard features will be implemented in Sprint 4. This is the authentication foundation.', 'bookit-booking-system' ); ?></em></p>
 	</div>
 </div>
 
-<link rel="stylesheet" href="<?php echo esc_url( BOOKING_SYSTEM_URL . 'dashboard/css/dashboard-auth.css' ); ?>">
+<link rel="stylesheet" href="<?php echo esc_url( BOOKIT_PLUGIN_URL . 'dashboard/css/dashboard-auth.css' ); ?>">
 
 <?php
 get_footer();

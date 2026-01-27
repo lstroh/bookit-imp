@@ -2,8 +2,8 @@
 /**
  * Authentication for dashboard users.
  *
- * @package    Booking_System
- * @subpackage Booking_System/includes
+ * @package    Bookit_Booking_System
+ * @subpackage Bookit_Booking_System/includes
  */
 
 // If this file is called directly, abort.
@@ -14,7 +14,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Authentication class.
  */
-class Booking_Auth {
+class Bookit_Auth {
 
 	/**
 	 * Authenticate user credentials.
@@ -38,7 +38,7 @@ class Booking_Auth {
 		);
 
 		if ( ! $staff ) {
-			Booking_Logger::warning(
+			Bookit_Logger::warning(
 				'Login failed: Email not found',
 				array(
 					'email' => $email,
@@ -48,7 +48,7 @@ class Booking_Auth {
 		}
 
 		if ( empty( $staff['password_hash'] ) || ! password_verify( $password, $staff['password_hash'] ) ) {
-			Booking_Logger::warning(
+			Bookit_Logger::warning(
 				'Login failed: Invalid password',
 				array(
 					'email' => $email,
@@ -57,7 +57,7 @@ class Booking_Auth {
 			return false;
 		}
 
-		Booking_Logger::info(
+		Bookit_Logger::info(
 			'User login successful',
 			array(
 				'staff_id' => $staff['id'],
@@ -75,18 +75,18 @@ class Booking_Auth {
 	 * @return void
 	 */
 	public static function login( $staff ) {
-		Booking_Session::init();
-		Booking_Session::regenerate(); // Prevent session fixation.
+		Bookit_Session::init();
+		Bookit_Session::regenerate(); // Prevent session fixation.
 
-		Booking_Session::set( 'staff_id', (int) $staff['id'] );
-		Booking_Session::set( 'staff_email', (string) $staff['email'] );
-		Booking_Session::set( 'staff_role', (string) $staff['role'] );
-		Booking_Session::set(
+		Bookit_Session::set( 'staff_id', (int) $staff['id'] );
+		Bookit_Session::set( 'staff_email', (string) $staff['email'] );
+		Bookit_Session::set( 'staff_role', (string) $staff['role'] );
+		Bookit_Session::set(
 			'staff_name',
 			trim( (string) $staff['first_name'] . ' ' . (string) $staff['last_name'] )
 		);
-		Booking_Session::set( 'is_logged_in', true );
-		Booking_Session::update_activity();
+		Bookit_Session::set( 'is_logged_in', true );
+		Bookit_Session::update_activity();
 	}
 
 	/**
@@ -95,10 +95,10 @@ class Booking_Auth {
 	 * @return void
 	 */
 	public static function logout() {
-		$staff_id = Booking_Session::get( 'staff_id', 'unknown' );
-		Booking_Session::destroy();
+		$staff_id = Bookit_Session::get( 'staff_id', 'unknown' );
+		Bookit_Session::destroy();
 
-		Booking_Logger::info(
+		Bookit_Logger::info(
 			'User logged out',
 			array(
 				'staff_id' => $staff_id,
@@ -112,17 +112,17 @@ class Booking_Auth {
 	 * @return bool True if logged in.
 	 */
 	public static function is_logged_in() {
-		Booking_Session::init();
+		Bookit_Session::init();
 
-		if ( Booking_Session::is_expired() ) {
+		if ( Bookit_Session::is_expired() ) {
 			self::logout();
 			return false;
 		}
 
-		$is_logged_in = (bool) Booking_Session::get( 'is_logged_in', false );
+		$is_logged_in = (bool) Bookit_Session::get( 'is_logged_in', false );
 
 		if ( $is_logged_in ) {
-			Booking_Session::update_activity();
+			Bookit_Session::update_activity();
 		}
 
 		return $is_logged_in;
@@ -139,10 +139,10 @@ class Booking_Auth {
 		}
 
 		return array(
-			'id'    => Booking_Session::get( 'staff_id' ),
-			'email' => Booking_Session::get( 'staff_email' ),
-			'role'  => Booking_Session::get( 'staff_role' ),
-			'name'  => Booking_Session::get( 'staff_name' ),
+			'id'    => Bookit_Session::get( 'staff_id' ),
+			'email' => Bookit_Session::get( 'staff_email' ),
+			'role'  => Bookit_Session::get( 'staff_role' ),
+			'name'  => Bookit_Session::get( 'staff_name' ),
 		);
 	}
 
@@ -156,7 +156,7 @@ class Booking_Auth {
 			return false;
 		}
 
-		return Booking_Session::get( 'staff_role' ) === 'admin';
+		return Bookit_Session::get( 'staff_role' ) === 'admin';
 	}
 
 	/**
@@ -172,7 +172,7 @@ class Booking_Auth {
 				$redirect_to = wp_unslash( $_SERVER['REQUEST_URI'] );
 			}
 
-			$login_url = home_url( '/booking-dashboard/?redirect_to=' . rawurlencode( $redirect_to ) );
+			$login_url = home_url( '/bookit-dashboard/?redirect_to=' . rawurlencode( $redirect_to ) );
 			wp_redirect( $login_url );
 			exit;
 		}
@@ -188,4 +188,3 @@ class Booking_Auth {
 		return password_hash( $password, PASSWORD_BCRYPT, array( 'cost' => 12 ) );
 	}
 }
-

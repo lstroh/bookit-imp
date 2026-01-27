@@ -2,7 +2,7 @@
 /**
  * Integration tests - Test components working together.
  *
- * @package Booking_System
+ * @package Bookit_Booking_System
  */
 
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
@@ -19,10 +19,10 @@ class Test_Integration extends TestCase {
 		parent::setUp();
 		
 		// Load all necessary classes
-		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-logger.php';
-		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-auth.php';
-		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-session.php';
-		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-database.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-logger.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-auth.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-session.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-database.php';
 	}
 
 	/**
@@ -32,8 +32,8 @@ class Test_Integration extends TestCase {
 	 */
 	public function test_plugin_activation_flow() {
 		// 1. Verify plugin constants
-		$this->assertTrue( defined( 'BOOKING_SYSTEM_VERSION' ) );
-		$this->assertTrue( defined( 'BOOKING_SYSTEM_PATH' ) );
+		$this->assertTrue( defined( 'BOOKIT_VERSION' ) );
+		$this->assertTrue( defined( 'BOOKIT_PLUGIN_DIR' ) );
 		
 		// 2. Verify database tables created
 		global $wpdb;
@@ -57,13 +57,13 @@ class Test_Integration extends TestCase {
 		}
 		
 		// 3. Verify log directory created and secure
-		$log_dir = Booking_Logger::get_log_directory();
+		$log_dir = Bookit_Logger::get_log_directory();
 		$this->assertTrue( file_exists( $log_dir ) );
 		$this->assertTrue( file_exists( $log_dir . '/.htaccess' ) );
 		$this->assertTrue( file_exists( $log_dir . '/index.php' ) );
 		
 		// 4. Verify default settings created
-		$settings = get_option( 'booking_system_settings' );
+		$settings = get_option( 'bookit_settings' );
 		$this->assertIsArray( $settings );
 		$this->assertEquals( 'Europe/London', $settings['timezone'] );
 		$this->assertEquals( 'GBP', $settings['currency'] );
@@ -80,7 +80,7 @@ class Test_Integration extends TestCase {
 		
 		// 1. Create staff member
 		$password      = 'integration_test_' . time();
-		$password_hash = Booking_Auth::hash_password( $password );
+		$password_hash = Bookit_Auth::hash_password( $password );
 		
 		$result = $wpdb->insert(
 			$table_name,
@@ -103,17 +103,17 @@ class Test_Integration extends TestCase {
 		$this->assertEquals( 60, strlen( $password_hash ) );
 		
 		// 3. Test authentication succeeds
-		$auth_result = Booking_Auth::authenticate( 'integration@test.com', $password );
+		$auth_result = Bookit_Auth::authenticate( 'integration@test.com', $password );
 		$this->assertIsArray( $auth_result );
 		$this->assertEquals( 'integration@test.com', $auth_result['email'] );
 		$this->assertEquals( 'admin', $auth_result['role'] );
 		
 		// 4. Test authentication fails with wrong password
-		$failed_auth = Booking_Auth::authenticate( 'integration@test.com', 'wrongpassword' );
+		$failed_auth = Bookit_Auth::authenticate( 'integration@test.com', 'wrongpassword' );
 		$this->assertFalse( $failed_auth );
 		
 		// 5. Verify logging captured authentication events
-		$log_file = Booking_Logger::get_todays_log_file();
+		$log_file = Bookit_Logger::get_todays_log_file();
 		$this->assertTrue( file_exists( $log_file ) );
 		
 		$log_contents = file_get_contents( $log_file );
@@ -198,9 +198,9 @@ class Test_Integration extends TestCase {
 			'normal_field'    => 'This should not be redacted',
 		);
 		
-		Booking_Logger::info( 'Security test log', $sensitive_data );
+		Bookit_Logger::info( 'Security test log', $sensitive_data );
 		
-		$log_file     = Booking_Logger::get_todays_log_file();
+		$log_file     = Bookit_Logger::get_todays_log_file();
 		$log_contents = file_get_contents( $log_file );
 		
 		// Verify redaction
@@ -215,8 +215,8 @@ class Test_Integration extends TestCase {
 		$this->assertStringContainsString( 'test@example.com', $log_contents );
 		
 		// 2. Verify log directory is secure
-		$log_dir   = Booking_Logger::get_log_directory();
-		$is_secure = Booking_Logger::is_secure_location();
+		$log_dir   = Bookit_Logger::get_log_directory();
+		$is_secure = Bookit_Logger::is_secure_location();
 		
 		// Should be outside web root OR protected
 		if ( ! $is_secure ) {
@@ -235,7 +235,7 @@ class Test_Integration extends TestCase {
 		global $menu, $submenu;
 		
 		// Load admin menu class
-		require_once BOOKING_SYSTEM_PATH . 'admin/class-booking-admin-menu.php';
+		require_once BOOKIT_PLUGIN_DIR . 'admin/class-bookit-admin-menu.php';
 		
 		// Simulate admin context
 		set_current_screen( 'dashboard' );
@@ -259,8 +259,8 @@ class Test_Integration extends TestCase {
 		$this->assertTrue( $found_main_menu, 'Main admin menu should be registered' );
 		
 		// Verify submenus exist
-		if ( isset( $submenu['booking-system'] ) ) {
-			$this->assertGreaterThan( 5, count( $submenu['booking-system'] ), 'Should have multiple submenu items' );
+		if ( isset( $submenu['bookit-booking-system'] ) ) {
+			$this->assertGreaterThan( 5, count( $submenu['bookit-booking-system'] ), 'Should have multiple submenu items' );
 		}
 		
 		// Cleanup
@@ -287,12 +287,12 @@ class Test_Integration extends TestCase {
 		$this->assertNotEmpty( $wpdb->last_error, 'Should have error message' );
 		
 		// 2. Verify plugin continues functioning (no fatal error)
-		$this->assertTrue( defined( 'BOOKING_SYSTEM_VERSION' ) );
+		$this->assertTrue( defined( 'BOOKIT_VERSION' ) );
 		
 		// 3. Test logger handles errors gracefully
-		Booking_Logger::error( 'Test error logging', array( 'error' => $wpdb->last_error ) );
+		Bookit_Logger::error( 'Test error logging', array( 'error' => $wpdb->last_error ) );
 		
-		$log_file = Booking_Logger::get_todays_log_file();
+		$log_file = Bookit_Logger::get_todays_log_file();
 		$this->assertTrue( file_exists( $log_file ) );
 	}
 
@@ -330,7 +330,7 @@ class Test_Integration extends TestCase {
 			$table_name,
 			array(
 				'email'         => 'teststaff@example.com',
-				'password_hash' => Booking_Auth::hash_password( 'password' ),
+				'password_hash' => Bookit_Auth::hash_password( 'password' ),
 				'first_name'    => 'Test',
 				'last_name'     => 'Staff',
 				'role'          => 'staff',

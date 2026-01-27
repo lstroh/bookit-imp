@@ -11,6 +11,6 @@
     "WP_ENVIRONMENT_TYPE": "local"
   },
   "mappings": {
-    "wp-content/plugins/booking-system": "."
+    "wp-content/plugins/bookit-booking-system": "."
   }
 }

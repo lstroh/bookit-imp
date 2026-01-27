@@ -2,8 +2,8 @@
 /**
  * The core plugin class.
  *
- * @package    Booking_System
- * @subpackage Booking_System/includes
+ * @package    Bookit_Booking_System
+ * @subpackage Bookit_Booking_System/includes
  */
 
 // If this file is called directly, abort.
@@ -14,7 +14,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * The core plugin class.
  */
-class Booking_Loader {
+class Bookit_Loader {
 
 	/**
 	 * The unique identifier of this plugin.
@@ -36,8 +36,8 @@ class Booking_Loader {
 	 * @return void
 	 */
 	public function __construct() {
-		$this->version     = defined( 'BOOKING_SYSTEM_VERSION' ) ? BOOKING_SYSTEM_VERSION : '1.0.0';
-		$this->plugin_name = 'booking-system';
+		$this->version     = defined( 'BOOKIT_VERSION' ) ? BOOKIT_VERSION : '1.0.0';
+		$this->plugin_name = 'bookit-booking-system';
 
 		$this->load_dependencies();
 		$this->define_rewrite_rules();
@@ -53,20 +53,20 @@ class Booking_Loader {
 	 */
 	private function load_dependencies() {
 		// Logger (load early for use in other classes).
-		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-logger.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-logger.php';
 
 		// Database management.
-		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-database.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-database.php';
 
 		// Dashboard authentication/session.
-		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-session.php';
-		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-auth.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-session.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-auth.php';
 
 		// Admin-specific functionality.
-		require_once BOOKING_SYSTEM_PATH . 'admin/class-booking-admin.php';
+		require_once BOOKIT_PLUGIN_DIR . 'admin/class-bookit-admin.php';
 
 		// Public-facing functionality.
-		require_once BOOKING_SYSTEM_PATH . 'public/class-booking-public.php';
+		require_once BOOKIT_PLUGIN_DIR . 'public/class-bookit-public.php';
 	}
 
 	/**
@@ -88,22 +88,22 @@ class Booking_Loader {
 	public function add_dashboard_rewrite_rules() {
 		// Dashboard login page.
 		add_rewrite_rule(
-			'^booking-dashboard/?$',
-			'index.php?booking_dashboard_page=login',
+			'^bookit-dashboard/?$',
+			'index.php?bookit_dashboard_page=login',
 			'top'
 		);
 
 		// Dashboard home page.
 		add_rewrite_rule(
-			'^booking-dashboard/home/?$',
-			'index.php?booking_dashboard_page=home',
+			'^bookit-dashboard/home/?$',
+			'index.php?bookit_dashboard_page=home',
 			'top'
 		);
 
 		// Dashboard logout.
 		add_rewrite_rule(
-			'^booking-dashboard/logout/?$',
-			'index.php?booking_dashboard_page=logout',
+			'^bookit-dashboard/logout/?$',
+			'index.php?bookit_dashboard_page=logout',
 			'top'
 		);
 	}
@@ -115,7 +115,7 @@ class Booking_Loader {
 	 * @return array Modified query vars.
 	 */
 	public function add_dashboard_query_vars( $vars ) {
-		$vars[] = 'booking_dashboard_page';
+		$vars[] = 'bookit_dashboard_page';
 		return $vars;
 	}
 
@@ -125,7 +125,7 @@ class Booking_Loader {
 	 * @return void
 	 */
 	public function dashboard_template_redirect() {
-		$page = get_query_var( 'booking_dashboard_page', '' );
+		$page = get_query_var( 'bookit_dashboard_page', '' );
 
 		if ( empty( $page ) ) {
 			return;
@@ -133,19 +133,19 @@ class Booking_Loader {
 
 		switch ( $page ) {
 			case 'login':
-				require_once BOOKING_SYSTEM_PATH . 'dashboard/index.php';
+				require_once BOOKIT_PLUGIN_DIR . 'dashboard/index.php';
 				exit;
 
 			case 'home':
-				require_once BOOKING_SYSTEM_PATH . 'dashboard/dashboard-home.php';
+				require_once BOOKIT_PLUGIN_DIR . 'dashboard/dashboard-home.php';
 				exit;
 
 			case 'logout':
-				require_once BOOKING_SYSTEM_PATH . 'dashboard/logout.php';
+				require_once BOOKIT_PLUGIN_DIR . 'dashboard/logout.php';
 				exit;
 
 			default:
-				wp_redirect( home_url( '/booking-dashboard/' ) );
+				wp_redirect( home_url( '/bookit-dashboard/' ) );
 				exit;
 		}
 	}
@@ -156,14 +156,14 @@ class Booking_Loader {
 	 * @return void
 	 */
 	private function define_admin_hooks() {
-		$plugin_admin = new Booking_Admin( $this->get_plugin_name(), $this->get_version() );
+		$plugin_admin = new Bookit_Admin( $this->get_plugin_name(), $this->get_version() );
 
 		add_action( 'admin_enqueue_scripts', array( $plugin_admin, 'enqueue_styles' ) );
 		add_action( 'admin_enqueue_scripts', array( $plugin_admin, 'enqueue_scripts' ) );
 
 		// Load admin menu class
-		require_once BOOKING_SYSTEM_PATH . 'admin/class-booking-admin-menu.php';
-		$admin_menu = new Booking_Admin_Menu();
+		require_once BOOKIT_PLUGIN_DIR . 'admin/class-bookit-admin-menu.php';
+		$admin_menu = new Bookit_Admin_Menu();
 
 		// Register admin menu
 		add_action( 'admin_menu', array( $admin_menu, 'register_menu' ) );
@@ -175,7 +175,7 @@ class Booking_Loader {
 	 * @return void
 	 */
 	private function define_public_hooks() {
-		$plugin_public = new Booking_Public( $this->get_plugin_name(), $this->get_version() );
+		$plugin_public = new Bookit_Public( $this->get_plugin_name(), $this->get_version() );
 
 		add_action( 'wp_enqueue_scripts', array( $plugin_public, 'enqueue_styles' ) );
 		add_action( 'wp_enqueue_scripts', array( $plugin_public, 'enqueue_scripts' ) );
@@ -190,7 +190,7 @@ class Booking_Loader {
 	 */
 	private function define_cron_hooks() {
 		// Log cleanup cron
-		add_action( 'booking_system_cleanup_logs', array( 'Booking_Logger', 'cleanup_old_logs' ) );
+		add_action( 'bookit_cleanup_logs', array( 'Bookit_Logger', 'cleanup_old_logs' ) );
 	}
 
 	/**

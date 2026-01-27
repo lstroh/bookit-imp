@@ -2,7 +2,7 @@
 /**
  * Authentication tests.
  *
- * @package Booking_System
+ * @package Bookit_Booking_System
  */
 
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
@@ -25,8 +25,8 @@ class Test_Auth extends TestCase {
 	public function setUp(): void {
 		parent::setUp();
 		
-		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-auth.php';
-		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-session.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-auth.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-session.php';
 		
 		// Create test staff member
 		global $wpdb;
@@ -36,7 +36,7 @@ class Test_Auth extends TestCase {
 			$table_name,
 			array(
 				'email'         => 'test@example.com',
-				'password_hash' => Booking_Auth::hash_password( 'testpassword123' ),
+				'password_hash' => Bookit_Auth::hash_password( 'testpassword123' ),
 				'first_name'    => 'Test',
 				'last_name'     => 'User',
 				'role'          => 'staff',
@@ -73,7 +73,7 @@ class Test_Auth extends TestCase {
 	 */
 	public function test_password_hashing() {
 		$password = 'testpassword123';
-		$hash     = Booking_Auth::hash_password( $password );
+		$hash     = Bookit_Auth::hash_password( $password );
 		
 		// Hash should start with $2y$ (bcrypt)
 		$this->assertStringStartsWith( '$2y$', $hash );
@@ -89,7 +89,7 @@ class Test_Auth extends TestCase {
 	 * Test successful authentication.
 	 */
 	public function test_successful_authentication() {
-		$result = Booking_Auth::authenticate( 'test@example.com', 'testpassword123' );
+		$result = Bookit_Auth::authenticate( 'test@example.com', 'testpassword123' );
 		
 		$this->assertIsArray( $result );
 		$this->assertArrayHasKey( 'id', $result );
@@ -101,7 +101,7 @@ class Test_Auth extends TestCase {
 	 * Test failed authentication with wrong password.
 	 */
 	public function test_failed_authentication_wrong_password() {
-		$result = Booking_Auth::authenticate( 'test@example.com', 'wrongpassword' );
+		$result = Bookit_Auth::authenticate( 'test@example.com', 'wrongpassword' );
 		
 		$this->assertFalse( $result );
 	}
@@ -110,7 +110,7 @@ class Test_Auth extends TestCase {
 	 * Test failed authentication with non-existent email.
 	 */
 	public function test_failed_authentication_invalid_email() {
-		$result = Booking_Auth::authenticate( 'nonexistent@example.com', 'testpassword123' );
+		$result = Bookit_Auth::authenticate( 'nonexistent@example.com', 'testpassword123' );
 		
 		$this->assertFalse( $result );
 	}
@@ -132,7 +132,7 @@ class Test_Auth extends TestCase {
 		);
 		
 		// Authentication should fail
-		$result = Booking_Auth::authenticate( 'test@example.com', 'testpassword123' );
+		$result = Bookit_Auth::authenticate( 'test@example.com', 'testpassword123' );
 		$this->assertFalse( $result );
 		
 		// Reset to active
@@ -149,7 +149,7 @@ class Test_Auth extends TestCase {
 	 * Test get current staff when not logged in.
 	 */
 	public function test_get_current_staff_not_logged_in() {
-		$staff = Booking_Auth::get_current_staff();
+		$staff = Bookit_Auth::get_current_staff();
 		$this->assertNull( $staff );
 	}
 
@@ -158,6 +158,6 @@ class Test_Auth extends TestCase {
 	 */
 	public function test_is_admin_method() {
 		// Not logged in - should be false
-		$this->assertFalse( Booking_Auth::is_admin() );
+		$this->assertFalse( Bookit_Auth::is_admin() );
 	}
 }

@@ -12,20 +12,20 @@ if ( ! defined( 'WPINC' ) ) {
 
 // Check user capabilities
 if ( ! current_user_can( 'manage_options' ) ) {
-	wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'booking-system' ) );
+	wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'bookit-booking-system' ) );
 }
 ?>
 
 <div class="wrap">
-	<h1><?php esc_html_e( 'Calendar View', 'booking-system' ); ?></h1>
+	<h1><?php esc_html_e( 'Calendar View', 'bookit-booking-system' ); ?></h1>
 	<hr class="wp-header-end">
 
 	<div class="booking-admin-notice notice notice-info">
 		<p>
-			<strong><?php esc_html_e( 'Sprint 0: Foundation Phase', 'booking-system' ); ?></strong>
+			<strong><?php esc_html_e( 'Sprint 0: Foundation Phase', 'bookit-booking-system' ); ?></strong>
 		</p>
 		<p>
-			<?php esc_html_e( 'Calendar view will be implemented in Sprint 2. This will show bookings in a visual calendar interface.', 'booking-system' ); ?>
+			<?php esc_html_e( 'Calendar view will be implemented in Sprint 2. This will show bookings in a visual calendar interface.', 'bookit-booking-system' ); ?>
 		</p>
 	</div>
 </div>

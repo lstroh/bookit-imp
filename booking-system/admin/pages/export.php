@@ -12,20 +12,20 @@ if ( ! defined( 'WPINC' ) ) {
 
 // Check user capabilities
 if ( ! current_user_can( 'manage_options' ) ) {
-	wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'booking-system' ) );
+	wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'bookit-booking-system' ) );
 }
 ?>
 
 <div class="wrap">
-	<h1><?php esc_html_e( 'Export Customers', 'booking-system' ); ?></h1>
+	<h1><?php esc_html_e( 'Export Customers', 'bookit-booking-system' ); ?></h1>
 	<hr class="wp-header-end">
 
 	<div class="booking-admin-notice notice notice-info">
 		<p>
-			<strong><?php esc_html_e( 'Sprint 0: Foundation Phase', 'booking-system' ); ?></strong>
+			<strong><?php esc_html_e( 'Sprint 0: Foundation Phase', 'bookit-booking-system' ); ?></strong>
 		</p>
 		<p>
-			<?php esc_html_e( 'Customer export functionality will be implemented in Sprint 2 (GDPR compliance).', 'booking-system' ); ?>
+			<?php esc_html_e( 'Customer export functionality will be implemented in Sprint 2 (GDPR compliance).', 'bookit-booking-system' ); ?>
 		</p>
 	</div>
 </div>

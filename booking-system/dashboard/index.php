@@ -2,7 +2,7 @@
 /**
  * Dashboard login page.
  *
- * @package Booking_System
+ * @package Bookit_Booking_System
  */
 
 // If this file is called directly, abort.
@@ -10,12 +10,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-session.php';
-require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-auth.php';
+require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-session.php';
+require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-auth.php';
 
 // If already logged in, redirect to dashboard.
-if ( Booking_Auth::is_logged_in() ) {
-	wp_redirect( home_url( '/booking-dashboard/home/' ) );
+if ( Bookit_Auth::is_logged_in() ) {
+	wp_redirect( home_url( '/bookit-dashboard/home/' ) );
 	exit;
 }
 
@@ -35,14 +35,14 @@ if ( 'POST' === $_SERVER['REQUEST_METHOD'] && isset( $_POST['booking_login_submi
 		if ( empty( $email ) || empty( $password ) ) {
 			$error_message = 'Please enter both email and password.';
 		} else {
-			$staff = Booking_Auth::authenticate( $email, $password );
+			$staff = Bookit_Auth::authenticate( $email, $password );
 
 			if ( $staff ) {
-				Booking_Auth::login( $staff );
+				Bookit_Auth::login( $staff );
 
 				$redirect_to = isset( $_GET['redirect_to'] ) ? (string) wp_unslash( $_GET['redirect_to'] ) : '';
 				if ( empty( $redirect_to ) ) {
-					$redirect_to = home_url( '/booking-dashboard/home/' );
+					$redirect_to = home_url( '/bookit-dashboard/home/' );
 				}
 
 				wp_redirect( $redirect_to );
@@ -60,8 +60,8 @@ get_header();
 <div class="booking-dashboard-login-wrapper">
 	<div class="booking-login-container">
 		<div class="booking-login-header">
-			<h1><?php echo esc_html__( 'Booking System', 'booking-system' ); ?></h1>
-			<p><?php echo esc_html__( 'Staff Dashboard Login', 'booking-system' ); ?></p>
+			<h1><?php echo esc_html__( 'Booking System', 'bookit-booking-system' ); ?></h1>
+			<p><?php echo esc_html__( 'Staff Dashboard Login', 'bookit-booking-system' ); ?></p>
 		</div>
 
 		<?php if ( ! empty( $error_message ) ) : ?>
@@ -74,7 +74,7 @@ get_header();
 			<?php wp_nonce_field( 'booking_login', 'booking_login_nonce' ); ?>
 
 			<div class="booking-form-group">
-				<label for="email"><?php echo esc_html__( 'Email Address', 'booking-system' ); ?></label>
+				<label for="email"><?php echo esc_html__( 'Email Address', 'bookit-booking-system' ); ?></label>
 				<input
 					type="email"
 					id="email"
@@ -86,7 +86,7 @@ get_header();
 			</div>
 
 			<div class="booking-form-group">
-				<label for="password"><?php echo esc_html__( 'Password', 'booking-system' ); ?></label>
+				<label for="password"><?php echo esc_html__( 'Password', 'bookit-booking-system' ); ?></label>
 				<input
 					type="password"
 					id="password"
@@ -97,25 +97,25 @@ get_header();
 
 			<div class="booking-form-group">
 				<button type="submit" name="booking_login_submit" class="booking-login-button">
-					<?php echo esc_html__( 'Log In', 'booking-system' ); ?>
+					<?php echo esc_html__( 'Log In', 'bookit-booking-system' ); ?>
 				</button>
 			</div>
 		</form>
 
 		<div class="booking-login-footer">
 			<p>
-				<a href="<?php echo esc_url( home_url( '/booking-dashboard/forgot-password/' ) ); ?>">
-					<?php echo esc_html__( 'Forgot password?', 'booking-system' ); ?>
+				<a href="<?php echo esc_url( home_url( '/bookit-dashboard/forgot-password/' ) ); ?>">
+					<?php echo esc_html__( 'Forgot password?', 'bookit-booking-system' ); ?>
 				</a>
 			</p>
 			<p class="booking-login-help">
-				<?php echo esc_html__( 'Need help? Contact your administrator.', 'booking-system' ); ?>
+				<?php echo esc_html__( 'Need help? Contact your administrator.', 'bookit-booking-system' ); ?>
 			</p>
 		</div>
 	</div>
 </div>
 
-<link rel="stylesheet" href="<?php echo esc_url( BOOKING_SYSTEM_URL . 'dashboard/css/dashboard-auth.css' ); ?>">
+<link rel="stylesheet" href="<?php echo esc_url( BOOKIT_PLUGIN_URL . 'dashboard/css/dashboard-auth.css' ); ?>">
 
 <?php
 get_footer();

@@ -2,8 +2,8 @@
 /**
  * Database setup and management.
  *
- * @package    Booking_System
- * @subpackage Booking_System/includes
+ * @package    Bookit_Booking_System
+ * @subpackage Bookit_Booking_System/includes
  */
 
 // If this file is called directly, abort.
@@ -14,7 +14,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Database setup and management class.
  */
-class Booking_Database {
+class Bookit_Database {
 
 	/**
 	 * Current database version.
@@ -38,9 +38,9 @@ class Booking_Database {
 		$table_prefix    = $wpdb->prefix;
 
 		// Get current database version.
-		$installed_version = get_option( 'booking_system_db_version', '0' );
+		$installed_version = get_option( 'bookit_db_version', '0' );
 
-		Booking_Logger::info(
+		Bookit_Logger::info(
 			'Database tables creation started',
 			array(
 				'db_version' => self::DB_VERSION,
@@ -67,16 +67,16 @@ class Booking_Database {
 			self::create_settings_table( $table_prefix, $charset_collate );
 
 			// Update database version.
-			update_option( 'booking_system_db_version', self::DB_VERSION );
+			update_option( 'bookit_db_version', self::DB_VERSION );
 
-			Booking_Logger::info(
+			Bookit_Logger::info(
 				'Database tables created successfully',
 				array(
 					'tables_created' => 10,
 				)
 			);
 		} else {
-			Booking_Logger::info(
+			Bookit_Logger::info(
 				'Database already at current version, skipping table creation',
 				array(
 					'current_version' => $installed_version,
@@ -433,4 +433,3 @@ class Booking_Database {
 		}
 	}
 }
-

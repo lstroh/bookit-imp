@@ -2,8 +2,8 @@
 /**
  * Session management for dashboard authentication.
  *
- * @package    Booking_System
- * @subpackage Booking_System/includes
+ * @package    Bookit_Booking_System
+ * @subpackage Bookit_Booking_System/includes
  */
 
 // If this file is called directly, abort.
@@ -14,7 +14,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Session management class.
  */
-class Booking_Session {
+class Bookit_Session {
 
 	/**
 	 * Initialize session with security settings.
@@ -45,10 +45,10 @@ class Booking_Session {
 				@ini_set( 'session.cookie_secure', '1' );
 			}
 
-			session_name( 'booking_dashboard_session' );
+			session_name( 'bookit_dashboard_session' );
 			session_start();
 
-			Booking_Logger::info(
+			Bookit_Logger::info(
 				'Session started',
 				array(
 					'session_id' => session_id(),
@@ -145,7 +145,7 @@ class Booking_Session {
 			session_destroy();
 		}
 
-		Booking_Logger::info( 'Session destroyed' );
+		Bookit_Logger::info( 'Session destroyed' );
 	}
 
 	/**
@@ -159,7 +159,7 @@ class Booking_Session {
 		// Only regenerate if session is active.
 		if ( session_status() === PHP_SESSION_ACTIVE ) {
 			session_regenerate_id( true );
-			Booking_Logger::info( 'Session ID regenerated' );
+			Bookit_Logger::info( 'Session ID regenerated' );
 		}
 	}
 
@@ -188,4 +188,3 @@ class Booking_Session {
 		self::set( 'last_activity', time() );
 	}
 }
-

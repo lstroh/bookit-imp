@@ -2,7 +2,7 @@
 /**
  * Logger tests.
  *
- * @package Booking_System
+ * @package Bookit_Booking_System
  */
 
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
@@ -17,14 +17,14 @@ class Test_Logger extends TestCase {
 	 */
 	public function setUp(): void {
 		parent::setUp();
-		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-logger.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-logger.php';
 	}
 
 	/**
 	 * Test logger can write to log file.
 	 */
 	public function test_logger_can_write() {
-		$result = Booking_Logger::test_logging();
+		$result = Bookit_Logger::test_logging();
 		$this->assertTrue( $result, 'Logger should be able to write to log file' );
 	}
 
@@ -32,7 +32,7 @@ class Test_Logger extends TestCase {
 	 * Test log directory is writable.
 	 */
 	public function test_log_directory_writable() {
-		$log_dir = Booking_Logger::get_log_directory();
+		$log_dir = Bookit_Logger::get_log_directory();
 		$this->assertTrue( is_writable( $log_dir ), 'Log directory should be writable' );
 	}
 
@@ -40,9 +40,9 @@ class Test_Logger extends TestCase {
 	 * Test logging creates file with correct name.
 	 */
 	public function test_log_file_naming() {
-		Booking_Logger::info( 'Test log entry' );
+		Bookit_Logger::info( 'Test log entry' );
 		
-		$log_file = Booking_Logger::get_todays_log_file();
+		$log_file = Bookit_Logger::get_todays_log_file();
 		$expected = 'bookings-' . date( 'Y-m-d' ) . '.log';
 		
 		$this->assertStringContainsString( $expected, $log_file );
@@ -62,9 +62,9 @@ class Test_Logger extends TestCase {
 			'normal_data' => 'This should not be redacted',
 		);
 		
-		Booking_Logger::info( $test_message, $test_context );
+		Bookit_Logger::info( $test_message, $test_context );
 		
-		$log_file     = Booking_Logger::get_todays_log_file();
+		$log_file     = Bookit_Logger::get_todays_log_file();
 		$log_contents = file_get_contents( $log_file );
 		
 		// Sensitive data should be redacted
@@ -82,11 +82,11 @@ class Test_Logger extends TestCase {
 	 * Test log levels work correctly.
 	 */
 	public function test_log_levels() {
-		Booking_Logger::info( 'Info message' );
-		Booking_Logger::warning( 'Warning message' );
-		Booking_Logger::error( 'Error message' );
+		Bookit_Logger::info( 'Info message' );
+		Bookit_Logger::warning( 'Warning message' );
+		Bookit_Logger::error( 'Error message' );
 		
-		$log_file     = Booking_Logger::get_todays_log_file();
+		$log_file     = Bookit_Logger::get_todays_log_file();
 		$log_contents = file_get_contents( $log_file );
 		
 		$this->assertStringContainsString( '[INFO]', $log_contents );
@@ -98,9 +98,9 @@ class Test_Logger extends TestCase {
 	 * Test log entry format.
 	 */
 	public function test_log_entry_format() {
-		Booking_Logger::info( 'Format test' );
+		Bookit_Logger::info( 'Format test' );
 		
-		$log_file     = Booking_Logger::get_todays_log_file();
+		$log_file     = Bookit_Logger::get_todays_log_file();
 		$log_contents = file_get_contents( $log_file );
 		
 		// Check format: [YYYY-MM-DD HH:MM:SS] [LEVEL] Message
@@ -112,8 +112,8 @@ class Test_Logger extends TestCase {
 	 * Test log security location.
 	 */
 	public function test_log_security_location() {
-		$is_secure = Booking_Logger::is_secure_location();
-		$log_dir   = Booking_Logger::get_log_directory();
+		$is_secure = Bookit_Logger::is_secure_location();
+		$log_dir   = Bookit_Logger::get_log_directory();
 		
 		// Just verify method works, don't require specific location in tests
 		$this->assertIsBool( $is_secure );

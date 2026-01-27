@@ -2,7 +2,7 @@
 /**
  * PHPUnit bootstrap file for wp-env.
  *
- * @package Booking_System
+ * @package Bookit_Booking_System
  */
 
 // Composer autoloader
@@ -49,10 +49,10 @@ if ( ! file_exists( $_tests_dir . '/includes/functions.php' ) ) {
 		require_once $wp_core_dir . '/wp-load.php';
 
 		// Manually load the plugin
-		require_once dirname( __DIR__ ) . '/booking-system.php';
+		require_once dirname( __DIR__ ) . '/bookit-booking-system.php';
 
 		// Activate plugin programmatically
-		if ( ! function_exists( 'activate_booking_system' ) ) {
+		if ( ! function_exists( 'bookit_activate' ) ) {
 			die( "Error: Plugin not loaded correctly\n" );
 		}
 
@@ -62,7 +62,7 @@ if ( ! file_exists( $_tests_dir . '/includes/functions.php' ) ) {
 		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$table_name'" );
 
 		if ( $table_exists !== $table_name ) {
-			activate_booking_system();
+			bookit_activate();
 		}
 
 		// Stop here - WordPress loaded directly
@@ -79,7 +79,7 @@ require_once $_tests_dir . '/includes/functions.php';
  * Manually load the plugin being tested.
  */
 function _manually_load_plugin() {
-	require dirname( __DIR__ ) . '/booking-system.php';
+	require dirname( __DIR__ ) . '/bookit-booking-system.php';
 }
 
 // Load plugin before running tests
@@ -89,4 +89,4 @@ tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 require $_tests_dir . '/includes/bootstrap.php';
 
 // Ensure plugin is activated
-activate_plugin( 'booking-system/booking-system.php' );
+activate_plugin( 'bookit-booking-system/bookit-booking-system.php' );

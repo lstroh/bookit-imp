@@ -2,7 +2,7 @@
 /**
  * Plugin activation tests.
  *
- * @package Booking_System
+ * @package Bookit_Booking_System
  */
 
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
@@ -16,16 +16,16 @@ class Test_Plugin_Activation extends TestCase {
 	 * Test plugin constants are defined.
 	 */
 	public function test_plugin_constants_defined() {
-		$this->assertTrue( defined( 'BOOKING_SYSTEM_VERSION' ) );
-		$this->assertTrue( defined( 'BOOKING_SYSTEM_PATH' ) );
-		$this->assertTrue( defined( 'BOOKING_SYSTEM_URL' ) );
+		$this->assertTrue( defined( 'BOOKIT_VERSION' ) );
+		$this->assertTrue( defined( 'BOOKIT_PLUGIN_DIR' ) );
+		$this->assertTrue( defined( 'BOOKIT_PLUGIN_URL' ) );
 	}
 
 	/**
 	 * Test plugin version matches expected format.
 	 */
 	public function test_plugin_version_format() {
-		$version = BOOKING_SYSTEM_VERSION;
+		$version = BOOKIT_VERSION;
 		$this->assertMatchesRegularExpression( '/^\d+\.\d+\.\d+$/', $version );
 	}
 
@@ -33,7 +33,7 @@ class Test_Plugin_Activation extends TestCase {
 	 * Test default settings are created.
 	 */
 	public function test_default_settings_created() {
-		$settings = get_option( 'booking_system_settings' );
+		$settings = get_option( 'bookit_settings' );
 		
 		$this->assertIsArray( $settings );
 		$this->assertArrayHasKey( 'timezone', $settings );
@@ -46,7 +46,7 @@ class Test_Plugin_Activation extends TestCase {
 	 * Test database version option is set.
 	 */
 	public function test_database_version_option() {
-		$db_version = get_option( 'booking_system_db_version' );
+		$db_version = get_option( 'bookit_db_version' );
 		$this->assertNotEmpty( $db_version );
 		$this->assertEquals( '1.0', $db_version );
 	}
@@ -55,9 +55,9 @@ class Test_Plugin_Activation extends TestCase {
 	 * Test log directory is created.
 	 */
 	public function test_log_directory_created() {
-		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-logger.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-logger.php';
 		
-		$log_dir = Booking_Logger::get_log_directory();
+		$log_dir = Bookit_Logger::get_log_directory();
 		
 		$this->assertTrue( file_exists( $log_dir ) );
 		$this->assertTrue( is_dir( $log_dir ) );
@@ -68,9 +68,9 @@ class Test_Plugin_Activation extends TestCase {
 	 * Test log directory has protection files.
 	 */
 	public function test_log_directory_protection() {
-		require_once BOOKING_SYSTEM_PATH . 'includes/class-booking-logger.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-logger.php';
 		
-		$log_dir = Booking_Logger::get_log_directory();
+		$log_dir = Bookit_Logger::get_log_directory();
 		
 		$this->assertTrue( file_exists( $log_dir . '/.htaccess' ) );
 		$this->assertTrue( file_exists( $log_dir . '/index.php' ) );

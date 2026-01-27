@@ -2,7 +2,7 @@
 /**
  * Fired when the plugin is uninstalled.
  *
- * @package Booking_System
+ * @package Bookit_Booking_System
  */
 
 // If uninstall not called from WordPress, then exit.
@@ -44,9 +44,9 @@ foreach ( $tables as $table ) {
 }
 
 // Delete all plugin options.
-delete_option( 'booking_system_version' );
-delete_option( 'booking_system_db_version' );
-delete_option( 'booking_system_settings' );
+delete_option( 'bookit_version' );
+delete_option( 'bookit_db_version' );
+delete_option( 'bookit_settings' );
 
 // Delete log directory.
 $upload_dir = wp_upload_dir();

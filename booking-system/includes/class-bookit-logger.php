@@ -2,8 +2,8 @@
 /**
  * Error logging system.
  *
- * @package    Booking_System
- * @subpackage Booking_System/includes
+ * @package    Bookit_Booking_System
+ * @subpackage Bookit_Booking_System/includes
  */
 
 // If this file is called directly, abort.
@@ -14,7 +14,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Logger class.
  */
-class Booking_Logger {
+class Bookit_Logger {
 
 	/**
 	 * Log directory path.
@@ -169,7 +169,7 @@ class Booking_Logger {
 		// Also write to WordPress debug.log if WP_DEBUG is enabled
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( '[Booking System] ' . $log_entry );
+			error_log( '[Bookit Booking System] ' . $log_entry );
 		}
 	}
 

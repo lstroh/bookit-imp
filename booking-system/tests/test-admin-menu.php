@@ -2,7 +2,7 @@
 /**
  * Admin menu tests.
  *
- * @package Booking_System
+ * @package Bookit_Booking_System
  */
 
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
@@ -24,7 +24,7 @@ class Test_Admin_Menu extends TestCase {
 	 */
 	public function setUp(): void {
 		parent::setUp();
-		require_once BOOKING_SYSTEM_PATH . 'admin/class-booking-admin-menu.php';
+		require_once BOOKIT_PLUGIN_DIR . 'admin/class-bookit-admin-menu.php';
 		
 		// Create an admin user and set as current user for capability checks.
 		$this->admin_user_id = wp_insert_user(
@@ -57,15 +57,15 @@ class Test_Admin_Menu extends TestCase {
 	 * Test admin menu class exists.
 	 */
 	public function test_admin_menu_class_exists() {
-		$this->assertTrue( class_exists( 'Booking_Admin_Menu' ) );
+		$this->assertTrue( class_exists( 'Bookit_Admin_Menu' ) );
 	}
 
 	/**
 	 * Test admin menu can be instantiated.
 	 */
 	public function test_admin_menu_instantiation() {
-		$admin_menu = new Booking_Admin_Menu();
-		$this->assertInstanceOf( 'Booking_Admin_Menu', $admin_menu );
+		$admin_menu = new Bookit_Admin_Menu();
+		$this->assertInstanceOf( 'Bookit_Admin_Menu', $admin_menu );
 	}
 
 	/**
@@ -92,7 +92,7 @@ class Test_Admin_Menu extends TestCase {
 		$menu    = array();
 		$submenu = array();
 		
-		$admin_menu = new Booking_Admin_Menu();
+		$admin_menu = new Bookit_Admin_Menu();
 		
 		// Simulate being in admin context
 		set_current_screen( 'dashboard' );
@@ -109,7 +109,7 @@ class Test_Admin_Menu extends TestCase {
 		$found_main_menu = false;
 		if ( is_array( $menu ) && ! empty( $menu ) ) {
 			foreach ( $menu as $menu_item ) {
-				if ( isset( $menu_item[2] ) && $menu_item[2] === 'booking-system' ) {
+				if ( isset( $menu_item[2] ) && $menu_item[2] === 'bookit-booking-system' ) {
 					$found_main_menu = true;
 					break;
 				}
@@ -127,18 +127,18 @@ class Test_Admin_Menu extends TestCase {
 		$this->assertTrue( $found_main_menu, 'Main booking system menu should be registered' );
 		
 		// Check submenus are registered - may not be populated in test environment
-		if ( ! isset( $submenu['booking-system'] ) ) {
+		if ( ! isset( $submenu['bookit-booking-system'] ) ) {
 			$this->markTestSkipped( 
 				'WordPress submenu functions may not populate arrays in test environment (user capabilities issue). This is a test environment limitation, not a code issue.' 
 			);
 			return;
 		}
 		
-		$this->assertArrayHasKey( 'booking-system', $submenu, 'Booking system submenu should exist' );
+		$this->assertArrayHasKey( 'bookit-booking-system', $submenu, 'Booking system submenu should exist' );
 		
 		$submenu_slugs = array();
-		if ( isset( $submenu['booking-system'] ) && is_array( $submenu['booking-system'] ) ) {
-			foreach ( $submenu['booking-system'] as $submenu_item ) {
+		if ( isset( $submenu['bookit-booking-system'] ) && is_array( $submenu['bookit-booking-system'] ) ) {
+			foreach ( $submenu['bookit-booking-system'] as $submenu_item ) {
 				if ( isset( $submenu_item[2] ) ) {
 					$submenu_slugs[] = $submenu_item[2];
 				}
@@ -147,17 +147,17 @@ class Test_Admin_Menu extends TestCase {
 		
 		// Check for key submenu pages
 		$expected_submenus = array(
-			'booking-system',
-			'booking-calendar',
-			'booking-add-new',
-			'booking-services',
-			'booking-service-categories',
-			'booking-add-service',
-			'booking-staff',
-			'booking-add-staff',
-			'booking-customers',
-			'booking-export-customers',
-			'booking-settings',
+			'bookit-booking-system',
+			'bookit-calendar',
+			'bookit-add-new',
+			'bookit-services',
+			'bookit-service-categories',
+			'bookit-add-service',
+			'bookit-staff',
+			'bookit-add-staff',
+			'bookit-customers',
+			'bookit-export-customers',
+			'bookit-settings',
 		);
 		
 		foreach ( $expected_submenus as $expected_slug ) {
@@ -193,7 +193,7 @@ class Test_Admin_Menu extends TestCase {
 		$menu    = array();
 		$submenu = array();
 		
-		$admin_menu = new Booking_Admin_Menu();
+		$admin_menu = new Bookit_Admin_Menu();
 		
 		// Simulate being in admin context
 		set_current_screen( 'dashboard' );
@@ -204,7 +204,7 @@ class Test_Admin_Menu extends TestCase {
 		$main_menu_capability = null;
 		if ( is_array( $menu ) && ! empty( $menu ) ) {
 			foreach ( $menu as $menu_item ) {
-				if ( isset( $menu_item[2] ) && $menu_item[2] === 'booking-system' ) {
+				if ( isset( $menu_item[2] ) && $menu_item[2] === 'bookit-booking-system' ) {
 					$main_menu_capability = isset( $menu_item[1] ) ? $menu_item[1] : null;
 					break;
 				}
@@ -222,8 +222,8 @@ class Test_Admin_Menu extends TestCase {
 		$this->assertEquals( 'manage_options', $main_menu_capability );
 		
 		// Check submenu capabilities
-		if ( isset( $submenu['booking-system'] ) && is_array( $submenu['booking-system'] ) ) {
-			foreach ( $submenu['booking-system'] as $submenu_item ) {
+		if ( isset( $submenu['bookit-booking-system'] ) && is_array( $submenu['bookit-booking-system'] ) ) {
+			foreach ( $submenu['bookit-booking-system'] as $submenu_item ) {
 				if ( isset( $submenu_item[1] ) && isset( $submenu_item[2] ) ) {
 					$this->assertEquals(
 						'manage_options',
