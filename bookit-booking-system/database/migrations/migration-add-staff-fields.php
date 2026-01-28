@@ -100,8 +100,7 @@ class Bookit_Migration_Add_Staff_Fields {
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 			$result = $this->wpdb->query(
 				"ALTER TABLE {$this->wpdb->prefix}bookings_staff_services 
-				 ADD COLUMN custom_price DECIMAL(10,2) NULL AFTER service_id 
-				 COMMENT 'Staff-specific price override (NULL = use service base price)'"
+				 ADD COLUMN custom_price DECIMAL(10,2) NULL COMMENT 'Staff-specific price override (NULL = use service base price)' AFTER service_id"
 			);
 			if ( false === $result ) {
 				$errors[] = 'Failed to add custom_price: ' . $this->wpdb->last_error;
