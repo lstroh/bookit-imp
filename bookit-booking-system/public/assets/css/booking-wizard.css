@@ -1,0 +1,371 @@
+/**
+ * Booking wizard stylesheet.
+ * Mobile-first, WCAG 2.1 AA compliant.
+ *
+ * @package    Bookit_Booking_System
+ * @subpackage Bookit_Booking_System/public/assets/css
+ */
+
+/* ==========================================================================
+   Skip Link (WCAG 2.1 - First focusable element)
+   ========================================================================== */
+
+.bookit-skip-link {
+	position: absolute;
+	top: -40px;
+	left: 0;
+	background: #0056B3;
+	color: #ffffff;
+	padding: 8px 16px;
+	text-decoration: none;
+	z-index: 10000;
+	font-size: 16px;
+	line-height: 1.5;
+	border: 2px solid transparent;
+}
+
+.bookit-skip-link:focus {
+	top: 0;
+	outline: 2px solid #ffffff;
+	outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Wizard Container
+   ========================================================================== */
+
+.bookit-wizard-container {
+	max-width: 100%;
+	margin: 0 auto;
+	padding: 20px 16px;
+	position: relative;
+}
+
+/* ==========================================================================
+   Progress Indicator
+   ========================================================================== */
+
+.bookit-progress-indicator {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin-bottom: 32px;
+	padding-bottom: 24px;
+	border-bottom: 2px solid #E5E5E5;
+}
+
+.bookit-progress-step {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex: 1;
+}
+
+.bookit-progress-step-number {
+	width: 44px;
+	height: 44px;
+	min-width: 44px;
+	min-height: 44px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 600;
+	font-size: 18px;
+	line-height: 1;
+	border: 2px solid #6C757D;
+	background: #ffffff;
+	color: #6C757D;
+	transition: all 0.3s ease;
+}
+
+.bookit-progress-step-label {
+	font-size: 16px;
+	line-height: 1.5;
+	color: #333333;
+	font-weight: 500;
+}
+
+/* Completed step */
+.bookit-progress-step-completed .bookit-progress-step-number {
+	background: #28A745;
+	border-color: #28A745;
+	color: #ffffff;
+}
+
+.bookit-progress-step-completed .bookit-progress-step-label {
+	color: #28A745;
+}
+
+.bookit-progress-checkmark {
+	font-size: 24px;
+	line-height: 1;
+}
+
+/* Current step */
+.bookit-progress-step-current .bookit-progress-step-number {
+	background: #0056B3;
+	border-color: #0056B3;
+	color: #ffffff;
+	border-width: 3px;
+	box-shadow: 0 0 0 2px rgba(0, 86, 179, 0.2);
+}
+
+.bookit-progress-step-current .bookit-progress-step-label {
+	color: #0056B3;
+	font-weight: 600;
+}
+
+/* Upcoming step */
+.bookit-progress-step-upcoming .bookit-progress-step-number {
+	background: #ffffff;
+	border-color: #E5E5E5;
+	color: #6C757D;
+}
+
+.bookit-progress-step-upcoming .bookit-progress-step-label {
+	color: #6C757D;
+}
+
+/* ==========================================================================
+   Wizard Content
+   ========================================================================== */
+
+.bookit-wizard-content {
+	margin-bottom: 32px;
+	min-height: 300px;
+}
+
+.bookit-step {
+	padding: 24px 0;
+}
+
+.bookit-step h2 {
+	font-size: 24px;
+	line-height: 1.4;
+	margin: 0 0 16px 0;
+	color: #333333;
+	font-weight: 600;
+}
+
+.bookit-step p {
+	font-size: 16px;
+	line-height: 1.6;
+	color: #555555;
+	margin: 0;
+}
+
+/* ==========================================================================
+   Navigation Buttons
+   ========================================================================== */
+
+.bookit-wizard-nav {
+	display: flex;
+	gap: 12px;
+	justify-content: space-between;
+	margin-top: 32px;
+	padding-top: 24px;
+	border-top: 2px solid #E5E5E5;
+}
+
+.bookit-btn {
+	min-height: 44px;
+	min-width: 44px;
+	padding: 12px 24px;
+	font-size: 16px;
+	line-height: 1.5;
+	font-weight: 500;
+	border: 2px solid transparent;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	text-decoration: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-family: inherit;
+}
+
+/* Focus indicators (WCAG 2.1 - ≥2px outline) */
+.bookit-btn:focus {
+	outline: 2px solid #0056B3;
+	outline-offset: 2px;
+}
+
+.bookit-btn:focus:not(:focus-visible) {
+	outline: none;
+}
+
+.bookit-btn:focus-visible {
+	outline: 2px solid #0056B3;
+	outline-offset: 2px;
+}
+
+/* Back button */
+.bookit-btn-back {
+	background: #ffffff;
+	color: #6C757D;
+	border-color: #6C757D;
+	flex: 1;
+}
+
+.bookit-btn-back:hover {
+	background: #6C757D;
+	color: #ffffff;
+}
+
+.bookit-btn-back:active {
+	background: #5A6268;
+	border-color: #5A6268;
+}
+
+/* Next button */
+.bookit-btn-next {
+	background: #0056B3;
+	color: #ffffff;
+	border-color: #0056B3;
+	flex: 1;
+}
+
+.bookit-btn-next:hover {
+	background: #004494;
+	border-color: #004494;
+}
+
+.bookit-btn-next:active {
+	background: #003375;
+	border-color: #003375;
+}
+
+.bookit-btn-next:disabled {
+	background: #E5E5E5;
+	color: #6C757D;
+	border-color: #E5E5E5;
+	cursor: not-allowed;
+	opacity: 0.6;
+}
+
+/* Hide back button on step 1 */
+.bookit-wizard-nav:has(.bookit-btn-back:not([style*="display: none"])) {
+	/* Fallback for browsers that don't support :has() */
+}
+
+/* ==========================================================================
+   Timeout Warning
+   ========================================================================== */
+
+.bookit-timeout-warning {
+	background: #FFC107;
+	color: #000000;
+	padding: 12px 16px;
+	border-radius: 4px;
+	margin-bottom: 20px;
+	font-size: 16px;
+	line-height: 1.5;
+	border: 2px solid #FF9800;
+	display: none;
+}
+
+.bookit-timeout-warning:focus {
+	outline: 2px solid #000000;
+	outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Responsive Breakpoints
+   ========================================================================== */
+
+/* Small devices (640px and up) */
+@media (min-width: 640px) {
+	.bookit-wizard-container {
+		padding: 24px 20px;
+	}
+
+	.bookit-progress-indicator {
+		flex-direction: row;
+		justify-content: space-between;
+	}
+
+	.bookit-progress-step {
+		flex-direction: column;
+		text-align: center;
+		flex: 1;
+	}
+
+	.bookit-progress-step-label {
+		font-size: 14px;
+		margin-top: 8px;
+	}
+
+	.bookit-wizard-nav {
+		justify-content: flex-end;
+	}
+
+	.bookit-btn {
+		flex: 0 0 auto;
+		min-width: 120px;
+	}
+}
+
+/* Medium devices (768px and up) */
+@media (min-width: 768px) {
+	.bookit-wizard-container {
+		padding: 32px 24px;
+		max-width: 800px;
+	}
+
+	.bookit-progress-step-label {
+		font-size: 16px;
+	}
+
+	.bookit-step h2 {
+		font-size: 28px;
+	}
+}
+
+/* Large devices (1024px and up) */
+@media (min-width: 1024px) {
+	.bookit-wizard-container {
+		max-width: 1200px;
+		padding: 40px 32px;
+	}
+
+	.bookit-progress-indicator {
+		margin-bottom: 48px;
+		padding-bottom: 32px;
+	}
+
+	.bookit-wizard-content {
+		margin-bottom: 48px;
+	}
+
+	.bookit-step {
+		padding: 32px 0;
+	}
+
+	.bookit-step h2 {
+		font-size: 32px;
+		margin-bottom: 24px;
+	}
+
+	.bookit-wizard-nav {
+		margin-top: 48px;
+		padding-top: 32px;
+	}
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+	.bookit-skip-link,
+	.bookit-wizard-nav {
+		display: none;
+	}
+
+	.bookit-wizard-container {
+		max-width: 100%;
+		padding: 0;
+	}
+}

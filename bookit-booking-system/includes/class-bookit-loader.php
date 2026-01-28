@@ -62,11 +62,20 @@ class Bookit_Loader {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-session.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-auth.php';
 
+		// Booking wizard session manager.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
+
 		// Admin-specific functionality.
 		require_once BOOKIT_PLUGIN_DIR . 'admin/class-bookit-admin.php';
 
 		// Public-facing functionality.
 		require_once BOOKIT_PLUGIN_DIR . 'public/class-bookit-public.php';
+
+		// Shortcode handler.
+		require_once BOOKIT_PLUGIN_DIR . 'public/class-shortcodes.php';
+
+		// REST API endpoints.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-wizard-api.php';
 	}
 
 	/**
@@ -180,7 +189,11 @@ class Bookit_Loader {
 		add_action( 'wp_enqueue_scripts', array( $plugin_public, 'enqueue_styles' ) );
 		add_action( 'wp_enqueue_scripts', array( $plugin_public, 'enqueue_scripts' ) );
 
-		// Public hooks will be added in later sprints.
+		// Initialize shortcode handler.
+		$shortcodes = new Bookit_Shortcodes();
+
+		// Initialize REST API.
+		$wizard_api = new Bookit_Wizard_API();
 	}
 
 	/**
