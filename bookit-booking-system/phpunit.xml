@@ -17,6 +17,11 @@
             <file>./tests/test-logger.php</file>
             <file>./tests/test-plugin-activation.php</file>
             <file>./tests/test-session.php</file>
+            <file>./tests/unit/test-session-manager.php</file>
+            <file>./tests/unit/test-booking-shortcode.php</file>
+            <file>./tests/unit/test-wizard-api.php</file>
+            <file>./tests/unit/test-wizard-navigation.php</file>
+            <file>./tests/integration/test-wizard-flow.php</file>
         </testsuite>
     </testsuites>
 
