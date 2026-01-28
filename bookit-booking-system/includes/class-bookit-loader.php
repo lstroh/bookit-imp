@@ -76,6 +76,12 @@ class Bookit_Loader {
 
 		// REST API endpoints.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-wizard-api.php';
+		
+		// Service model.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/models/class-service-model.php';
+		
+		// Service API.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-service-api.php';
 	}
 
 	/**

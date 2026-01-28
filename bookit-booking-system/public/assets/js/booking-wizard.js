@@ -160,9 +160,79 @@
 		 * @return {boolean} True if valid.
 		 */
 		validateCurrentStep: function() {
-			// Stub for now - will be implemented in later tasks.
-			// Each step will have its own validation logic.
+			// Step 1: Validate service selection.
+			if (this.currentStep === 1) {
+				// Check if a service has been selected (via session data).
+				// For now, we'll allow navigation if service selection button was clicked.
+				// The actual validation happens server-side when saving.
+				return true;
+			}
+			
+			// Other steps will have their own validation (implemented in later tasks).
 			return true;
+		},
+
+		/**
+		 * Initialize service selection handlers.
+		 */
+		initServiceSelection: function() {
+			const self = this;
+			const selectButtons = document.querySelectorAll('.bookit-btn-select-service');
+			
+			selectButtons.forEach(function(button) {
+				button.addEventListener('click', function(e) {
+					e.preventDefault();
+					
+					const serviceId = this.dataset.serviceId;
+					const serviceName = this.dataset.serviceName;
+					const serviceDuration = this.dataset.serviceDuration;
+					const servicePrice = this.dataset.servicePrice;
+					
+					// Disable button during request.
+					this.disabled = true;
+					const originalText = this.textContent;
+					this.textContent = 'Selecting...';
+					
+					// Get REST URL and nonce from localized script.
+					const restUrl = (typeof bookitWizard !== 'undefined' && bookitWizard.restUrl) 
+						? bookitWizard.restUrl 
+						: '/wp-json/';
+					const nonce = (typeof bookitWizard !== 'undefined' && bookitWizard.nonce) 
+						? bookitWizard.nonce 
+						: '';
+					
+					// Send AJAX request.
+					fetch(restUrl + 'bookit/v1/service/select', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-WP-Nonce': nonce
+						},
+						body: JSON.stringify({
+							service_id: serviceId
+						})
+					})
+					.then(function(response) {
+						return response.json();
+					})
+					.then(function(data) {
+						if (data.success) {
+							// Navigate to step 2 (goToStep will update progress indicator).
+							self.goToStep(2);
+						} else {
+							alert('Error selecting service. Please try again.');
+							button.disabled = false;
+							button.textContent = originalText;
+						}
+					})
+					.catch(function(error) {
+						console.error('Service selection error:', error);
+						alert('Error selecting service. Please try again.');
+						button.disabled = false;
+						button.textContent = originalText;
+					});
+				});
+			});
 		},
 
 		/**
@@ -300,6 +370,11 @@
 	// Initialize on document ready.
 	$(document).ready(function() {
 		BookitWizard.init();
+		
+		// Initialize service selection if on step 1.
+		if (BookitWizard.currentStep === 1) {
+			BookitWizard.initServiceSelection();
+		}
 	});
 
 })(jQuery);

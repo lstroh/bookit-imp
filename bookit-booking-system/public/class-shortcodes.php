@@ -108,8 +108,9 @@ class Bookit_Shortcodes {
 			'bookit-wizard',
 			'bookitWizard',
 			array(
-				'ajaxUrl'     => rest_url( 'bookit/v1/wizard/session' ),
-				'nonce'       => wp_create_nonce( 'wp_rest' ),
+				'restUrl'    => rest_url(),
+				'ajaxUrl'    => rest_url( 'bookit/v1/wizard/session' ),
+				'nonce'      => wp_create_nonce( 'wp_rest' ),
 				'currentStep' => $current_step,
 			)
 		);
