@@ -10,8 +10,8 @@
     "wp-env:destroy": "wp-env destroy",
     "test": "wp-env run tests-wordpress bash -c \"cd /var/www/html/wp-content/plugins/bookit-booking-system && vendor/bin/phpunit\"",
     "test:watch": "npm run test -- --watch",
-    "test:verbose": "wp-env run tests-wordpress bash -c \"cd /var/www/html/wp-content/plugins/booking-system && vendor/bin/phpunit --verbose\"",
-    "test:coverage": "wp-env run tests-wordpress bash -c \"cd /var/www/html/wp-content/plugins/booking-system && vendor/bin/phpunit --coverage-html coverage\""
+    "test:verbose": "wp-env run tests-wordpress bash -c \"cd /var/www/html/wp-content/plugins/bookit-booking-system && vendor/bin/phpunit --verbose\"",
+    "test:coverage": "wp-env run tests-wordpress bash -c \"cd /var/www/html/wp-content/plugins/bookit-booking-system && vendor/bin/phpunit --coverage-html coverage\""
   },
   "keywords": ["wordpress", "plugin", "booking"],
   "author": "Liron",
