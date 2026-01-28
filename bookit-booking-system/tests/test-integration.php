@@ -320,23 +320,36 @@ class Test_Integration extends TestCase {
 	/**
 	 * Helper: Create test staff.
 	 *
+	 * @param string|null $photo_url Optional photo URL.
+	 * @param string|null $bio Optional bio.
+	 * @param string|null $title Optional title.
 	 * @return int Staff ID.
 	 */
-	private function create_test_staff() {
+	private function create_test_staff( $photo_url = null, $bio = null, $title = null ) {
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'bookings_staff';
 		
-		$wpdb->insert(
-			$table_name,
-			array(
-				'email'         => 'teststaff@example.com',
-				'password_hash' => Bookit_Auth::hash_password( 'password' ),
-				'first_name'    => 'Test',
-				'last_name'     => 'Staff',
-				'role'          => 'staff',
-				'is_active'     => 1,
-			)
+		$data = array(
+			'email'         => 'teststaff@example.com',
+			'password_hash' => Bookit_Auth::hash_password( 'password' ),
+			'first_name'    => 'Test',
+			'last_name'     => 'Staff',
+			'role'          => 'staff',
+			'is_active'     => 1,
 		);
+
+		// Add optional fields if provided.
+		if ( $photo_url !== null ) {
+			$data['photo_url'] = $photo_url;
+		}
+		if ( $bio !== null ) {
+			$data['bio'] = $bio;
+		}
+		if ( $title !== null ) {
+			$data['title'] = $title;
+		}
+		
+		$wpdb->insert( $table_name, $data );
 		
 		return $wpdb->insert_id;
 	}

@@ -549,24 +549,47 @@ class Test_Service_Model extends WP_UnitTestCase {
 	/**
 	 * Create a test staff member
 	 *
-	 * @param string $first_name First name.
-	 * @param string $last_name Last name.
-	 * @param bool   $is_active Whether staff is active.
+	 * @param string      $first_name First name.
+	 * @param string      $last_name Last name.
+	 * @param bool        $is_active Whether staff is active.
+	 * @param string|null $photo_url Optional photo URL.
+	 * @param string|null $bio Optional bio.
+	 * @param string|null $title Optional title.
 	 * @return int Staff ID.
 	 */
-	private function create_staff( $first_name, $last_name, $is_active = true ) {
+	private function create_staff( $first_name, $last_name, $is_active = true, $photo_url = null, $bio = null, $title = null ) {
 		global $wpdb;
+
+		$data = array(
+			'first_name'    => $first_name,
+			'last_name'     => $last_name,
+			'email'         => strtolower( $first_name ) . '@example.com',
+			'password_hash' => password_hash( 'password', PASSWORD_BCRYPT ),
+			'role'          => 'staff',
+			'is_active'     => $is_active ? 1 : 0,
+			'deleted_at'    => null,
+		);
+
+		$format = array( '%s', '%s', '%s', '%s', '%s', '%d', '%s' );
+
+		// Add optional fields if provided.
+		if ( $photo_url !== null ) {
+			$data['photo_url'] = $photo_url;
+			$format[]          = '%s';
+		}
+		if ( $bio !== null ) {
+			$data['bio'] = $bio;
+			$format[]    = '%s';
+		}
+		if ( $title !== null ) {
+			$data['title'] = $title;
+			$format[]      = '%s';
+		}
 
 		$wpdb->insert(
 			$wpdb->prefix . 'bookings_staff',
-			array(
-				'first_name' => $first_name,
-				'last_name'  => $last_name,
-				'email'      => strtolower( $first_name ) . '@example.com',
-				'is_active'  => $is_active ? 1 : 0,
-				'deleted_at' => null,
-			),
-			array( '%s', '%s', '%s', '%d', '%s' )
+			$data,
+			$format
 		);
 
 		return $wpdb->insert_id;
