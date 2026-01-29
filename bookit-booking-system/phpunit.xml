@@ -25,6 +25,7 @@
             <file>./tests/unit/test-service-api.php</file>
             <file>./tests/unit/test-staff-model.php</file>
             <file>./tests/unit/test-staff-api.php</file>
+            <file>./tests/unit/test-datetime-model.php</file>
             <file>./tests/integration/test-wizard-flow.php</file>
         </testsuite>
     </testsuites>

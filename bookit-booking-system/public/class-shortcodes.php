@@ -96,6 +96,22 @@ class Bookit_Shortcodes {
 			true
 		);
 
+		// Step 3: Date & Time picker.
+		wp_enqueue_style(
+			'bookit-datetime-picker',
+			BOOKIT_PLUGIN_URL . 'public/assets/css/datetime-picker.css',
+			array(),
+			BOOKIT_VERSION,
+			'all'
+		);
+		wp_enqueue_script(
+			'bookit-datetime-picker',
+			BOOKIT_PLUGIN_URL . 'public/assets/js/datetime-picker.js',
+			array( 'bookit-wizard' ),
+			BOOKIT_VERSION,
+			true
+		);
+
 		// Get current step from session if available.
 		$current_step = 1;
 		if ( class_exists( 'Bookit_Session_Manager' ) ) {

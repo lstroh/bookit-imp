@@ -36,9 +36,11 @@ $lowest_price  = $staff_model->get_lowest_staff_price_for_service( $service_id )
 
 if ( empty( $staff_members ) ) {
 	?>
-	<div class="bookit-no-staff">
-		<h2><?php esc_html_e( 'No Staff Available', 'bookit-booking-system' ); ?></h2>
-		<p><?php esc_html_e( 'All staff members are currently unavailable for this service.', 'bookit-booking-system' ); ?></p>
+	<div class="bookit-step bookit-step-2-staff">
+		<div class="bookit-no-staff">
+			<h2><?php esc_html_e( 'No Staff Available', 'bookit-booking-system' ); ?></h2>
+			<p><?php esc_html_e( 'All staff members are currently unavailable for this service.', 'bookit-booking-system' ); ?></p>
+		</div>
 	</div>
 	<?php
 	return;

@@ -88,6 +88,12 @@ class Bookit_Loader {
 		
 		// Staff API.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-staff-api.php';
+
+		// DateTime model.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/models/class-datetime-model.php';
+
+		// DateTime API.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-datetime-api.php';
 	}
 
 	/**

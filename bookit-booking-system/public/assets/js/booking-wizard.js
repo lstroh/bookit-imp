@@ -430,6 +430,9 @@
 		}
 	};
 
+	// Expose for step 3 Back button and datetime continue.
+	window.BookitWizard = BookitWizard;
+
 	// Initialize on document ready.
 	$(document).ready(function() {
 		BookitWizard.init();

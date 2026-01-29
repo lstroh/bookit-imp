@@ -1,0 +1,231 @@
+/**
+ * Date & Time Picker - Step 3 styles.
+ * Mobile-first, WCAG 2.1 AA.
+ *
+ * @package    Bookit_Booking_System
+ * @subpackage Bookit_Booking_System/public/assets/css
+ */
+
+/* ==========================================================================
+   Calendar
+   ========================================================================== */
+
+.bookit-calendar-container {
+	max-width: 400px;
+	margin: 0 auto 2rem;
+}
+
+.bookit-step-3 .calendar-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1rem;
+}
+
+.bookit-step-3 .btn-prev-month,
+.bookit-step-3 .btn-next-month {
+	background: none;
+	border: 1px solid #ddd;
+	padding: 0.5rem 1rem;
+	cursor: pointer;
+	font-size: 1.2rem;
+	border-radius: 4px;
+	min-height: 44px;
+}
+
+.bookit-step-3 .btn-prev-month:hover:not(:disabled),
+.bookit-step-3 .btn-next-month:hover:not(:disabled) {
+	border-color: #1e40af;
+	background-color: #eff6ff;
+}
+
+.bookit-step-3 .current-month-year {
+	font-size: 1.25rem;
+	font-weight: 600;
+	margin: 0;
+}
+
+.bookit-step-3 .calendar-grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 4px;
+}
+
+.bookit-step-3 .calendar-weekdays {
+	display: contents;
+}
+
+.bookit-step-3 .calendar-weekday {
+	text-align: center;
+	font-weight: 600;
+	padding: 0.5rem;
+	font-size: 0.875rem;
+	color: #666;
+}
+
+.bookit-step-3 .calendar-days {
+	display: contents;
+}
+
+.bookit-step-3 .date-cell {
+	aspect-ratio: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid #e0e0e0;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.875rem;
+	transition: all 0.2s;
+	background: #fff;
+	min-width: 0;
+}
+
+.bookit-step-3 .date-cell:hover:not(:disabled):not(.date-past):not(.date-holiday) {
+	background-color: #f0f0f0;
+	border-color: #1e40af;
+}
+
+.bookit-step-3 .date-cell.date-today {
+	border: 2px solid #1e40af;
+	font-weight: 700;
+}
+
+.bookit-step-3 .date-cell.date-selected {
+	background-color: #1e40af;
+	color: white;
+	border-color: #1e40af;
+}
+
+.bookit-step-3 .date-cell.date-past,
+.bookit-step-3 .date-cell.date-holiday {
+	color: #ccc;
+	cursor: not-allowed;
+	background-color: #fafafa;
+}
+
+.bookit-step-3 .date-cell.date-holiday {
+	color: #dc2626;
+	text-decoration: line-through;
+}
+
+.bookit-step-3 .date-cell.date-other-month {
+	color: #999;
+}
+
+.bookit-step-3 .selected-date-display {
+	text-align: center;
+	margin-top: 1rem;
+	font-size: 1rem;
+	color: #333;
+	min-height: 1.5rem;
+}
+
+/* ==========================================================================
+   Time Slots
+   ========================================================================== */
+
+.bookit-timeslots-container {
+	margin: 2rem 0;
+}
+
+.bookit-timeslots-container h3 {
+	font-size: 1.125rem;
+	margin-bottom: 1rem;
+}
+
+.bookit-step-3 .timeslots-loading {
+	text-align: center;
+	padding: 2rem;
+	color: #666;
+}
+
+.bookit-step-3 .timeslot-period {
+	margin-bottom: 2rem;
+}
+
+.bookit-step-3 .timeslot-period h4 {
+	font-size: 1.125rem;
+	font-weight: 600;
+	margin-bottom: 1rem;
+	color: #333;
+}
+
+.bookit-step-3 .timeslot-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+	gap: 0.5rem;
+}
+
+.bookit-step-3 .timeslot {
+	padding: 0.75rem 1rem;
+	background: white;
+	border: 2px solid #e0e0e0;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.875rem;
+	font-weight: 500;
+	transition: all 0.2s;
+	min-height: 44px;
+}
+
+.bookit-step-3 .timeslot:hover {
+	border-color: #1e40af;
+	background-color: #eff6ff;
+}
+
+.bookit-step-3 .timeslot.timeslot-selected {
+	background-color: #1e40af;
+	color: white;
+	border-color: #1e40af;
+}
+
+.bookit-step-3 .timeslot:focus {
+	outline: 2px solid #1e40af;
+	outline-offset: 2px;
+}
+
+.bookit-step-3 .timeslots-error {
+	color: #dc2626;
+	padding: 1rem;
+	margin-top: 1rem;
+	background: #fef2f2;
+	border-radius: 4px;
+}
+
+/* ==========================================================================
+   Step 3 Navigation
+   ========================================================================== */
+
+.bookit-step-3-nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	justify-content: space-between;
+	margin-top: 2rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid #e5e5e5;
+}
+
+.bookit-step-3-nav .bookit-btn-continue-datetime:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Responsive: Mobile
+   ========================================================================== */
+
+@media (max-width: 640px) {
+	.bookit-step-3 .calendar-grid {
+		gap: 2px;
+	}
+
+	.bookit-step-3 .date-cell {
+		font-size: 0.75rem;
+	}
+
+	.bookit-step-3 .timeslot-grid {
+		grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+	}
+}

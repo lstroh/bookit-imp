@@ -58,21 +58,57 @@ class Test_Wizard_Flow extends WP_UnitTestCase {
 	public function test_complete_wizard_flow() {
 		$nonce = wp_create_nonce( 'wp_rest' );
 
-		for ( $step = 1; $step <= 4; $step++ ) {
-			$request = new WP_REST_Request( 'POST', '/' . $this->namespace . $this->route );
-			$request->set_header( 'X-WP-Nonce', $nonce );
-			$request->set_body_params( array( 'current_step' => $step ) );
-			$response = rest_get_server()->dispatch( $request );
+		// Step 1: only current_step.
+		$params = array( 'current_step' => 1 );
+		$this->post_step_and_assert( 1, $params, $nonce );
 
-			$this->assertEquals( 200, $response->get_status(), "Step $step POST should succeed" );
-			$data = $response->get_data();
-			$this->assertTrue( $data['success'] );
-			$this->assertEquals( $step, (int) $data['data']['current_step'] );
-			$this->assertEquals( $step, (int) Bookit_Session_Manager::get( 'current_step' ) );
+		// Step 2: requires service_id so step 2 template can show staff selection.
+		$params = array(
+			'current_step' => 2,
+			'service_id'   => 1,
+		);
+		$this->post_step_and_assert( 2, $params, $nonce );
 
-			$output = do_shortcode( '[bookit_booking_wizard]' );
-			$this->assertStringContainsString( 'bookit-step-' . $step, $output );
-		}
+		// Step 3: requires service_id and staff_id so step 3 template shows date/time picker.
+		$params = array(
+			'current_step' => 3,
+			'service_id'   => 1,
+			'staff_id'     => 1,
+		);
+		$this->post_step_and_assert( 3, $params, $nonce );
+
+		// Step 4: requires date and time so step 4 (checkout) can show summary.
+		$params = array(
+			'current_step' => 4,
+			'service_id'   => 1,
+			'staff_id'     => 1,
+			'date'         => '2026-05-15',
+			'time'         => '14:00:00',
+		);
+		$this->post_step_and_assert( 4, $params, $nonce );
+	}
+
+	/**
+	 * POST session update and assert shortcode output contains step markup.
+	 *
+	 * @param int    $step   Step number (1–4).
+	 * @param array  $params Body params for POST.
+	 * @param string $nonce  REST nonce.
+	 */
+	private function post_step_and_assert( $step, array $params, $nonce ) {
+		$request = new WP_REST_Request( 'POST', '/' . $this->namespace . $this->route );
+		$request->set_header( 'X-WP-Nonce', $nonce );
+		$request->set_body_params( $params );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status(), "Step $step POST should succeed" );
+		$data = $response->get_data();
+		$this->assertTrue( $data['success'] );
+		$this->assertEquals( $step, (int) $data['data']['current_step'] );
+		$this->assertEquals( $step, (int) Bookit_Session_Manager::get( 'current_step' ) );
+
+		$output = do_shortcode( '[bookit_booking_wizard]' );
+		$this->assertStringContainsString( 'bookit-step-' . $step, $output );
 	}
 
 	/**
