@@ -82,6 +82,12 @@ class Bookit_Loader {
 		
 		// Service API.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-service-api.php';
+		
+		// Staff model.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/models/class-staff-model.php';
+		
+		// Staff API.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-staff-api.php';
 	}
 
 	/**

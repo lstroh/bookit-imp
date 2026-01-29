@@ -236,6 +236,69 @@
 		},
 
 		/**
+		 * Initialize staff selection handlers.
+		 */
+		initStaffSelection: function() {
+			const self = this;
+			const selectButtons = document.querySelectorAll('.bookit-btn-select-staff');
+			
+			selectButtons.forEach(function(button) {
+				button.addEventListener('click', function(e) {
+					e.preventDefault();
+					
+					const staffId = this.dataset.staffId;
+					
+					// Disable all buttons during request.
+					selectButtons.forEach(function(btn) {
+						btn.disabled = true;
+						btn.textContent = 'Selecting...';
+					});
+					
+					// Get REST URL and nonce from localized script.
+					const restUrl = (typeof bookitWizard !== 'undefined' && bookitWizard.restUrl) 
+						? bookitWizard.restUrl 
+						: '/wp-json/';
+					const nonce = (typeof bookitWizard !== 'undefined' && bookitWizard.nonce) 
+						? bookitWizard.nonce 
+						: '';
+					
+					// Send AJAX request.
+					fetch(restUrl + 'bookit/v1/staff/select', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-WP-Nonce': nonce
+						},
+						body: JSON.stringify({
+							staff_id: staffId
+						})
+					})
+					.then(function(response) {
+						return response.json();
+					})
+					.then(function(data) {
+						if (data.success) {
+							// Navigate to step 3 (goToStep will update progress indicator).
+							self.goToStep(3);
+						} else {
+							alert(data.message || 'Error selecting staff. Please try again.');
+							selectButtons.forEach(function(btn) {
+								btn.disabled = false;
+							});
+						}
+					})
+					.catch(function(error) {
+						console.error('Error:', error);
+						alert('Error selecting staff. Please try again.');
+						selectButtons.forEach(function(btn) {
+							btn.disabled = false;
+						});
+					});
+				});
+			});
+		},
+
+		/**
 		 * Update progress indicator visual state.
 		 */
 		updateProgressIndicator: function() {
@@ -374,6 +437,11 @@
 		// Initialize service selection if on step 1.
 		if (BookitWizard.currentStep === 1) {
 			BookitWizard.initServiceSelection();
+		}
+		
+		// Initialize staff selection if on step 2.
+		if (BookitWizard.currentStep === 2) {
+			BookitWizard.initStaffSelection();
 		}
 	});
 
