@@ -128,7 +128,7 @@ class Bookit_DateTime_API {
 
 	/**
 	 * GET timeslots endpoint.
-	 * Validates date, checks if selectable, returns grouped slots.
+	 * Returns real available slots (filtered by working hours, bookings, duration + buffers).
 	 *
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response|WP_Error Response or error.
@@ -160,13 +160,39 @@ class Bookit_DateTime_API {
 		$service_id  = isset( $wizard_data['service_id'] ) ? absint( $wizard_data['service_id'] ) : 0;
 		$staff_id    = isset( $wizard_data['staff_id'] ) ? absint( $wizard_data['staff_id'] ) : 0;
 
-		$time_slots = $model->generate_time_slots( $date, $service_id, $staff_id );
-		$slots      = $model->group_time_slots( $time_slots );
+		if ( ! $service_id ) {
+			return new WP_Error(
+				'no_service',
+				__( 'Please select a service first', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$available_slots = $model->get_available_slots( $date, $service_id, $staff_id );
+
+		if ( empty( $available_slots ) ) {
+			return rest_ensure_response(
+				array(
+					'success'   => true,
+					'available' => false,
+					'message'   => __( 'No time slots available for this date', 'bookit-booking-system' ),
+					'slots'     => array(
+						'morning'   => array(),
+						'afternoon' => array(),
+						'evening'   => array(),
+					),
+				)
+			);
+		}
+
+		$slots = $model->group_time_slots( $available_slots );
 
 		return rest_ensure_response(
 			array(
-				'success' => true,
-				'slots'   => $slots,
+				'success'      => true,
+				'available'    => true,
+				'slots'        => $slots,
+				'total_slots'  => count( $available_slots ),
 			)
 		);
 	}

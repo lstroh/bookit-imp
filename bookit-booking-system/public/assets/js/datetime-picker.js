@@ -203,6 +203,7 @@
 			if (errorEl) {
 				errorEl.style.display = 'none';
 				errorEl.textContent = '';
+				errorEl.innerHTML = '';
 			}
 
 			const url = this.restUrl + 'bookit/v1/timeslots?date=' + encodeURIComponent(date);
@@ -219,7 +220,16 @@
 				})
 				.then(function(data) {
 					if (loading) loading.style.display = 'none';
-					if (data.success && data.slots) {
+					if (!data.success) {
+						self.showTimeslotsError(data.message || 'Unable to load times.');
+						return;
+					}
+					if (data.available === false) {
+						errorEl.innerHTML = '<p><strong>No time slots available</strong></p><p>This date is fully booked. Please select another date.</p>';
+						errorEl.style.display = 'block';
+						return;
+					}
+					if (data.slots) {
 						self.renderTimeSlots(data.slots);
 						if (content) content.style.display = 'block';
 					} else {

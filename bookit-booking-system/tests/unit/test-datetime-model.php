@@ -29,51 +29,31 @@ class Test_DateTime_Model extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test 1: generate_time_slots returns 96 slots (24h * 4 per hour)
+	 * Test 1: generate_time_slots returns array (Phase 2: real availability; empty when no working hours)
 	 *
 	 * @covers Bookit_DateTime_Model::generate_time_slots
+	 * @covers Bookit_DateTime_Model::get_available_slots
 	 */
-	public function test_generate_time_slots_returns_96_slots() {
+	public function test_generate_time_slots_returns_array() {
 		$date       = '2026-05-15';
-		$service_id = 1; // Dummy for Phase 1
-		$staff_id   = 1; // Dummy for Phase 1
+		$service_id = 1;
+		$staff_id   = 1;
 
 		$slots = $this->model->generate_time_slots( $date, $service_id, $staff_id );
 
-		// Assert count
-		$this->assertCount( 96, $slots, 'Should generate 96 time slots (15-min increments)' );
-
-		// Assert first slot
-		$this->assertEquals( '00:00:00', $slots[0], 'First slot should be 00:00:00' );
-
-		// Assert last slot
-		$this->assertEquals( '23:45:00', $slots[95], 'Last slot should be 23:45:00' );
-
-		// Assert 9:00 AM exists
-		$this->assertContains( '09:00:00', $slots, '9:00 AM should exist' );
-
-		// Assert 9:15 AM exists
-		$this->assertContains( '09:15:00', $slots, '9:15 AM should exist' );
+		$this->assertIsArray( $slots );
+		// With no staff_working_hours or no service, slots are empty (Phase 2 behavior).
+		// Full availability logic is tested in Test_Availability_Algorithm.
 	}
 
 	/**
-	 * Test 2: Time slots are in correct 15-minute increments
+	 * Test 2: get_available_slots returns empty for invalid service
 	 *
-	 * @covers Bookit_DateTime_Model::generate_time_slots
+	 * @covers Bookit_DateTime_Model::get_available_slots
 	 */
-	public function test_time_slots_are_15_minute_increments() {
-		$slots = $this->model->generate_time_slots( '2026-05-15', 1, 1 );
-
-		// Check a few specific slots
-		$this->assertContains( '00:15:00', $slots );
-		$this->assertContains( '00:30:00', $slots );
-		$this->assertContains( '00:45:00', $slots );
-		$this->assertContains( '01:00:00', $slots );
-
-		// No 5-minute or 10-minute slots
-		$this->assertNotContains( '00:05:00', $slots );
-		$this->assertNotContains( '00:10:00', $slots );
-		$this->assertNotContains( '00:20:00', $slots );
+	public function test_get_available_slots_returns_empty_for_invalid_service() {
+		$slots = $this->model->get_available_slots( '2026-05-15', 99999, 1 );
+		$this->assertSame( array(), $slots );
 	}
 
 	/**
