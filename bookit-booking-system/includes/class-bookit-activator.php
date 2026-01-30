@@ -71,6 +71,11 @@ class Bookit_Activator {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-database.php';
 		Bookit_Database::create_tables();
 
+		// Run migrations for additional tables (e.g. staff working hours).
+		require_once BOOKIT_PLUGIN_DIR . 'database/migrations/migration-add-staff-working-hours.php';
+		$staff_working_hours_migration = new Bookit_Migration_Add_Staff_Working_Hours();
+		$staff_working_hours_migration->up();
+
 		// Schedule log cleanup (daily at 3 AM)
 		if ( ! wp_next_scheduled( 'bookit_cleanup_logs' ) ) {
 			wp_schedule_event( strtotime( '03:00:00' ), 'daily', 'bookit_cleanup_logs' );

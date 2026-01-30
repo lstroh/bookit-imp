@@ -60,21 +60,26 @@ if ( ! current_user_can( 'manage_options' ) ) {
 	<h1>Bookit Database Migration</h1>
 	<?php
 
-	// Load migration class.
+	// Load migration classes.
 	require_once __DIR__ . '/database/migrations/migration-add-staff-fields.php';
+	require_once __DIR__ . '/database/migrations/migration-add-staff-working-hours.php';
 
-	// Run migration.
+	// Run staff fields migration.
 	$migration = new Bookit_Migration_Add_Staff_Fields();
 	$success   = $migration->up();
 
+	// Run staff working hours migration (creates wp_bookings_staff_working_hours table).
+	$staff_wh_migration = new Bookit_Migration_Add_Staff_Working_Hours();
+	$success_wh         = $staff_wh_migration->up();
+	$success            = $success && $success_wh;
+
 	if ( $success ) {
 		echo '<h2 class="success">✅ Migration Completed Successfully!</h2>';
-		echo '<p>The following columns have been added:</p>';
+		echo '<p>The following have been applied:</p>';
 		echo '<ul>';
-		echo '<li>wp_bookings_staff.photo_url</li>';
-		echo '<li>wp_bookings_staff.bio</li>';
-		echo '<li>wp_bookings_staff.title</li>';
+		echo '<li>wp_bookings_staff.photo_url, bio, title</li>';
 		echo '<li>wp_bookings_staff_services.custom_price</li>';
+		echo '<li>Table wp_bookings_staff_working_hours (if not already present)</li>';
 		echo '</ul>';
 	} else {
 		echo '<h2 class="error">❌ Migration Completed with Errors</h2>';

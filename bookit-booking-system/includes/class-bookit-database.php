@@ -420,6 +420,7 @@ class Bookit_Database {
 			// Part 2 tables (drop first due to dependencies).
 			$table_prefix . 'bookings_payments',
 			$table_prefix . 'bookings',
+			$table_prefix . 'bookings_staff_working_hours',
 			$table_prefix . 'bookings_working_hours',
 			$table_prefix . 'bookings_customers',
 			$table_prefix . 'bookings_settings',
