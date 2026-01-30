@@ -131,12 +131,23 @@ class Bookit_DateTime_Model {
 	private function get_staff_availability( $staff_id, $date, $total_time_needed ) {
 		global $wpdb;
 
+		Bookit_Logger::info( 'get_staff_availability: start', array(
+			'staff_id'           => $staff_id,
+			'date'               => $date,
+			'total_time_needed'  => $total_time_needed,
+		) );
+
 		$day_of_week = (int) date( 'N', strtotime( $date ) ); // 1=Monday, 7=Sunday.
 		$table       = $wpdb->prefix . 'bookings_staff_working_hours';
 
 		// Check if staff_working_hours table exists; fallback not required if migration is run.
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
+			Bookit_Logger::warning( 'get_staff_availability: staff_working_hours table does not exist', array(
+				'staff_id' => $staff_id,
+				'date'    => $date,
+				'table'   => $table,
+			) );
 			return array();
 		}
 
@@ -157,6 +168,13 @@ class Bookit_DateTime_Model {
 		$all_slots = array();
 
 		if ( $working_hours ) {
+			Bookit_Logger::info( 'get_staff_availability: using specific_date working hours', array(
+				'staff_id'    => $staff_id,
+				'date'        => $date,
+				'start_time'  => $working_hours['start_time'],
+				'end_time'    => $working_hours['end_time'],
+				'is_working'  => isset( $working_hours['is_working'] ) ? (int) $working_hours['is_working'] : 1,
+			) );
 			$is_working = isset( $working_hours['is_working'] ) ? (int) $working_hours['is_working'] : 1;
 			if ( 1 === $is_working ) {
 				$all_slots = $this->generate_slots_in_range(
@@ -187,8 +205,20 @@ class Bookit_DateTime_Model {
 			);
 
 			if ( empty( $patterns ) ) {
+				Bookit_Logger::info( 'get_staff_availability: no day-of-week patterns for date', array(
+					'staff_id'     => $staff_id,
+					'date'         => $date,
+					'day_of_week'  => $day_of_week,
+				) );
 				return array();
 			}
+
+			Bookit_Logger::info( 'get_staff_availability: using day-of-week patterns', array(
+				'staff_id'     => $staff_id,
+				'date'         => $date,
+				'day_of_week'  => $day_of_week,
+				'pattern_count' => count( $patterns ),
+			) );
 
 			foreach ( $patterns as $row ) {
 				$is_working = isset( $row['is_working'] ) ? (int) $row['is_working'] : 1;
@@ -209,6 +239,10 @@ class Bookit_DateTime_Model {
 		}
 
 		if ( empty( $all_slots ) ) {
+			Bookit_Logger::info( 'get_staff_availability: no slots from working hours', array(
+				'staff_id' => $staff_id,
+				'date'    => $date,
+			) );
 			return array();
 		}
 
@@ -226,11 +260,25 @@ class Bookit_DateTime_Model {
 			ARRAY_A
 		);
 
-		$available_slots = $this->filter_booked_slots( $all_slots, $existing_bookings ? $existing_bookings : array(), $total_time_needed );
+		$existing_bookings = $existing_bookings ? $existing_bookings : array();
+		Bookit_Logger::info( 'get_staff_availability: existing bookings count', array(
+			'staff_id'           => $staff_id,
+			'date'               => $date,
+			'slots_before_filter' => count( $all_slots ),
+			'existing_bookings'  => count( $existing_bookings ),
+		) );
+
+		$available_slots = $this->filter_booked_slots( $all_slots, $existing_bookings, $total_time_needed );
 
 		if ( $date === gmdate( 'Y-m-d' ) ) {
 			$available_slots = $this->filter_past_slots( $available_slots, $date );
 		}
+
+		Bookit_Logger::info( 'get_staff_availability: done', array(
+			'staff_id'        => $staff_id,
+			'date'            => $date,
+			'available_count' => count( $available_slots ),
+		) );
 
 		return array_values( $available_slots );
 	}
