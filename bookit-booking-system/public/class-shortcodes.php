@@ -112,6 +112,22 @@ class Bookit_Shortcodes {
 			true
 		);
 
+		// Step 4: Contact form.
+		wp_enqueue_style(
+			'bookit-contact-form',
+			BOOKIT_PLUGIN_URL . 'public/assets/css/contact-form.css',
+			array(),
+			BOOKIT_VERSION,
+			'all'
+		);
+		wp_enqueue_script(
+			'bookit-contact-form',
+			BOOKIT_PLUGIN_URL . 'public/assets/js/contact-form.js',
+			array( 'bookit-wizard' ),
+			BOOKIT_VERSION,
+			true
+		);
+
 		// Get current step from session if available.
 		$current_step = 1;
 		if ( class_exists( 'Bookit_Session_Manager' ) ) {

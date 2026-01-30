@@ -1,0 +1,199 @@
+/**
+ * Contact Form Styles (Step 4)
+ *
+ * @package    Bookit_Booking_System
+ * @subpackage Bookit_Booking_System/public/assets/css
+ */
+
+.bookit-step-4 {
+	max-width: 600px;
+	margin: 0 auto;
+	padding: 2rem 1rem;
+}
+
+.bookit-step-4 .step-intro {
+	margin-bottom: 2rem;
+	color: #666;
+	font-size: 1rem;
+}
+
+/* Form Groups */
+.bookit-contact-form .form-group {
+	margin-bottom: 1.5rem;
+}
+
+.bookit-contact-form .form-group label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 0.5rem;
+	color: #333;
+}
+
+.bookit-contact-form .required {
+	color: #dc2626;
+	font-weight: 700;
+}
+
+.bookit-contact-form .optional {
+	color: #666;
+	font-weight: 400;
+	font-size: 0.875rem;
+}
+
+/* Input Fields */
+.bookit-contact-form .form-group input[type="text"],
+.bookit-contact-form .form-group input[type="email"],
+.bookit-contact-form .form-group input[type="tel"],
+.bookit-contact-form .form-group textarea {
+	width: 100%;
+	padding: 0.75rem;
+	border: 2px solid #e0e0e0;
+	border-radius: 6px;
+	font-size: 1rem;
+	font-family: inherit;
+	transition: border-color 0.2s;
+}
+
+.bookit-contact-form .form-group input:focus,
+.bookit-contact-form .form-group textarea:focus {
+	outline: none;
+	border-color: #1e40af;
+}
+
+.bookit-contact-form .form-group input.field-error,
+.bookit-contact-form .form-group textarea.field-error {
+	border-color: #dc2626;
+}
+
+/* Field Help Text */
+.bookit-contact-form .field-help {
+	margin-top: 0.25rem;
+	font-size: 0.875rem;
+	color: #666;
+}
+
+/* Error Messages */
+.bookit-contact-form .error-message {
+	display: block;
+	margin-top: 0.25rem;
+	font-size: 0.875rem;
+	color: #dc2626;
+	font-weight: 500;
+}
+
+.bookit-contact-form textarea {
+	resize: vertical;
+	min-height: 80px;
+}
+
+/* Checkbox Group */
+.bookit-contact-form .checkbox-group {
+	margin-bottom: 1.5rem;
+}
+
+.bookit-contact-form .checkbox-label {
+	display: flex;
+	align-items: flex-start;
+	cursor: pointer;
+	font-weight: 400;
+}
+
+.bookit-contact-form .checkbox-label input[type="checkbox"] {
+	width: 20px;
+	height: 20px;
+	margin-right: 0.75rem;
+	margin-top: 2px;
+	cursor: pointer;
+}
+
+.bookit-contact-form .checkbox-label span {
+	flex: 1;
+}
+
+/* Terms Notice */
+.bookit-contact-form .terms-notice {
+	padding: 1rem;
+	background-color: #f5f5f5;
+	border-radius: 6px;
+	font-size: 0.875rem;
+	color: #666;
+	margin-bottom: 2rem;
+}
+
+.bookit-contact-form .terms-notice a {
+	color: #1e40af;
+	text-decoration: underline;
+}
+
+.bookit-contact-form .terms-notice a:hover {
+	text-decoration: none;
+}
+
+/* Navigation Buttons (Step 4) */
+.bookit-step-4-nav {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-top: 2rem;
+}
+
+.bookit-step-4-nav .bookit-btn-back-step-4,
+.bookit-step-4-nav .bookit-btn-continue-contact {
+	padding: 0.75rem 1.5rem;
+	border: none;
+	border-radius: 6px;
+	font-size: 1rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.bookit-step-4-nav .bookit-btn-back-step-4 {
+	background: #fff;
+	border: 2px solid #e0e0e0;
+	color: #333;
+}
+
+.bookit-step-4-nav .bookit-btn-back-step-4:hover {
+	border-color: #1e40af;
+	color: #1e40af;
+}
+
+.bookit-step-4-nav .bookit-btn-continue-contact {
+	background: #1e40af;
+	color: #fff;
+	flex: 1;
+}
+
+.bookit-step-4-nav .bookit-btn-continue-contact:hover:not(:disabled) {
+	background: #1e3a8a;
+}
+
+.bookit-step-4-nav .bookit-btn-continue-contact:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+	.bookit-step-4 {
+		padding: 1rem 0.5rem;
+	}
+
+	.bookit-step-4-nav {
+		flex-direction: column;
+	}
+
+	.bookit-step-4-nav .bookit-btn-back-step-4,
+	.bookit-step-4-nav .bookit-btn-continue-contact {
+		width: 100%;
+	}
+}
+
+/* Focus Indicators (Accessibility) */
+.bookit-contact-form .form-group input:focus,
+.bookit-contact-form .form-group textarea:focus,
+.bookit-contact-form .checkbox-label input:focus {
+	outline: 2px solid #1e40af;
+	outline-offset: 2px;
+}

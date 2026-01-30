@@ -116,7 +116,8 @@ class Test_Wizard_Navigation extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that step 4 still shows next button (submit); step validation blocks >4.
+	 * Test that step 4 is the final step; step validation blocks >4.
+	 * Step 4 (contact form) uses its own nav; shell nav is hidden on step 4.
 	 *
 	 * @covers Bookit_Wizard_API::validate_step
 	 * @covers Bookit_Shortcodes::render_booking_wizard
@@ -124,7 +125,8 @@ class Test_Wizard_Navigation extends WP_UnitTestCase {
 	public function test_cannot_go_above_step_four() {
 		Bookit_Session_Manager::set( 'current_step', 4 );
 		$output = do_shortcode( '[bookit_booking_wizard]' );
-		$this->assertStringContainsString( 'bookit-btn-next', $output );
+		$this->assertStringContainsString( 'bookit-progress-step-current', $output );
+		$this->assertStringContainsString( 'Contact Details', $output );
 
 		$request = new WP_REST_Request( 'POST', '/' . $this->namespace . $this->route );
 		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
@@ -193,16 +195,21 @@ class Test_Wizard_Navigation extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that back button is present on steps 2–4.
+	 * Test that back button is present on steps 2–3 (shell nav).
+	 * Step 4 uses the contact form's own back button; shell nav is hidden.
 	 *
 	 * @covers Bookit_Shortcodes::render_booking_wizard
 	 */
 	public function test_browser_back_button_works() {
-		foreach ( array( 2, 3, 4 ) as $step ) {
+		foreach ( array( 2, 3 ) as $step ) {
 			Bookit_Session_Manager::set( 'current_step', $step );
 			$output = do_shortcode( '[bookit_booking_wizard]' );
 			$this->assertStringContainsString( 'bookit-btn-back', $output );
 			$this->assertStringContainsString( 'bookit-back-btn', $output );
 		}
+		// Step 4: shell nav is hidden; contact form has its own back (bookit-btn-back-step-4).
+		Bookit_Session_Manager::set( 'current_step', 4 );
+		$output = do_shortcode( '[bookit_booking_wizard]' );
+		$this->assertStringContainsString( 'Contact Details', $output );
 	}
 }

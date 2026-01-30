@@ -94,6 +94,9 @@ class Bookit_Loader {
 
 		// DateTime API.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-datetime-api.php';
+
+		// Contact API.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-contact-api.php';
 	}
 
 	/**
@@ -211,7 +214,8 @@ class Bookit_Loader {
 		$shortcodes = new Bookit_Shortcodes();
 
 		// Initialize REST API.
-		$wizard_api = new Bookit_Wizard_API();
+		$wizard_api  = new Bookit_Wizard_API();
+		$contact_api = new Bookit_Contact_API();
 	}
 
 	/**

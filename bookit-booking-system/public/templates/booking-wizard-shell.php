@@ -58,7 +58,7 @@ $step_labels = array(
 			1 => 'services',
 			2 => 'staff',
 			3 => 'datetime',
-			4 => 'checkout',
+			4 => 'contact',
 		);
 		$step_slug = isset( $step_slugs[ $current_step ] ) ? $step_slugs[ $current_step ] : 'step-' . $current_step;
 
@@ -75,6 +75,7 @@ $step_labels = array(
 		?>
 	</main>
 
+	<?php if ( $current_step < 4 ) : ?>
 	<nav class="bookit-wizard-nav" aria-label="<?php esc_attr_e( 'Booking navigation', 'bookit-booking-system' ); ?>">
 		<?php if ( $current_step > 1 ) : ?>
 			<button type="button" class="bookit-btn bookit-btn-back" id="bookit-back-btn" aria-label="<?php esc_attr_e( 'Go to previous step', 'bookit-booking-system' ); ?>">
@@ -85,4 +86,5 @@ $step_labels = array(
 			<?php esc_html_e( 'Next', 'bookit-booking-system' ); ?> →
 		</button>
 	</nav>
+	<?php endif; ?>
 </div>
