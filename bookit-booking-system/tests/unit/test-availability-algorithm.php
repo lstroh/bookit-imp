@@ -1,6 +1,16 @@
 <?php
 /**
- * Tests for Time Slot Availability Algorithm (Sprint 1, Task 5)
+ * Availability Algorithm Unit Tests (Sprint 1, Task 5)
+ *
+ * Tests the complex time slot availability calculation including:
+ * - Working hours integration
+ * - Existing booking conflicts
+ * - Buffer time calculations
+ * - Break time exclusions
+ * - "No Preference" staff aggregation
+ * - Past slot filtering
+ *
+ * Target Coverage: 85%+
  *
  * @package    Bookit_Booking_System
  * @subpackage Tests
@@ -286,12 +296,36 @@ class Test_Availability_Algorithm extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test 3: 60-min service, 10-min buffer_before, 15-min buffer_after → Slots overlapping booking buffer blocked.
+	 * Test 3: Buffer times considered (total time = buffer_before + duration + buffer_after).
+	 * 60-min service, 10-min buffer_before, 15-min buffer_after → last slot 15:30 OK, 15:45 exceeds end.
+	 *
+	 * @covers Bookit_DateTime_Model::get_available_slots
+	 * @covers Bookit_DateTime_Model::generate_slots_in_range
+	 */
+	public function test_buffers_considered() {
+		$date = '2026-05-15';
+		$service_id = $this->create_service( array( 'duration' => 60, 'buffer_before' => 10, 'buffer_after' => 15 ) );
+		$staff_id   = $this->create_staff();
+		$this->link_staff_service( $staff_id, $service_id );
+		$this->add_working_hours( $staff_id, 5, null, '09:00:00', '17:00:00' );
+
+		$slots = $this->model->get_available_slots( $date, $service_id, $staff_id );
+
+		$this->assertNotEmpty( $slots );
+		// Total time needed: 10 + 60 + 15 = 85 min. 15:30 slot ends 16:55 (within 17:00).
+		$this->assertContains( '15:30:00', $slots, '3:30pm should be available' );
+		// 15:45 slot would end 17:10 (past 17:00).
+		$this->assertNotContains( '15:45:00', $slots, '3:45pm should NOT be available (buffer exceeds end time)' );
+	}
+
+	/**
+	 * Test 3b: Buffer + existing booking — slot overlapping booking buffer is blocked.
+	 * 60-min service, 10 buffer_before, 15 buffer_after; booking 10:00–11:00 → 9:00 slot overlaps.
 	 *
 	 * @covers Bookit_DateTime_Model::get_available_slots
 	 * @covers Bookit_DateTime_Model::filter_booked_slots
 	 */
-	public function test_buffers_considered() {
+	public function test_buffers_considered_with_booking() {
 		$date = '2026-05-15';
 		$service_id = $this->create_service( array( 'duration' => 60, 'buffer_before' => 10, 'buffer_after' => 15 ) );
 		$staff_id   = $this->create_staff();
@@ -301,7 +335,7 @@ class Test_Availability_Algorithm extends WP_UnitTestCase {
 
 		$slots = $this->model->get_available_slots( $date, $service_id, $staff_id );
 
-		// Total time = 10+60+15 = 85 min. Slot 9:00 runs 9:00-10:25, overlaps 10:00-11:00.
+		// Total time = 85 min. Slot 9:00 runs 9:00–10:25, overlaps 10:00–11:00.
 		$this->assertNotContains( '09:00:00', $slots );
 		$this->assertNotContains( '10:00:00', $slots );
 		$this->assertContains( '11:00:00', $slots );
@@ -353,7 +387,8 @@ class Test_Availability_Algorithm extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test 6: is_working = 0 → Returns empty array.
+	 * Test 6: Blocked day (is_working = 0) returns no slots.
+	 * Uses specific_date exception to block the whole day (vacation, sick day).
 	 *
 	 * @covers Bookit_DateTime_Model::get_available_slots
 	 */
@@ -362,15 +397,16 @@ class Test_Availability_Algorithm extends WP_UnitTestCase {
 		$service_id = $this->create_service( array( 'duration' => 60 ) );
 		$staff_id   = $this->create_staff();
 		$this->link_staff_service( $staff_id, $service_id );
-		$this->add_working_hours( $staff_id, 5, null, '09:00:00', '17:00:00', 0 );
+		$this->add_working_hours( $staff_id, null, $date, '00:00:00', '23:59:59', 0 );
 
 		$slots = $this->model->get_available_slots( $date, $service_id, $staff_id );
 
-		$this->assertEmpty( $slots );
+		$this->assertEmpty( $slots, 'Should return NO slots when is_working = 0' );
 	}
 
 	/**
-	 * Test 7: "No Preference" with 3 staff → Returns union of all slots.
+	 * Test 7: "No Preference" (staff_id = 0) aggregates slots from all qualified staff.
+	 * 3 staff: Alice 9–5 (booked 10–11), Bob 10–6, Charlie 8–4 → union of slots.
 	 *
 	 * @covers Bookit_DateTime_Model::get_available_slots
 	 * @covers Bookit_DateTime_Model::get_no_preference_slots
@@ -378,23 +414,27 @@ class Test_Availability_Algorithm extends WP_UnitTestCase {
 	public function test_no_preference_aggregates_staff() {
 		$date = '2026-05-15';
 		$service_id = $this->create_service( array( 'duration' => 60 ) );
-		$staff1 = $this->create_staff( array( 'first_name' => 'A' ) );
-		$staff2 = $this->create_staff( array( 'first_name' => 'B' ) );
-		$staff3 = $this->create_staff( array( 'first_name' => 'C' ) );
-		$this->link_staff_service( $staff1, $service_id );
-		$this->link_staff_service( $staff2, $service_id );
-		$this->link_staff_service( $staff3, $service_id );
-		$this->add_working_hours( $staff1, 5, null, '09:00:00', '12:00:00' );
-		$this->add_working_hours( $staff2, 5, null, '12:00:00', '15:00:00' );
-		$this->add_working_hours( $staff3, 5, null, '15:00:00', '18:00:00' );
+		$staff_a = $this->create_staff( array( 'first_name' => 'Alice' ) );
+		$staff_b = $this->create_staff( array( 'first_name' => 'Bob' ) );
+		$staff_c = $this->create_staff( array( 'first_name' => 'Charlie' ) );
+		$this->link_staff_service( $staff_a, $service_id );
+		$this->link_staff_service( $staff_b, $service_id );
+		$this->link_staff_service( $staff_c, $service_id );
+
+		$this->add_working_hours( $staff_a, 5, null, '09:00:00', '17:00:00' );
+		$this->create_booking( $staff_a, $date, '10:00:00', '11:00:00' );
+
+		$this->add_working_hours( $staff_b, 5, null, '10:00:00', '18:00:00' );
+		$this->add_working_hours( $staff_c, 5, null, '08:00:00', '16:00:00' );
 
 		$slots = $this->model->get_available_slots( $date, $service_id, 0 );
 
 		$this->assertNotEmpty( $slots );
-		$this->assertContains( '09:00:00', $slots );
-		$this->assertContains( '12:00:00', $slots );
-		$this->assertContains( '15:00:00', $slots );
-		$this->assertContains( '17:00:00', $slots );
+		$this->assertContains( '09:00:00', $slots, '9:00am should show (Alice & Charlie available)' );
+		$this->assertContains( '10:00:00', $slots, '10:00am should show (Bob & Charlie available)' );
+		$this->assertContains( '11:00:00', $slots, '11:00am should show (all available)' );
+		$this->assertContains( '15:00:00', $slots, '3:00pm should show (Alice & Bob available)' );
+		$this->assertContains( '17:00:00', $slots, '5:00pm should show (Bob available until 6pm)' );
 		$slots_unique = array_unique( $slots );
 		$this->assertCount( count( $slots_unique ), $slots, 'Slots should be unique and sorted' );
 	}
@@ -422,30 +462,29 @@ class Test_Availability_Algorithm extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test 9: 60-min service at 4:45pm ending 5:45pm, hours end 6pm → Slot 16:45 shows.
+	 * Test 9: Slot fits with buffer at end of working hours.
+	 * 60-min service + 10-min buffer_after = 70 min; working until 18:00 → 16:45 OK, 17:00 exceeds.
 	 *
 	 * @covers Bookit_DateTime_Model::get_available_slots
 	 * @covers Bookit_DateTime_Model::generate_slots_in_range
 	 */
 	public function test_slot_fits_with_buffer() {
 		$date = '2026-05-15';
-		$service_id = $this->create_service( array( 'duration' => 60, 'buffer_before' => 0, 'buffer_after' => 0 ) );
+		$service_id = $this->create_service( array( 'duration' => 60, 'buffer_before' => 0, 'buffer_after' => 10 ) );
 		$staff_id   = $this->create_staff();
 		$this->link_staff_service( $staff_id, $service_id );
 		$this->add_working_hours( $staff_id, 5, null, '09:00:00', '18:00:00' );
 
 		$slots = $this->model->get_available_slots( $date, $service_id, $staff_id );
 
-		// 60-min service, hours end 18:00: slot 16:45 ends 17:45, slot 17:00 ends 18:00 — both valid.
-		$this->assertContains( '16:45:00', $slots );
-		$this->assertContains( '16:00:00', $slots );
-		$this->assertContains( '17:00:00', $slots );
-		// Slot 17:15 would end 18:15 > 18:00, so must not appear.
-		$this->assertNotContains( '17:15:00', $slots );
+		// 16:45 slot: service 16:45–17:45, buffer 17:45–17:55 (within 18:00).
+		$this->assertContains( '16:45:00', $slots, '4:45pm should be available (ends at 5:55pm with buffer)' );
+		// 17:00 slot: service 17:00–18:00, buffer 18:00–18:10 (exceeds 18:00).
+		$this->assertNotContains( '17:00:00', $slots, '5:00pm should NOT be available (buffer exceeds end time)' );
 	}
 
 	/**
-	 * Test 10: Split shift (9-12, 14-18) → Slots in both periods.
+	 * Test 10a: Split shift via day_of_week (9–12, 14–18) → Slots in both periods.
 	 *
 	 * @covers Bookit_DateTime_Model::get_available_slots
 	 * @covers Bookit_DateTime_Model::get_staff_availability
@@ -465,5 +504,28 @@ class Test_Availability_Algorithm extends WP_UnitTestCase {
 		$this->assertNotContains( '12:00:00', $slots ); // 12:00 + 60 = 13:00, outside first block.
 		$this->assertContains( '14:00:00', $slots );
 		$this->assertContains( '17:00:00', $slots );
+	}
+
+	/**
+	 * Test 10b: Split shift with specific_date afternoon only (exception overrides pattern).
+	 * Pattern: 9–12; exception for date: 14–18 → only afternoon slots (exception takes priority).
+	 *
+	 * @covers Bookit_DateTime_Model::get_available_slots
+	 * @covers Bookit_DateTime_Model::get_staff_availability
+	 */
+	public function test_split_shift_exception_overrides_pattern() {
+		$date = '2026-05-15';
+		$service_id = $this->create_service( array( 'duration' => 60 ) );
+		$staff_id   = $this->create_staff();
+		$this->link_staff_service( $staff_id, $service_id );
+		$this->add_working_hours( $staff_id, 5, null, '09:00:00', '12:00:00' );
+		$this->add_working_hours( $staff_id, null, $date, '14:00:00', '18:00:00' );
+
+		$slots = $this->model->get_available_slots( $date, $service_id, $staff_id );
+
+		$this->assertNotEmpty( $slots );
+		$this->assertContains( '14:00:00', $slots, '2:00pm should be available' );
+		$this->assertContains( '17:00:00', $slots, '5:00pm should be available (ends at 6pm)' );
+		$this->assertNotContains( '09:00:00', $slots, '9:00am should NOT be available (exception overrides)' );
 	}
 }
