@@ -87,16 +87,15 @@ class Bookit_Wizard_API {
 	 * Check permission for session updates.
 	 *
 	 * @param WP_REST_Request $request Request object.
-	 * @return bool True if allowed.
+	 * @return bool|WP_Error True if allowed, WP_Error on failure.
 	 */
 	public function check_permission( $request ) {
-		// Verify nonce for security.
-		$nonce = $request->get_header( 'X-WP-Nonce' );
-		if ( ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
-			return false;
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-csrf-protection.php';
+
+		if ( ! Bookit_CSRF_Protection::verify_rest_request( $request ) ) {
+			return Bookit_CSRF_Protection::get_rest_error();
 		}
 
-		// Public endpoint - allow for booking wizard.
 		return true;
 	}
 

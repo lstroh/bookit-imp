@@ -36,6 +36,10 @@ $marketing_consent = isset( $session['marketing_consent'] ) ? (int) $session['ma
 	<p class="step-intro"><?php esc_html_e( 'Almost there! Just a few more details to confirm your booking.', 'bookit-booking-system' ); ?></p>
 
 	<form id="bookit-contact-form" class="bookit-contact-form" novalidate>
+		<?php
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-csrf-protection.php';
+		Bookit_CSRF_Protection::nonce_field( true, true );
+		?>
 
 		<!-- First Name -->
 		<div class="form-group">

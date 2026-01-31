@@ -33,6 +33,9 @@ class Bookit_Deactivator {
 			wp_unschedule_event( $timestamp, 'bookit_cleanup_logs' );
 		}
 
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-session-cleanup.php';
+		Bookit_Session_Cleanup::unregister_cron();
+
 		// Flush rewrite rules.
 		flush_rewrite_rules();
 

@@ -135,14 +135,16 @@ class Bookit_Shortcodes {
 			$current_step = (int) Bookit_Session_Manager::get( 'current_step', 1 );
 		}
 
-		// Localize script with AJAX data.
+		// Localize script with AJAX data (wp_rest for REST API, bookit_booking for CSRF).
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-csrf-protection.php';
 		wp_localize_script(
 			'bookit-wizard',
 			'bookitWizard',
 			array(
-				'restUrl'    => rest_url(),
-				'ajaxUrl'    => rest_url( 'bookit/v1/wizard/session' ),
-				'nonce'      => wp_create_nonce( 'wp_rest' ),
+				'restUrl'     => rest_url(),
+				'ajaxUrl'     => rest_url( 'bookit/v1/wizard/session' ),
+				'nonce'       => wp_create_nonce( 'wp_rest' ),
+				'bookingNonce' => Bookit_CSRF_Protection::get_nonce(),
 				'currentStep' => $current_step,
 			)
 		);

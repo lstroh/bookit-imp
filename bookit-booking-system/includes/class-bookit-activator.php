@@ -81,6 +81,10 @@ class Bookit_Activator {
 			wp_schedule_event( strtotime( '03:00:00' ), 'daily', 'bookit_cleanup_logs' );
 		}
 
+		// Schedule abandoned session cleanup (daily at 3:30 AM)
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-session-cleanup.php';
+		Bookit_Session_Cleanup::register_cron();
+
 		// Initialize logger (creates log directory in best location)
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-logger.php';
 		Bookit_Logger::init();

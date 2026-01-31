@@ -65,6 +65,9 @@ class Bookit_Loader {
 		// Booking wizard session manager.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
 
+		// CSRF protection.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-csrf-protection.php';
+
 		// Admin-specific functionality.
 		require_once BOOKIT_PLUGIN_DIR . 'admin/class-bookit-admin.php';
 
@@ -97,6 +100,9 @@ class Bookit_Loader {
 
 		// Contact API.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-contact-api.php';
+
+		// Session cleanup cron.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-session-cleanup.php';
 	}
 
 	/**
@@ -210,6 +216,9 @@ class Bookit_Loader {
 		add_action( 'wp_enqueue_scripts', array( $plugin_public, 'enqueue_styles' ) );
 		add_action( 'wp_enqueue_scripts', array( $plugin_public, 'enqueue_scripts' ) );
 
+		// Initialize session on front-end (non-admin) requests for booking wizard.
+		add_action( 'init', array( $this, 'maybe_init_booking_session' ), 1 );
+
 		// Initialize shortcode handler.
 		$shortcodes = new Bookit_Shortcodes();
 
@@ -224,8 +233,23 @@ class Bookit_Loader {
 	 * @return void
 	 */
 	private function define_cron_hooks() {
-		// Log cleanup cron
+		// Log cleanup cron.
 		add_action( 'bookit_cleanup_logs', array( 'Bookit_Logger', 'cleanup_old_logs' ) );
+
+		// Abandoned session cleanup cron.
+		add_action( 'bookit_cleanup_abandoned_sessions', array( 'Bookit_Session_Cleanup', 'run_cleanup' ) );
+	}
+
+	/**
+	 * Initialize booking session on front-end requests (not admin or cron).
+	 *
+	 * @return void
+	 */
+	public function maybe_init_booking_session() {
+		if ( is_admin() || wp_doing_cron() ) {
+			return;
+		}
+		Bookit_Session_Manager::init();
 	}
 
 	/**

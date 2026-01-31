@@ -39,7 +39,7 @@ class Bookit_Contact_API {
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( $this, 'save_contact_details' ),
-				'permission_callback' => '__return_true',
+				'permission_callback' => array( $this, 'check_permission' ),
 				'args'                => array(
 					'first_name'        => array(
 						'required'          => false,
@@ -76,6 +76,22 @@ class Bookit_Contact_API {
 				),
 			)
 		);
+	}
+
+	/**
+	 * Check permission for contact save (CSRF nonce verification).
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return bool|WP_Error True if allowed, WP_Error on failure.
+	 */
+	public function check_permission( $request ) {
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-csrf-protection.php';
+
+		if ( ! Bookit_CSRF_Protection::verify_rest_request( $request ) ) {
+			return Bookit_CSRF_Protection::get_rest_error();
+		}
+
+		return true;
 	}
 
 	/**

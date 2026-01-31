@@ -224,7 +224,7 @@ class Test_Session_Manager extends WP_UnitTestCase {
 		// Set directly in session so it sticks.
 		Bookit_Session_Manager::init();
 		Bookit_Session_Manager::set_data( array() );
-		$_SESSION[ Bookit_Session_Manager::SESSION_KEY ]['last_activity'] = time() - 28801; // 8h+ ago.
+		$_SESSION[ Bookit_Session_Manager::SESSION_KEY ]['last_activity'] = time() - ( Bookit_Session_Manager::SESSION_TIMEOUT + 1 ); // 30 min+ ago.
 		$this->assertTrue( Bookit_Session_Manager::is_expired() );
 	}
 
@@ -249,7 +249,7 @@ class Test_Session_Manager extends WP_UnitTestCase {
 		$remaining = Bookit_Session_Manager::get_time_remaining();
 		$this->assertIsInt( $remaining );
 		$this->assertGreaterThanOrEqual( 0, $remaining );
-		$this->assertLessThanOrEqual( 28800, $remaining );
+		$this->assertLessThanOrEqual( Bookit_Session_Manager::SESSION_TIMEOUT, $remaining );
 	}
 
 	/**

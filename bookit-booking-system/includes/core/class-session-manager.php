@@ -24,7 +24,16 @@ class Bookit_Session_Manager {
 	const SESSION_KEY = 'bookit_wizard';
 
 	/**
+	 * Session inactivity timeout in seconds (30 minutes).
+	 *
+	 * @var int
+	 */
+	const SESSION_TIMEOUT = 1800;
+
+	/**
 	 * Initialize session with security settings.
+	 * Must be called before any session operations.
+	 * Session configuration happens BEFORE session_start().
 	 *
 	 * @return void
 	 */
@@ -40,15 +49,16 @@ class Bookit_Session_Manager {
 				return;
 			}
 
-			// Session security configuration.
-			@ini_set( 'session.cookie_httponly', '1' ); // Prevent JavaScript access.
-			@ini_set( 'session.cookie_samesite', 'Lax' ); // CSRF protection.
-			@ini_set( 'session.gc_maxlifetime', '28800' ); // 8 hours.
-			@ini_set( 'session.use_only_cookies', '1' ); // No session ID in URL.
+			// Session security configuration - MUST happen before session_start().
+			@ini_set( 'session.cookie_httponly', '1' );  // HttpOnly: prevents JavaScript access.
+			@ini_set( 'session.cookie_samesite', 'Lax' ); // SameSite: CSRF protection.
+			@ini_set( 'session.gc_maxlifetime', (string) self::SESSION_TIMEOUT );
+			@ini_set( 'session.use_only_cookies', '1' );  // No session ID in URL.
+			@ini_set( 'session.cookie_secure', '1' );     // HTTPS-only cookies (when not localhost).
 
-			// HTTPS only in production (not localhost).
-			if ( ! self::is_localhost() ) {
-				@ini_set( 'session.cookie_secure', '1' );
+			// Allow HTTP on localhost for development.
+			if ( self::is_localhost() ) {
+				@ini_set( 'session.cookie_secure', '0' );
 			}
 
 			session_name( 'bookit_wizard_session' );
@@ -57,10 +67,23 @@ class Bookit_Session_Manager {
 			// Initialize wizard data if not exists.
 			if ( ! isset( $_SESSION[ self::SESSION_KEY ] ) ) {
 				$_SESSION[ self::SESSION_KEY ] = self::get_default_data();
+				// Session fixation prevention: regenerate ID on first visit.
+				if ( session_status() === PHP_SESSION_ACTIVE ) {
+					session_regenerate_id( true );
+				}
 			}
 
 			// Update last activity timestamp.
 			self::update_activity();
+		}
+
+		// Check inactivity timeout on every request (even if session already started).
+		if ( session_status() === PHP_SESSION_ACTIVE && isset( $_SESSION[ self::SESSION_KEY ] ) ) {
+			$last = (int) ( $_SESSION[ self::SESSION_KEY ]['last_activity'] ?? 0 );
+			if ( $last > 0 && ( time() - $last ) > self::SESSION_TIMEOUT ) {
+				self::clear();
+				self::update_activity();
+			}
 		}
 	}
 
@@ -170,15 +193,14 @@ class Bookit_Session_Manager {
 	}
 
 	/**
-	 * Check if session is expired.
+	 * Check if session is expired (30-minute inactivity timeout).
 	 *
 	 * @return bool True if expired.
 	 */
 	public static function is_expired() {
 		$last_activity = (int) self::get( 'last_activity', 0 );
-		$timeout       = 28800; // 8 hours in seconds.
 
-		if ( $last_activity > 0 && ( time() - $last_activity > $timeout ) ) {
+		if ( $last_activity > 0 && ( time() - $last_activity > self::SESSION_TIMEOUT ) ) {
 			return true;
 		}
 
@@ -205,10 +227,22 @@ class Bookit_Session_Manager {
 	 */
 	public static function get_time_remaining() {
 		$last_activity = (int) self::get( 'last_activity', 0 );
-		$timeout       = 28800; // 8 hours in seconds.
 		$elapsed       = time() - $last_activity;
-		$remaining     = $timeout - $elapsed;
+		$remaining     = self::SESSION_TIMEOUT - $elapsed;
 
 		return max( 0, $remaining );
+	}
+
+	/**
+	 * Clear session on booking completion.
+	 * Call this after a booking has been successfully completed.
+	 *
+	 * @return void
+	 */
+	public static function complete_booking() {
+		self::init();
+		self::clear();
+		$_SESSION[ self::SESSION_KEY ] = self::get_default_data();
+		self::update_activity();
 	}
 }

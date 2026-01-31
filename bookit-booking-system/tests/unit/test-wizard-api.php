@@ -131,7 +131,7 @@ class Test_Wizard_API extends WP_UnitTestCase {
 		// No X-WP-Nonce header.
 
 		$response = rest_get_server()->dispatch( $request );
-		$this->assertEquals( 401, $response->get_status() );
+		$this->assertEquals( 403, $response->get_status() );
 	}
 
 	/**
@@ -145,7 +145,7 @@ class Test_Wizard_API extends WP_UnitTestCase {
 		$request->set_body_params( array( 'current_step' => 2 ) );
 
 		$response = rest_get_server()->dispatch( $request );
-		$this->assertEquals( 401, $response->get_status() );
+		$this->assertEquals( 403, $response->get_status() );
 	}
 
 	/**

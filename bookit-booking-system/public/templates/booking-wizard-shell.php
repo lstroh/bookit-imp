@@ -11,6 +11,9 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+// Load CSRF protection.
+require_once BOOKIT_PLUGIN_DIR . 'includes/class-csrf-protection.php';
+
 // Get current step.
 $current_step = (int) Bookit_Session_Manager::get( 'current_step', 1 );
 
@@ -52,6 +55,7 @@ $step_labels = array(
 	</div>
 
 	<main id="main-content" class="bookit-wizard-content" role="main">
+		<?php Bookit_CSRF_Protection::nonce_field( true, true ); ?>
 		<?php
 		// Get step slug for template filename.
 		$step_slugs = array(
