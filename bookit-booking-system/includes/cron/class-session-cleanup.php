@@ -45,10 +45,11 @@ class Bookit_Session_Cleanup {
 	 * Finds session files containing booking data that are older than 24 hours
 	 * and deletes them safely.
 	 *
+	 * @param string|null $path Optional directory path for testing. If null, uses session_save_path().
 	 * @return void
 	 */
-	public static function run_cleanup() {
-		$save_path = session_save_path();
+	public static function run_cleanup( $path = null ) {
+		$save_path = null !== $path ? $path : session_save_path();
 
 		if ( empty( $save_path ) || ! is_dir( $save_path ) ) {
 			// Use default if session path is not set.
