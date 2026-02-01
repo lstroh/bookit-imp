@@ -47,6 +47,14 @@ define( 'BOOKIT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'BOOKIT_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 
 /**
+ * Composer autoload (Stripe SDK and other dependencies).
+ */
+$bookit_vendor = BOOKIT_PLUGIN_DIR . 'vendor/autoload.php';
+if ( file_exists( $bookit_vendor ) ) {
+	require_once $bookit_vendor;
+}
+
+/**
  * The code that runs during plugin activation.
  *
  * @return void

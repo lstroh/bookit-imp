@@ -125,6 +125,16 @@ class Bookit_Admin_Menu {
 			array( $this, 'render_export_page' )
 		);
 
+		// Payment Settings submenu
+		add_submenu_page(
+			'bookit-booking-system',
+			__( 'Payment Settings', 'bookit-booking-system' ),
+			__( 'Payment Settings', 'bookit-booking-system' ),
+			'manage_options',
+			'bookit-payment-settings',
+			array( $this, 'render_payment_settings_page' )
+		);
+
 		// Settings submenu
 		add_submenu_page(
 			'bookit-booking-system',
@@ -204,6 +214,13 @@ class Bookit_Admin_Menu {
 	 */
 	public function render_export_page() {
 		require_once BOOKIT_PLUGIN_DIR . 'admin/pages/export.php';
+	}
+
+	/**
+	 * Render payment settings page.
+	 */
+	public function render_payment_settings_page() {
+		require_once BOOKIT_PLUGIN_DIR . 'admin/pages/payment-settings.php';
 	}
 
 	/**

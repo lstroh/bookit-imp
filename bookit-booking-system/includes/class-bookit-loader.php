@@ -101,6 +101,9 @@ class Bookit_Loader {
 		// Contact API.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-contact-api.php';
 
+		// Stripe configuration (payment).
+		require_once BOOKIT_PLUGIN_DIR . 'includes/payment/class-stripe-config.php';
+
 		// Session cleanup cron.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-session-cleanup.php';
 	}
@@ -203,6 +206,9 @@ class Bookit_Loader {
 
 		// Register admin menu
 		add_action( 'admin_menu', array( $admin_menu, 'register_menu' ) );
+
+		// Stripe settings (registration, allowed_options filter, form renderer)
+		require_once BOOKIT_PLUGIN_DIR . 'admin/settings/stripe-settings.php';
 	}
 
 	/**

@@ -209,13 +209,13 @@ class Bookit_Session_Manager {
 
 	/**
 	 * Update last activity timestamp.
+	 * Must only be called after init() has run (no init() here to avoid recursion).
 	 *
 	 * @return void
 	 */
 	private static function update_activity() {
-		self::init();
-		if ( ! isset( $_SESSION[ self::SESSION_KEY ] ) ) {
-			$_SESSION[ self::SESSION_KEY ] = self::get_default_data();
+		if ( session_status() !== PHP_SESSION_ACTIVE || ! isset( $_SESSION[ self::SESSION_KEY ] ) ) {
+			return;
 		}
 		$_SESSION[ self::SESSION_KEY ]['last_activity'] = time();
 	}
