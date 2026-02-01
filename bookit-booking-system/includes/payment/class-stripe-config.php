@@ -41,7 +41,11 @@ class Bookit_Stripe_Config {
 	 */
 	public static function get_mode(): string {
 		$test_mode = get_option( 'bookit_stripe_test_mode', true );
-		return $test_mode ? 'test' : 'live';
+		// WordPress may store false as '0', 0, or ''; treat as live.
+		if ( $test_mode === false || $test_mode === 0 || $test_mode === '0' || $test_mode === '' ) {
+			return 'live';
+		}
+		return 'test';
 	}
 
 	/**

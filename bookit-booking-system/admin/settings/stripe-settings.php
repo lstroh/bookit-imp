@@ -390,8 +390,8 @@ function bookit_stripe_sanitize_test_mode( $value, string $option, $old_value ):
 	if ( $option !== 'bookit_stripe_test_mode' ) {
 		return (bool) $value;
 	}
-	// Checkbox unchecked = not in POST; options.php may pass null.
-	return ! empty( $value ) || $value === '1';
+	// Checkbox unchecked = not in POST; options.php may pass null. Only explicit truthy = true.
+	return ( $value === true || $value === '1' || $value === 1 );
 }
 
 add_filter( 'pre_update_option_bookit_stripe_test_mode', 'bookit_stripe_sanitize_test_mode', 10, 3 );
