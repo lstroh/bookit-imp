@@ -19,6 +19,7 @@
             <file>./tests/test-session.php</file>
             <file>./tests/test-session-security.php</file>
             <file>./tests/test-stripe-config.php</file>
+            <file>./tests/test-stripe-checkout.php</file>
             <file>./tests/unit/test-session-manager.php</file>
             <file>./tests/unit/test-booking-shortcode.php</file>
             <file>./tests/unit/test-wizard-api.php</file>

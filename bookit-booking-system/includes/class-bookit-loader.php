@@ -104,6 +104,13 @@ class Bookit_Loader {
 		// Stripe configuration (payment).
 		require_once BOOKIT_PLUGIN_DIR . 'includes/payment/class-stripe-config.php';
 
+		// Stripe Checkout (payment).
+		require_once BOOKIT_PLUGIN_DIR . 'includes/payment/class-stripe-checkout.php';
+
+		// Payment processor (form submission, redirect to Stripe).
+		require_once BOOKIT_PLUGIN_DIR . 'includes/payment/class-payment-processor.php';
+		new Booking_System_Payment_Processor();
+
 		// Session cleanup cron.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-session-cleanup.php';
 	}

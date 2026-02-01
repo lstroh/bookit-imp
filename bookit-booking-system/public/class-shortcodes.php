@@ -47,7 +47,7 @@ class Bookit_Shortcodes {
 		$current_step = (int) Bookit_Session_Manager::get( 'current_step', 1 );
 
 		// Validate step range.
-		if ( $current_step < 1 || $current_step > 4 ) {
+		if ( $current_step < 1 || $current_step > 5 ) {
 			$current_step = 1;
 			Bookit_Session_Manager::set( 'current_step', 1 );
 		}
@@ -126,6 +126,15 @@ class Bookit_Shortcodes {
 			array( 'bookit-wizard' ),
 			BOOKIT_VERSION,
 			true
+		);
+
+		// Step 5: Payment.
+		wp_enqueue_style(
+			'bookit-payment-step',
+			BOOKIT_PLUGIN_URL . 'public/assets/css/payment-step.css',
+			array(),
+			BOOKIT_VERSION,
+			'all'
 		);
 
 		// Get current step from session if available.

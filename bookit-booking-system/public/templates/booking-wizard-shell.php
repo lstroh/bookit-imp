@@ -23,6 +23,7 @@ $step_labels = array(
 	2 => __( 'Choose Staff', 'bookit-booking-system' ),
 	3 => __( 'Pick Date & Time', 'bookit-booking-system' ),
 	4 => __( 'Contact Details', 'bookit-booking-system' ),
+	5 => __( 'Payment', 'bookit-booking-system' ),
 );
 ?>
 
@@ -63,6 +64,7 @@ $step_labels = array(
 			2 => 'staff',
 			3 => 'datetime',
 			4 => 'contact',
+			5 => 'payment',
 		);
 		$step_slug = isset( $step_slugs[ $current_step ] ) ? $step_slugs[ $current_step ] : 'step-' . $current_step;
 
