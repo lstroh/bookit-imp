@@ -99,6 +99,9 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 		$this->create_test_service_and_staff();
 		$this->set_stripe_test_options();
 		$this->add_mock_filters();
+
+		// Suppress expected edge-case logs (invalid percentage, negative fixed) so test output is clean.
+		add_filter( 'bookit_log_deposit_edge_cases', '__return_false' );
 	}
 
 	/**
@@ -116,7 +119,7 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 			return;
 		}
 
-		// Insert test service: £50, 60 min, 50% deposit.
+		// Insert test service: £50, 60 min, 100% deposit (full payment).
 		$wpdb->insert(
 			$services_table,
 			array(
@@ -125,9 +128,9 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 				'description'     => null,
 				'duration'        => 60,
 				'price'           => 50.00,
-				'deposit_amount'  => 50,
 				'deposit_type'    => 'percentage',
-				'buffer_before'    => 0,
+				'deposit_amount'  => 100,
+				'buffer_before'   => 0,
 				'buffer_after'    => 0,
 				'is_active'       => 1,
 				'display_order'   => 0,
@@ -135,7 +138,7 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 				'updated_at'      => current_time( 'mysql' ),
 				'deleted_at'      => null,
 			),
-			array( '%d', '%s', '%s', '%d', '%f', '%f', '%s', '%d', '%d', '%d', '%d', '%s', '%s', '%s' )
+			array( '%d', '%s', '%s', '%d', '%f', '%s', '%f', '%d', '%d', '%d', '%d', '%s', '%s', '%s' )
 		);
 
 		// Insert test staff (password_hash required).
@@ -253,7 +256,7 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 	public function tearDown(): void {
 		global $wpdb;
 		$p = $wpdb->prefix;
-		$wpdb->query( "DELETE FROM {$p}bookings_services WHERE id = 1" );
+		$wpdb->query( "DELETE FROM {$p}bookings_services WHERE id IN (1, 94, 95, 96, 97, 98, 99)" );
 		$wpdb->query( "DELETE FROM {$p}bookings_staff WHERE id = 2" );
 
 		if ( isset( $this->mock_filter_callbacks['mode'] ) ) {
@@ -262,6 +265,8 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 		if ( isset( $this->mock_filter_callbacks['session'] ) ) {
 			remove_filter( 'bookit_mock_stripe_session', $this->mock_filter_callbacks['session'], $this->mock_filter_priority );
 		}
+
+		remove_filter( 'bookit_log_deposit_edge_cases', '__return_false' );
 
 		delete_option( 'bookit_stripe_test_mode' );
 		delete_option( 'bookit_stripe_test_secret_key' );
@@ -295,17 +300,17 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Test checkout session amount: service £50, deposit 50% = £25 = 2500 pence.
+	 * Test checkout session amount: service £50, deposit 100% = £50.00 = 5000 pence.
 	 *
-	 * Arrange: Service price £50, deposit 50%.
+	 * Arrange: Service price £50, deposit 100%.
 	 * Act: Create checkout session.
-	 * Assert: Line item amount = 2500 (£25.00 in pence).
+	 * Assert: Line item amount = 5000 (£50.00 in pence).
 	 */
 	public function test_checkout_session_has_correct_amount(): void {
 		$this->stripe_checkout->create_checkout_session( $this->test_session_data );
 
 		$this->assertNotNull( $this->last_mock_session );
-		$this->assertEquals( 2500, $this->last_mock_session->amount_total );
+		$this->assertEquals( 5000, $this->last_mock_session->amount_total );
 	}
 
 	// -------------------------------------------------------------------------
@@ -543,5 +548,265 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 
 		$this->assertInstanceOf( 'WP_Error', $result );
 		$this->assertEquals( 'missing_api_key', $result->get_error_code() );
+	}
+
+	// -------------------------------------------------------------------------
+	// 16. test_rejects_zero_price_service (calculate_deposit edge case)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Test that zero price service is rejected with WP_Error invalid_price.
+	 */
+	public function test_rejects_zero_price_service(): void {
+		global $wpdb;
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_services',
+			array(
+				'id'              => 99,
+				'name'            => 'Zero Price Service',
+				'description'     => null,
+				'duration'        => 30,
+				'price'           => 0.00,
+				'deposit_type'    => 'percentage',
+				'deposit_amount'  => 100,
+				'buffer_before'   => 0,
+				'buffer_after'    => 0,
+				'is_active'       => 1,
+				'display_order'   => 0,
+				'created_at'      => current_time( 'mysql' ),
+				'updated_at'      => current_time( 'mysql' ),
+				'deleted_at'      => null,
+			),
+			array( '%d', '%s', '%s', '%d', '%f', '%s', '%f', '%d', '%d', '%d', '%d', '%s', '%s', '%s' )
+		);
+
+		$session_data = $this->test_session_data;
+		$session_data['service_id'] = 99;
+
+		$result = $this->stripe_checkout->create_checkout_session( $session_data );
+
+		$this->assertInstanceOf( 'WP_Error', $result );
+		$this->assertEquals( 'invalid_price', $result->get_error_code() );
+	}
+
+	// -------------------------------------------------------------------------
+	// 17. test_handles_null_deposit_configuration
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Test that null deposit configuration defaults to full payment.
+	 */
+	public function test_handles_null_deposit_configuration(): void {
+		global $wpdb;
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_services',
+			array(
+				'id'              => 98,
+				'name'            => 'No Deposit Config',
+				'description'     => null,
+				'duration'        => 30,
+				'price'           => 40.00,
+				'deposit_type'    => null,
+				'deposit_amount'  => null,
+				'buffer_before'   => 0,
+				'buffer_after'    => 0,
+				'is_active'       => 1,
+				'display_order'   => 0,
+				'created_at'      => current_time( 'mysql' ),
+				'updated_at'      => current_time( 'mysql' ),
+				'deleted_at'      => null,
+			),
+			array( '%d', '%s', '%s', '%d', '%f', '%s', '%s', '%d', '%d', '%d', '%d', '%s', '%s', '%s' )
+		);
+
+		$service = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookings_services WHERE id = %d",
+				98
+			),
+			ARRAY_A
+		);
+
+		$deposit = $this->stripe_checkout->calculate_deposit( $service );
+
+		$this->assertEquals( 40.00, $deposit );
+	}
+
+	// -------------------------------------------------------------------------
+	// 18. test_clamps_invalid_percentage
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Test that invalid percentage (> 100) is clamped to 100%.
+	 */
+	public function test_clamps_invalid_percentage(): void {
+		global $wpdb;
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_services',
+			array(
+				'id'              => 97,
+				'name'            => 'Invalid Percentage',
+				'description'     => null,
+				'duration'        => 30,
+				'price'           => 40.00,
+				'deposit_type'    => 'percentage',
+				'deposit_amount'  => 150,
+				'buffer_before'   => 0,
+				'buffer_after'    => 0,
+				'is_active'       => 1,
+				'display_order'   => 0,
+				'created_at'      => current_time( 'mysql' ),
+				'updated_at'      => current_time( 'mysql' ),
+				'deleted_at'      => null,
+			),
+			array( '%d', '%s', '%s', '%d', '%f', '%s', '%f', '%d', '%d', '%d', '%d', '%s', '%s', '%s' )
+		);
+
+		$service = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookings_services WHERE id = %d",
+				97
+			),
+			ARRAY_A
+		);
+
+		$deposit = $this->stripe_checkout->calculate_deposit( $service );
+
+		$this->assertEquals( 40.00, $deposit );
+	}
+
+	// -------------------------------------------------------------------------
+	// 19. test_fixed_deposit_doesnt_exceed_price
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Test that fixed deposit does not exceed service price.
+	 */
+	public function test_fixed_deposit_doesnt_exceed_price(): void {
+		global $wpdb;
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_services',
+			array(
+				'id'              => 96,
+				'name'            => 'Excessive Fixed Deposit',
+				'description'     => null,
+				'duration'        => 30,
+				'price'           => 30.00,
+				'deposit_type'    => 'fixed',
+				'deposit_amount'  => 50.00,
+				'buffer_before'   => 0,
+				'buffer_after'    => 0,
+				'is_active'       => 1,
+				'display_order'   => 0,
+				'created_at'      => current_time( 'mysql' ),
+				'updated_at'      => current_time( 'mysql' ),
+				'deleted_at'      => null,
+			),
+			array( '%d', '%s', '%s', '%d', '%f', '%s', '%f', '%d', '%d', '%d', '%d', '%s', '%s', '%s' )
+		);
+
+		$service = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookings_services WHERE id = %d",
+				96
+			),
+			ARRAY_A
+		);
+
+		$deposit = $this->stripe_checkout->calculate_deposit( $service );
+
+		$this->assertEquals( 30.00, $deposit );
+	}
+
+	// -------------------------------------------------------------------------
+	// 20. test_rounds_to_two_decimal_places
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Test that deposit rounds to 2 decimal places.
+	 */
+	public function test_rounds_to_two_decimal_places(): void {
+		global $wpdb;
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_services',
+			array(
+				'id'              => 95,
+				'name'            => 'Rounding Test',
+				'description'     => null,
+				'duration'        => 30,
+				'price'           => 33.33,
+				'deposit_type'    => 'percentage',
+				'deposit_amount'  => 50,
+				'buffer_before'   => 0,
+				'buffer_after'    => 0,
+				'is_active'       => 1,
+				'display_order'   => 0,
+				'created_at'      => current_time( 'mysql' ),
+				'updated_at'      => current_time( 'mysql' ),
+				'deleted_at'      => null,
+			),
+			array( '%d', '%s', '%s', '%d', '%f', '%s', '%f', '%d', '%d', '%d', '%d', '%s', '%s', '%s' )
+		);
+
+		$service = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookings_services WHERE id = %d",
+				95
+			),
+			ARRAY_A
+		);
+
+		$deposit = $this->stripe_checkout->calculate_deposit( $service );
+
+		$this->assertEquals( 16.67, $deposit );
+	}
+
+	// -------------------------------------------------------------------------
+	// 21. test_handles_negative_fixed_deposit
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Test that negative fixed deposit defaults to full price.
+	 */
+	public function test_handles_negative_fixed_deposit(): void {
+		global $wpdb;
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_services',
+			array(
+				'id'              => 94,
+				'name'            => 'Negative Fixed',
+				'description'     => null,
+				'duration'        => 30,
+				'price'           => 40.00,
+				'deposit_type'    => 'fixed',
+				'deposit_amount'  => -10.00,
+				'buffer_before'   => 0,
+				'buffer_after'    => 0,
+				'is_active'       => 1,
+				'display_order'   => 0,
+				'created_at'      => current_time( 'mysql' ),
+				'updated_at'      => current_time( 'mysql' ),
+				'deleted_at'      => null,
+			),
+			array( '%d', '%s', '%s', '%d', '%f', '%s', '%f', '%d', '%d', '%d', '%d', '%s', '%s', '%s' )
+		);
+
+		$service = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookings_services WHERE id = %d",
+				94
+			),
+			ARRAY_A
+		);
+
+		$deposit = $this->stripe_checkout->calculate_deposit( $service );
+
+		$this->assertEquals( 40.00, $deposit );
 	}
 }

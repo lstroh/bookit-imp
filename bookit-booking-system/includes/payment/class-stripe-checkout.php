@@ -188,7 +188,9 @@ class Booking_System_Stripe_Checkout {
 
 				// Validate percentage range (0-100)
 				if ( $percentage < 0 || $percentage > 100 ) {
-					error_log( "Invalid deposit percentage: {$percentage}. Using 100%." );
+					if ( apply_filters( 'bookit_log_deposit_edge_cases', true ) ) {
+						error_log( "Invalid deposit percentage: {$percentage}. Using 100%." );
+					}
 					$percentage = 100;
 				}
 
@@ -202,7 +204,9 @@ class Booking_System_Stripe_Checkout {
 
 				// Validate fixed amount is positive
 				if ( $fixed < 0 ) {
-					error_log( "Invalid fixed deposit: {$fixed}. Using full price." );
+					if ( apply_filters( 'bookit_log_deposit_edge_cases', true ) ) {
+						error_log( "Invalid fixed deposit: {$fixed}. Using full price." );
+					}
 					return $price;
 				}
 
@@ -214,7 +218,9 @@ class Booking_System_Stripe_Checkout {
 
 			default:
 				// Unknown deposit type - log and use full payment
-				error_log( "Unknown deposit type: {$deposit_type}. Using full payment." );
+				if ( apply_filters( 'bookit_log_deposit_edge_cases', true ) ) {
+					error_log( "Unknown deposit type: {$deposit_type}. Using full payment." );
+				}
 				return $price;
 		}
 	}
