@@ -31,7 +31,7 @@ $step_labels = array(
 
 <div class="bookit-wizard-container">
 	<div class="bookit-progress-indicator" role="navigation" aria-label="<?php esc_attr_e( 'Booking progress', 'bookit-booking-system' ); ?>">
-		<?php for ( $i = 1; $i <= 4; $i++ ) : ?>
+		<?php for ( $i = 1; $i <= 5; $i++ ) : ?>
 			<?php
 			$step_class = 'bookit-progress-step';
 			if ( $i < $current_step ) {

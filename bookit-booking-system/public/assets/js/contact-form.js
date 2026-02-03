@@ -258,7 +258,8 @@
 			})
 			.then(function(data) {
 				if (data.success) {
-					alert('Contact details saved! Payment integration coming in Sprint 2.');
+					// Redirect to payment step (Step 5)
+					window.location.href = data.redirect_url || '/book?step=5';
 				} else {
 					if (data.errors) {
 						var map = { first_name: 'first-name', last_name: 'last-name', email: 'email', phone: 'phone', special_requests: 'special-requests' };

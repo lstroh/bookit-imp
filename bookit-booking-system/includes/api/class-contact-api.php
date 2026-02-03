@@ -202,13 +202,16 @@ class Bookit_Contact_API {
 		$session['marketing_consent']         = $marketing_consent ? 1 : 0;
 		$session['consent_date']              = $marketing_consent ? current_time( 'mysql' ) : null;
 
+		// Advance wizard to step 5 (payment).
+		$session['current_step'] = 5;
+
 		Bookit_Session_Manager::set_data( $session );
 
 		return new WP_REST_Response(
 			array(
-				'success'    => true,
-				'message'    => __( 'Contact details saved', 'bookit-booking-system' ),
-				'next_step'  => 5,
+				'success'       => true,
+				'message'       => __( 'Contact details saved', 'bookit-booking-system' ),
+				'redirect_url'  => home_url( '/book?step=5' ),
 			),
 			200
 		);

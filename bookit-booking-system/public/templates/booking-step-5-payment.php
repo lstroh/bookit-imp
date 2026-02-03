@@ -36,7 +36,7 @@ if ( ! $service ) {
 
 $stripe_checkout = new Booking_System_Stripe_Checkout();
 $deposit_amount  = $stripe_checkout->calculate_deposit( $service );
-$total_price     = isset( $service['base_price'] ) ? (float) $service['base_price'] : (float) $service['price'];
+$total_price     = (float) ( $service['price'] ?? 0 );
 $balance         = $total_price - $deposit_amount;
 ?>
 

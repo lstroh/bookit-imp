@@ -40,6 +40,9 @@ class Booking_System_Stripe_Checkout {
 		}
 
 		$deposit_amount = $this->calculate_deposit( $service );
+		if ( is_wp_error( $deposit_amount ) ) {
+			return $deposit_amount;
+		}
 		if ( $deposit_amount <= 0 ) {
 			return new WP_Error( 'invalid_amount', __( 'Deposit amount must be greater than zero', 'bookit-booking-system' ) );
 		}
@@ -158,26 +161,61 @@ class Booking_System_Stripe_Checkout {
 	}
 
 	/**
-	 * Calculate deposit amount based on service settings.
-	 * Supports full, percentage, and fixed deposit types.
+	 * Calculate deposit amount based on service settings
 	 *
-	 * @param array<string, mixed> $service Service row (price or base_price).
-	 * @return float Amount in pounds (e.g. 25.00).
+	 * @param array $service Service data from database
+	 * @return float|\WP_Error Deposit amount in pounds or error
 	 */
 	public function calculate_deposit( $service ) {
-		$base_price  = isset( $service['base_price'] ) ? (float) $service['base_price'] : (float) ( $service['price'] ?? 0 );
-		$deposit_type = $service['deposit_type'] ?? 'full';
+		// Validate service price
+		$price = floatval( $service['price'] ?? 0 );
+
+		if ( $price <= 0 ) {
+			return new WP_Error( 'invalid_price', 'Service price must be greater than zero' );
+		}
+
+		$deposit_type  = $service['deposit_type'] ?? null;
+		$deposit_amount = $service['deposit_amount'] ?? null;
+
+		// If no deposit configuration, default to full payment
+		if ( empty( $deposit_type ) || is_null( $deposit_amount ) ) {
+			return $price;
+		}
 
 		switch ( $deposit_type ) {
 			case 'percentage':
-				$percentage = (float) ( $service['deposit_amount'] ?? 0 );
-				return ( $base_price * $percentage ) / 100;
+				$percentage = floatval( $deposit_amount );
+
+				// Validate percentage range (0-100)
+				if ( $percentage < 0 || $percentage > 100 ) {
+					error_log( "Invalid deposit percentage: {$percentage}. Using 100%." );
+					$percentage = 100;
+				}
+
+				$deposit = ( $price * $percentage ) / 100;
+
+				// Round to 2 decimal places
+				return round( $deposit, 2 );
+
 			case 'fixed':
-				$fixed = (float) ( $service['deposit_amount'] ?? 0 );
-				return min( $fixed, $base_price );
-			case 'full':
+				$fixed = floatval( $deposit_amount );
+
+				// Validate fixed amount is positive
+				if ( $fixed < 0 ) {
+					error_log( "Invalid fixed deposit: {$fixed}. Using full price." );
+					return $price;
+				}
+
+				// Don't exceed service price
+				$deposit = min( $fixed, $price );
+
+				// Round to 2 decimal places
+				return round( $deposit, 2 );
+
 			default:
-				return $base_price;
+				// Unknown deposit type - log and use full payment
+				error_log( "Unknown deposit type: {$deposit_type}. Using full payment." );
+				return $price;
 		}
 	}
 
