@@ -111,6 +111,10 @@ class Bookit_Loader {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/payment/class-payment-processor.php';
 		new Booking_System_Payment_Processor();
 
+		// Webhook handling and booking creation.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/booking/class-booking-creator.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-stripe-webhook.php';
+
 		// Session cleanup cron.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-session-cleanup.php';
 	}

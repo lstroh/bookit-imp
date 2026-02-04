@@ -1,0 +1,397 @@
+<?php
+/**
+ * Booking Creator
+ * Creates booking and customer records from payment data
+ *
+ * @package    Bookit_Booking_System
+ * @subpackage Bookit_Booking_System/includes/booking
+ */
+
+// If this file is called directly, abort.
+if ( ! defined( 'WPINC' ) ) {
+	die;
+}
+
+/**
+ * Booking Creator class.
+ */
+class Booking_System_Booking_Creator {
+
+	/**
+	 * Whether to write messages to error_log (disabled during unit tests).
+	 *
+	 * @return bool
+	 */
+	private static function should_log() {
+		return ! defined( 'WP_TESTS_TABLE_PREFIX' ) && function_exists( 'error_log' );
+	}
+
+	/**
+	 * Create booking from payment data
+	 *
+	 * @param array $data Booking data.
+	 * @return int|WP_Error Booking ID or error.
+	 */
+	public function create_booking( $data ) {
+		global $wpdb;
+
+		$validation = $this->validate_booking_data( $data );
+		if ( is_wp_error( $validation ) ) {
+			return $validation;
+		}
+
+		$service = $this->get_service( $data['service_id'] );
+		if ( ! $service ) {
+			return new WP_Error( 'invalid_service', 'Service not found' );
+		}
+
+		$staff = $this->get_staff( $data['staff_id'] );
+		if ( ! $staff ) {
+			return new WP_Error( 'invalid_staff', 'Staff member not found' );
+		}
+
+		$start_time = $this->normalize_time( $data['booking_time'] );
+		$duration   = isset( $service['duration'] ) ? (int) $service['duration'] : 60;
+		$end_time   = $this->calculate_end_time( $start_time, $duration );
+
+		$customer_id = $this->get_or_create_customer(
+			array(
+				'first_name' => $data['customer_first_name'],
+				'last_name'  => $data['customer_last_name'],
+				'email'      => $data['customer_email'],
+				'phone'      => isset( $data['customer_phone'] ) ? $data['customer_phone'] : '',
+			)
+		);
+
+		if ( is_wp_error( $customer_id ) ) {
+			return $customer_id;
+		}
+
+		$conflict = $this->check_booking_conflict(
+			$data['staff_id'],
+			$data['booking_date'],
+			$start_time,
+			$end_time
+		);
+
+		if ( $conflict ) {
+			return new WP_Error(
+				'slot_unavailable',
+				'This time slot is no longer available'
+			);
+		}
+
+		$total_price   = isset( $service['price'] ) ? (float) $service['price'] : 0;
+		$amount_paid   = isset( $data['amount_paid'] ) ? (float) $data['amount_paid'] : 0;
+		$deposit_amount = $amount_paid;
+
+		$booking_data = array(
+			'customer_id'       => $customer_id,
+			'service_id'        => $data['service_id'],
+			'staff_id'          => $data['staff_id'],
+			'booking_date'      => $data['booking_date'],
+			'start_time'        => $start_time,
+			'end_time'          => $end_time,
+			'duration'          => $duration,
+			'status'            => 'confirmed',
+			'total_price'       => $total_price,
+			'deposit_amount'     => $deposit_amount,
+			'deposit_paid'      => 1,
+			'payment_method'     => $data['payment_method'],
+			'customer_notes'    => isset( $data['special_requests'] ) ? $data['special_requests'] : '',
+			'created_at'         => current_time( 'mysql' ),
+			'updated_at'         => current_time( 'mysql' ),
+		);
+
+		$inserted = $wpdb->insert(
+			$wpdb->prefix . 'bookings',
+			$booking_data,
+			array(
+				'%d',
+				'%d',
+				'%d',
+				'%s',
+				'%s',
+				'%s',
+				'%d',
+				'%s',
+				'%f',
+				'%f',
+				'%d',
+				'%s',
+				'%s',
+				'%s',
+				'%s',
+			)
+		);
+
+		if ( ! $inserted ) {
+			if ( self::should_log() ) {
+				error_log( 'Booking Creator: Database insert failed - ' . $wpdb->last_error );
+			}
+			return new WP_Error( 'database_error', 'Failed to create booking' );
+		}
+
+		$booking_id = (int) $wpdb->insert_id;
+
+		$payment_intent_id = isset( $data['payment_intent_id'] ) ? $data['payment_intent_id'] : '';
+		if ( $payment_intent_id !== '' ) {
+			$wpdb->insert(
+				$wpdb->prefix . 'bookings_payments',
+				array(
+					'booking_id'               => $booking_id,
+					'customer_id'              => $customer_id,
+					'amount'                   => $amount_paid,
+					'payment_type'             => 'deposit',
+					'payment_method'           => $data['payment_method'],
+					'payment_status'           => 'completed',
+					'stripe_payment_intent_id' => $payment_intent_id,
+					'transaction_date'         => current_time( 'mysql' ),
+					'created_at'               => current_time( 'mysql' ),
+					'updated_at'               => current_time( 'mysql' ),
+				),
+				array( '%d', '%d', '%f', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+			);
+		}
+
+		if ( self::should_log() ) {
+			error_log(
+				sprintf(
+					'Booking Creator: Created booking #%d (customer: %s, service: %s, date: %s %s)',
+					$booking_id,
+					$data['customer_email'],
+					isset( $service['name'] ) ? $service['name'] : '',
+					$data['booking_date'],
+					$start_time
+				)
+			);
+		}
+
+		return $booking_id;
+	}
+
+	/**
+	 * Validate booking data
+	 *
+	 * @param array $data Booking data.
+	 * @return bool|WP_Error
+	 */
+	private function validate_booking_data( $data ) {
+		$required_fields = array(
+			'service_id',
+			'staff_id',
+			'booking_date',
+			'booking_time',
+			'customer_email',
+			'customer_first_name',
+			'customer_last_name',
+			'payment_method',
+			'amount_paid',
+		);
+
+		foreach ( $required_fields as $field ) {
+			if ( ! isset( $data[ $field ] ) || $data[ $field ] === '' ) {
+				return new WP_Error(
+					'missing_field',
+					sprintf( 'Missing required field: %s', $field )
+				);
+			}
+		}
+
+		if ( ! is_email( $data['customer_email'] ) ) {
+			return new WP_Error( 'invalid_email', 'Invalid customer email' );
+		}
+
+		if ( ! $this->is_valid_date( $data['booking_date'] ) ) {
+			return new WP_Error( 'invalid_date', 'Invalid booking date format' );
+		}
+
+		if ( ! $this->is_valid_time( $data['booking_time'] ) ) {
+			return new WP_Error( 'invalid_time', 'Invalid booking time format' );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Get or create customer record
+	 *
+	 * @param array $data Customer data.
+	 * @return int|WP_Error Customer ID or error.
+	 */
+	private function get_or_create_customer( $data ) {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'bookings_customers';
+		$existing = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE email = %s",
+				$data['email']
+			)
+		);
+
+		if ( $existing ) {
+			$wpdb->update(
+				$table,
+				array(
+					'first_name' => $data['first_name'],
+					'last_name'  => $data['last_name'],
+					'phone'      => $data['phone'],
+					'updated_at' => current_time( 'mysql' ),
+				),
+				array( 'id' => $existing->id ),
+				array( '%s', '%s', '%s', '%s' ),
+				array( '%d' )
+			);
+			return (int) $existing->id;
+		}
+
+		$phone = isset( $data['phone'] ) ? $data['phone'] : '';
+		$inserted = $wpdb->insert(
+			$table,
+			array(
+				'first_name' => $data['first_name'],
+				'last_name'  => $data['last_name'],
+				'email'      => $data['email'],
+				'phone'      => $phone,
+				'created_at' => current_time( 'mysql' ),
+				'updated_at' => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%s', '%s', '%s', '%s' )
+		);
+
+		if ( ! $inserted ) {
+			if ( self::should_log() ) {
+				error_log( 'Booking Creator: Customer insert failed - ' . $wpdb->last_error );
+			}
+			return new WP_Error( 'database_error', 'Failed to create customer' );
+		}
+
+		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Calculate end time from start time and duration
+	 *
+	 * @param string $start_time       Time in HH:MM:SS format.
+	 * @param int    $duration_minutes Duration in minutes.
+	 * @return string End time in HH:MM:SS format.
+	 */
+	private function calculate_end_time( $start_time, $duration_minutes ) {
+		$start = strtotime( $start_time );
+		$end   = $start + ( $duration_minutes * 60 );
+		return gmdate( 'H:i:s', $end );
+	}
+
+	/**
+	 * Check for booking conflicts (double booking prevention)
+	 *
+	 * @param int    $staff_id   Staff ID.
+	 * @param string $date       Booking date.
+	 * @param string $start_time Start time.
+	 * @param string $end_time   End time.
+	 * @return bool True if conflict exists.
+	 */
+	private function check_booking_conflict( $staff_id, $date, $start_time, $end_time ) {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'bookings';
+		$conflict = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$table}
+				WHERE staff_id = %d
+				AND booking_date = %s
+				AND status != 'cancelled'
+				AND (
+					( start_time < %s AND end_time > %s )
+					OR ( start_time < %s AND end_time > %s )
+					OR ( start_time >= %s AND end_time <= %s )
+				)",
+				$staff_id,
+				$date,
+				$end_time,
+				$start_time,
+				$end_time,
+				$start_time,
+				$start_time,
+				$end_time
+			)
+		);
+
+		return (int) $conflict > 0;
+	}
+
+	/**
+	 * Get service from database
+	 *
+	 * @param int $service_id Service ID.
+	 * @return array|null Service row or null.
+	 */
+	private function get_service( $service_id ) {
+		global $wpdb;
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookings_services WHERE id = %d",
+				$service_id
+			),
+			ARRAY_A
+		);
+		return $row ? $row : null;
+	}
+
+	/**
+	 * Get staff from database
+	 *
+	 * @param int $staff_id Staff ID.
+	 * @return array|null Staff row or null.
+	 */
+	private function get_staff( $staff_id ) {
+		global $wpdb;
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookings_staff WHERE id = %d",
+				$staff_id
+			),
+			ARRAY_A
+		);
+		return $row ? $row : null;
+	}
+
+	/**
+	 * Validate date format (YYYY-MM-DD)
+	 *
+	 * @param string $date Date string.
+	 * @return bool
+	 */
+	private function is_valid_date( $date ) {
+		$d = DateTime::createFromFormat( 'Y-m-d', $date );
+		return $d && $d->format( 'Y-m-d' ) === $date;
+	}
+
+	/**
+	 * Validate time format (HH:MM:SS or HH:MM)
+	 *
+	 * @param string $time Time string.
+	 * @return bool
+	 */
+	private function is_valid_time( $time ) {
+		if ( preg_match( '/^([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$/', $time ) ) {
+			return true;
+		}
+		if ( preg_match( '/^([01][0-9]|2[0-3]):([0-5][0-9])$/', $time ) ) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Normalize time to HH:MM:SS for database storage
+	 *
+	 * @param string $time Time string (HH:MM or HH:MM:SS).
+	 * @return string Time in HH:MM:SS format.
+	 */
+	private function normalize_time( $time ) {
+		$ts = strtotime( $time );
+		return $ts !== false ? gmdate( 'H:i:s', $ts ) : $time;
+	}
+}
