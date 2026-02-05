@@ -143,11 +143,14 @@ CREATE TABLE wp_bookings (
 	duration INT UNSIGNED NOT NULL COMMENT 'Duration in minutes (cached from service)',
 	status ENUM('pending','confirmed','cancelled','completed','no_show') DEFAULT 'pending',
 	total_price DECIMAL(10,2) NOT NULL,
-	deposit_amount DECIMAL(10,2) NULL DEFAULT NULL,
-	deposit_paid TINYINT(1) DEFAULT 0,
+	deposit_amount DECIMAL(10,2) NULL DEFAULT NULL COMMENT 'Service deposit config amount',
+	deposit_paid DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Actual amount paid as deposit',
+	balance_due DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Remaining balance to pay',
 	full_amount_paid TINYINT(1) DEFAULT 0,
 	payment_method VARCHAR(50) NULL COMMENT 'stripe, paypal, cash, card',
-	customer_notes TEXT NULL COMMENT 'Notes from customer during booking',
+	payment_intent_id VARCHAR(255) NULL COMMENT 'Stripe PaymentIntent ID',
+	stripe_session_id VARCHAR(255) NULL DEFAULT NULL COMMENT 'Stripe Checkout session ID for lookup after payment',
+	special_requests TEXT NULL COMMENT 'Special requests from customer during booking',
 	staff_notes TEXT NULL COMMENT 'Internal staff notes',
 	cancellation_reason TEXT NULL,
 	cancelled_at DATETIME NULL,
@@ -164,7 +167,8 @@ CREATE TABLE wp_bookings (
 	KEY idx_booking_date (booking_date),
 	KEY idx_status (status),
 	KEY idx_deleted_at (deleted_at),
-	KEY idx_date_time (booking_date, start_time)
+	KEY idx_date_time (booking_date, start_time),
+	KEY idx_payment_intent (payment_intent_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================

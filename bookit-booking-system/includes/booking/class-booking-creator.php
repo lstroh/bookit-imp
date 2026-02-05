@@ -81,9 +81,10 @@ class Booking_System_Booking_Creator {
 			);
 		}
 
-		$total_price   = isset( $service['price'] ) ? (float) $service['price'] : 0;
-		$amount_paid   = isset( $data['amount_paid'] ) ? (float) $data['amount_paid'] : 0;
+		$total_price    = isset( $service['price'] ) ? (float) $service['price'] : 0;
+		$amount_paid    = isset( $data['amount_paid'] ) ? (float) $data['amount_paid'] : 0;
 		$deposit_amount = $amount_paid;
+		$balance_due    = max( 0, $total_price - $amount_paid );
 
 		$booking_data = array(
 			'customer_id'       => $customer_id,
@@ -95,34 +96,41 @@ class Booking_System_Booking_Creator {
 			'duration'          => $duration,
 			'status'            => 'confirmed',
 			'total_price'       => $total_price,
-			'deposit_amount'     => $deposit_amount,
-			'deposit_paid'      => 1,
-			'payment_method'     => $data['payment_method'],
-			'customer_notes'    => isset( $data['special_requests'] ) ? $data['special_requests'] : '',
-			'created_at'         => current_time( 'mysql' ),
-			'updated_at'         => current_time( 'mysql' ),
+			'deposit_amount'    => $deposit_amount,
+			'deposit_paid'      => $amount_paid,
+			'balance_due'       => $balance_due,
+			'payment_method'    => $data['payment_method'],
+			'payment_intent_id' => isset( $data['payment_intent_id'] ) ? $data['payment_intent_id'] : null,
+			'stripe_session_id' => isset( $data['stripe_session_id'] ) ? $data['stripe_session_id'] : null,
+			'special_requests'  => isset( $data['special_requests'] ) ? $data['special_requests'] : '',
+			'created_at'        => current_time( 'mysql' ),
+			'updated_at'        => current_time( 'mysql' ),
 		);
 
+		$format = array(
+			'%d', // customer_id
+			'%d', // service_id
+			'%d', // staff_id
+			'%s', // booking_date
+			'%s', // start_time
+			'%s', // end_time
+			'%d', // duration
+			'%s', // status
+			'%f', // total_price
+			'%f', // deposit_amount
+			'%f', // deposit_paid (DECIMAL)
+			'%f', // balance_due (DECIMAL)
+			'%s', // payment_method
+			'%s', // payment_intent_id
+			'%s', // stripe_session_id
+			'%s', // special_requests
+			'%s', // created_at
+			'%s', // updated_at
+		);
 		$inserted = $wpdb->insert(
 			$wpdb->prefix . 'bookings',
 			$booking_data,
-			array(
-				'%d',
-				'%d',
-				'%d',
-				'%s',
-				'%s',
-				'%s',
-				'%d',
-				'%s',
-				'%f',
-				'%f',
-				'%d',
-				'%s',
-				'%s',
-				'%s',
-				'%s',
-			)
+			$format
 		);
 
 		if ( ! $inserted ) {
@@ -134,8 +142,9 @@ class Booking_System_Booking_Creator {
 
 		$booking_id = (int) $wpdb->insert_id;
 
+		// Also create a payment record for tracking purposes.
 		$payment_intent_id = isset( $data['payment_intent_id'] ) ? $data['payment_intent_id'] : '';
-		if ( $payment_intent_id !== '' ) {
+		if ( $amount_paid > 0 ) {
 			$wpdb->insert(
 				$wpdb->prefix . 'bookings_payments',
 				array(

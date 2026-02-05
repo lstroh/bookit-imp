@@ -371,16 +371,27 @@ class Test_Stripe_Webhook extends WP_UnitTestCase {
 		global $wpdb;
 		$prefix = $wpdb->prefix;
 
-		$wpdb->insert(
-			$prefix . 'bookings_customers',
-			array(
-				'email'      => 'john@example.com',
-				'first_name' => 'John',
-				'last_name'  => 'Smith',
-				'phone'      => '07700900123',
+		// Get or create customer so we don't hit duplicate key when another test already created this email.
+		$existing_row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id FROM {$prefix}bookings_customers WHERE email = %s",
+				'john@example.com'
 			)
 		);
-		$existing_id = (int) $wpdb->insert_id;
+		if ( $existing_row ) {
+			$existing_id = (int) $existing_row->id;
+		} else {
+			$wpdb->insert(
+				$prefix . 'bookings_customers',
+				array(
+					'email'      => 'john@example.com',
+					'first_name' => 'John',
+					'last_name'  => 'Smith',
+					'phone'      => '07700900123',
+				)
+			);
+			$existing_id = (int) $wpdb->insert_id;
+		}
 
 		$request = new WP_REST_Request( 'POST', $this->webhook_route );
 		$request->set_header( 'Stripe-Signature', 't=123,v1=valid' );
@@ -468,7 +479,8 @@ class Test_Stripe_Webhook extends WP_UnitTestCase {
 		$this->assertEquals( 'confirmed', $booking->status );
 		$this->assertEquals( 50.00, (float) $booking->total_price );
 		$this->assertEquals( 50.00, (float) $booking->deposit_amount );
-		$this->assertEquals( 1, (int) $booking->deposit_paid );
+		$this->assertEquals( 50.00, (float) $booking->deposit_paid );
+		$this->assertEquals( 0.00, (float) $booking->balance_due );
 		$this->assertEquals( 'stripe', $booking->payment_method );
 
 		// Payment intent: stored on booking or in bookings_payments.

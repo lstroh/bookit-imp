@@ -54,6 +54,16 @@ class Bookit_Public {
 			$this->version,
 			'all'
 		);
+
+		// Enqueue confirmation page styles (when on confirmation page or redirect with session_id).
+		if ( is_page( 'booking-confirmed' ) || isset( $_GET['session_id'] ) ) {
+			wp_enqueue_style(
+				'bookit-confirmation',
+				BOOKIT_PLUGIN_URL . 'public/assets/css/confirmation-page.css',
+				array(),
+				'1.0.0'
+			);
+		}
 	}
 
 	/**

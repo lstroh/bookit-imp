@@ -1,0 +1,172 @@
+<?php
+/**
+ * Booking Confirmation Page
+ * Displayed after successful payment
+ *
+ * @package Booking_System
+ */
+
+// Security check
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+// Get Stripe session ID from URL
+$session_id = isset( $_GET['session_id'] ) ? sanitize_text_field( wp_unslash( $_GET['session_id'] ) ) : '';
+
+if ( empty( $session_id ) ) {
+	?>
+	<div class="bookit-confirmation-error">
+		<h2><?php esc_html_e( 'Booking Not Found', 'booking-system' ); ?></h2>
+		<p><?php esc_html_e( 'We couldn\'t find your booking. The confirmation link may be invalid or expired.', 'booking-system' ); ?></p>
+		<p><a href="<?php echo esc_url( home_url( '/book' ) ); ?>" class="bookit-btn-primary">
+			<?php esc_html_e( 'Make a New Booking', 'booking-system' ); ?>
+		</a></p>
+	</div>
+	<?php
+	return;
+}
+
+// Retrieve booking
+require_once BOOKIT_PLUGIN_DIR . 'includes/booking/class-booking-retriever.php';
+require_once BOOKIT_PLUGIN_DIR . 'includes/email/class-email-sender.php';
+
+$retriever = new Booking_System_Booking_Retriever();
+$booking   = $retriever->get_booking_by_stripe_session( $session_id );
+
+if ( ! $booking ) {
+	?>
+	<div class="bookit-confirmation-error">
+		<h2><?php esc_html_e( 'Booking Not Found', 'booking-system' ); ?></h2>
+		<p><?php esc_html_e( 'We couldn\'t retrieve your booking details. Please contact us if you need assistance.', 'booking-system' ); ?></p>
+		<p><a href="<?php echo esc_url( home_url( '/book' ) ); ?>" class="bookit-btn-primary">
+			<?php esc_html_e( 'Make a New Booking', 'booking-system' ); ?>
+		</a></p>
+	</div>
+	<?php
+	return;
+}
+
+// Send confirmation emails (only send once - check if already sent)
+$email_sent_key       = 'bookit_email_sent_' . $booking['id'];
+$emails_already_sent  = get_transient( $email_sent_key );
+
+if ( ! $emails_already_sent ) {
+	$email_sender = new Booking_System_Email_Sender();
+
+	// Send customer confirmation
+	$customer_result = $email_sender->send_customer_confirmation( $booking );
+	if ( is_wp_error( $customer_result ) ) {
+		error_log( 'Confirmation Page: Failed to send customer email - ' . $customer_result->get_error_message() );
+	}
+
+	// Send business notification
+	$business_result = $email_sender->send_business_notification( $booking );
+	if ( is_wp_error( $business_result ) ) {
+		error_log( 'Confirmation Page: Failed to send business email - ' . $business_result->get_error_message() );
+	}
+
+	// Mark emails as sent (24 hour transient)
+	set_transient( $email_sent_key, true, 24 * HOUR_IN_SECONDS );
+}
+
+// Clear booking wizard session
+$retriever->clear_booking_session();
+
+// Format date and time for display
+$date_formatted = $retriever->format_date( $booking['booking_date'] );
+$time_formatted = $retriever->format_time( $booking['start_time'] );
+?>
+
+<div class="bookit-confirmation-page">
+	<div class="bookit-confirmation-header">
+		<div class="bookit-success-icon">✓</div>
+		<h1><?php esc_html_e( 'Booking Confirmed!', 'booking-system' ); ?></h1>
+		<p class="bookit-confirmation-message">
+			<?php esc_html_e( 'Thank you for your booking. A confirmation email has been sent to', 'booking-system' ); ?>
+			<strong><?php echo esc_html( $booking['customer_email'] ); ?></strong>
+		</p>
+	</div>
+
+	<div class="bookit-confirmation-details">
+		<h2><?php esc_html_e( 'Booking Details', 'booking-system' ); ?></h2>
+
+		<div class="bookit-detail-card">
+			<div class="bookit-detail-row">
+				<span class="bookit-detail-label"><?php esc_html_e( 'Booking Reference:', 'booking-system' ); ?></span>
+				<span class="bookit-detail-value">#<?php echo esc_html( (string) $booking['id'] ); ?></span>
+			</div>
+
+			<div class="bookit-detail-row">
+				<span class="bookit-detail-label"><?php esc_html_e( 'Service:', 'booking-system' ); ?></span>
+				<span class="bookit-detail-value"><?php echo esc_html( $booking['service_name'] ); ?></span>
+			</div>
+
+			<div class="bookit-detail-row">
+				<span class="bookit-detail-label"><?php esc_html_e( 'Date:', 'booking-system' ); ?></span>
+				<span class="bookit-detail-value"><?php echo esc_html( $date_formatted ); ?></span>
+			</div>
+
+			<div class="bookit-detail-row">
+				<span class="bookit-detail-label"><?php esc_html_e( 'Time:', 'booking-system' ); ?></span>
+				<span class="bookit-detail-value"><?php echo esc_html( $time_formatted ); ?></span>
+			</div>
+
+			<div class="bookit-detail-row">
+				<span class="bookit-detail-label"><?php esc_html_e( 'Staff Member:', 'booking-system' ); ?></span>
+				<span class="bookit-detail-value"><?php echo esc_html( $booking['staff_name'] ); ?></span>
+			</div>
+
+			<div class="bookit-detail-row">
+				<span class="bookit-detail-label"><?php esc_html_e( 'Customer:', 'booking-system' ); ?></span>
+				<span class="bookit-detail-value"><?php echo esc_html( $booking['customer_name'] ); ?></span>
+			</div>
+		</div>
+
+		<div class="bookit-payment-summary">
+			<h3><?php esc_html_e( 'Payment Summary', 'booking-system' ); ?></h3>
+
+			<div class="bookit-detail-row">
+				<span class="bookit-detail-label"><?php esc_html_e( 'Total Price:', 'booking-system' ); ?></span>
+				<span class="bookit-detail-value">£<?php echo esc_html( number_format( (float) $booking['total_price'], 2 ) ); ?></span>
+			</div>
+
+			<div class="bookit-detail-row bookit-paid">
+				<span class="bookit-detail-label"><?php esc_html_e( 'Paid Today:', 'booking-system' ); ?></span>
+				<span class="bookit-detail-value">£<?php echo esc_html( number_format( (float) $booking['deposit_paid'], 2 ) ); ?></span>
+			</div>
+
+			<?php if ( (float) $booking['balance_due'] > 0 ) : ?>
+				<div class="bookit-detail-row bookit-balance">
+					<span class="bookit-detail-label"><?php esc_html_e( 'Balance Due (pay on arrival):', 'booking-system' ); ?></span>
+					<span class="bookit-detail-value">£<?php echo esc_html( number_format( (float) $booking['balance_due'], 2 ) ); ?></span>
+				</div>
+			<?php endif; ?>
+
+			<div class="bookit-detail-row">
+				<span class="bookit-detail-label"><?php esc_html_e( 'Payment Method:', 'booking-system' ); ?></span>
+				<span class="bookit-detail-value"><?php echo esc_html( ucfirst( $booking['payment_method'] ) ); ?></span>
+			</div>
+		</div>
+
+		<?php if ( ! empty( $booking['special_requests'] ) ) : ?>
+			<div class="bookit-special-requests">
+				<h3><?php esc_html_e( 'Special Requests', 'booking-system' ); ?></h3>
+				<p><?php echo esc_html( $booking['special_requests'] ); ?></p>
+			</div>
+		<?php endif; ?>
+	</div>
+
+	<div class="bookit-confirmation-actions">
+		<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="bookit-btn-secondary">
+			<?php esc_html_e( '← Back to Home', 'booking-system' ); ?>
+		</a>
+		<a href="<?php echo esc_url( home_url( '/book' ) ); ?>" class="bookit-btn-primary">
+			<?php esc_html_e( 'Make Another Booking', 'booking-system' ); ?>
+		</a>
+	</div>
+
+	<div class="bookit-confirmation-help">
+		<p><?php esc_html_e( 'Need to cancel or reschedule? Please contact us.', 'booking-system' ); ?></p>
+	</div>
+</div>

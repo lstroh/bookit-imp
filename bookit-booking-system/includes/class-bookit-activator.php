@@ -107,6 +107,20 @@ class Bookit_Activator {
 			error_log( '[Bookit Booking System] WARNING: Log directory not writable' );
 		}
 
+		// Create confirmation page on activation.
+		$page = get_page_by_path( 'booking-confirmed' );
+		if ( ! $page ) {
+			wp_insert_post(
+				array(
+					'post_title'   => 'Booking Confirmed',
+					'post_name'    => 'booking-confirmed',
+					'post_content' => '[bookit_confirmation]',
+					'post_status'  => 'publish',
+					'post_type'    => 'page',
+				)
+			);
+		}
+
 		// Flush rewrite rules (for dashboard endpoints).
 		flush_rewrite_rules();
 	}

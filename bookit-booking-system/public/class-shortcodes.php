@@ -23,6 +23,8 @@ class Bookit_Shortcodes {
 	 */
 	public function __construct() {
 		add_shortcode( 'bookit_booking_wizard', array( $this, 'render_booking_wizard' ) );
+		add_shortcode( 'bookit_booking_confirmation', array( $this, 'render_booking_confirmation' ) );
+		add_shortcode( 'bookit_confirmation', array( $this, 'bookit_confirmation_page_shortcode' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_wizard_assets' ) );
 	}
 
@@ -67,14 +69,49 @@ class Bookit_Shortcodes {
 	}
 
 	/**
+	 * Register booking confirmation page shortcode [bookit_confirmation].
+	 *
+	 * @return string Confirmation HTML.
+	 */
+	public function bookit_confirmation_page_shortcode() {
+		ob_start();
+		include BOOKIT_PLUGIN_DIR . 'public/templates/booking-confirmed.php';
+		return ob_get_clean();
+	}
+
+	/**
+	 * Render booking confirmation shortcode (success page after payment).
+	 *
+	 * @param array  $atts Shortcode attributes.
+	 * @param string $content Shortcode content.
+	 * @return string Confirmation HTML.
+	 */
+	public function render_booking_confirmation( $atts = array(), $content = '' ) {
+		// Initialize session so clear_booking_session can run if needed.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
+		Bookit_Session_Manager::init();
+
+		ob_start();
+		$template_path = BOOKIT_PLUGIN_DIR . 'public/templates/booking-confirmed.php';
+		if ( file_exists( $template_path ) ) {
+			include $template_path;
+		} else {
+			echo '<p>' . esc_html__( 'Confirmation template not found.', 'bookit-booking-system' ) . '</p>';
+		}
+		return ob_get_clean();
+	}
+
+	/**
 	 * Enqueue wizard-specific assets.
 	 *
 	 * @return void
 	 */
 	public function enqueue_wizard_assets() {
-		// Only enqueue on pages with the shortcode.
+		// Only enqueue on pages with the wizard or confirmation shortcode.
 		global $post;
-		if ( ! is_a( $post, 'WP_Post' ) || ! has_shortcode( $post->post_content, 'bookit_booking_wizard' ) ) {
+		$has_wizard = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_booking_wizard' );
+		$has_confirmation = is_a( $post, 'WP_Post' ) && ( has_shortcode( $post->post_content, 'bookit_booking_confirmation' ) || has_shortcode( $post->post_content, 'bookit_confirmation' ) );
+		if ( ! $has_wizard && ! $has_confirmation ) {
 			return;
 		}
 
@@ -136,6 +173,16 @@ class Bookit_Shortcodes {
 			BOOKIT_VERSION,
 			'all'
 		);
+
+		// Enqueue confirmation page styles when this page has the confirmation shortcode.
+		if ( $has_confirmation ) {
+			wp_enqueue_style(
+				'bookit-confirmation',
+				BOOKIT_PLUGIN_URL . 'public/assets/css/confirmation-page.css',
+				array(),
+				'1.0.0'
+			);
+		}
 
 		// Get current step from session if available.
 		$current_step = 1;
