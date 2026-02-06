@@ -55,6 +55,13 @@ if ( file_exists( $bookit_vendor ) ) {
 }
 
 /**
+ * Core includes - Idempotency handling (Sprint 2, Task 6).
+ */
+require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-idempotency-handler.php';
+require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-idempotency-cleanup.php';
+require_once BOOKIT_PLUGIN_DIR . 'includes/database/migration-idempotency-table.php';
+
+/**
  * The code that runs during plugin activation.
  *
  * @return void

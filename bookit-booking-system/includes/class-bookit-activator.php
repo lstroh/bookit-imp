@@ -85,6 +85,10 @@ class Bookit_Activator {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-session-cleanup.php';
 		Bookit_Session_Cleanup::register_cron();
 
+		// Schedule idempotency cleanup (daily at 3:00 AM) - Sprint 2, Task 6.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-idempotency-cleanup.php';
+		Bookit_Idempotency_Cleanup::register_cron();
+
 		// Initialize logger (creates log directory in best location)
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-logger.php';
 		Bookit_Logger::init();

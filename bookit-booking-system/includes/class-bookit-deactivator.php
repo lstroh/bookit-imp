@@ -36,6 +36,10 @@ class Bookit_Deactivator {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-session-cleanup.php';
 		Bookit_Session_Cleanup::unregister_cron();
 
+		// Unregister idempotency cleanup cron - Sprint 2, Task 6.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-idempotency-cleanup.php';
+		Bookit_Idempotency_Cleanup::unregister_cron();
+
 		// Flush rewrite rules.
 		flush_rewrite_rules();
 

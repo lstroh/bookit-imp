@@ -18,47 +18,109 @@ if ( ! defined( 'WPINC' ) ) {
 class Booking_System_Stripe_Checkout {
 
 	/**
+	 * Idempotency handler instance.
+	 *
+	 * @var Booking_System_Idempotency_Handler|null
+	 */
+	private $idempotency_handler = null;
+
+	/**
+	 * Current idempotency key for the operation.
+	 *
+	 * @var string|null
+	 */
+	private $current_idempotency_key = null;
+
+	/**
 	 * Create Stripe Checkout Session
+	 *
+	 * Uses idempotency to prevent duplicate checkout sessions.
+	 * If the same session data is submitted twice, returns the cached session ID.
 	 *
 	 * @param array<string, mixed> $session_data Booking wizard session data.
 	 * @return string|\WP_Error Stripe session ID or error.
 	 */
 	public function create_checkout_session( $session_data ) {
+		// Initialize idempotency handler.
+		$idempotency_result = $this->init_idempotency( $session_data );
+		if ( is_wp_error( $idempotency_result ) ) {
+			return $idempotency_result;
+		}
+
+		// If we got a cached session ID, return it immediately.
+		if ( is_string( $idempotency_result ) && ! empty( $idempotency_result ) ) {
+			return $idempotency_result;
+		}
+
 		$validation = $this->validate_session_data( $session_data );
 		if ( is_wp_error( $validation ) ) {
+			$this->fail_idempotency_operation( $validation->get_error_message() );
 			return $validation;
 		}
 
 		$service = $this->get_service( isset( $session_data['service_id'] ) ? (int) $session_data['service_id'] : 0 );
 		if ( ! $service ) {
-			return new WP_Error( 'missing_service', __( 'Service not found', 'bookit-booking-system' ) );
+			$error = new WP_Error( 'missing_service', __( 'Service not found', 'bookit-booking-system' ) );
+			$this->fail_idempotency_operation( $error->get_error_message() );
+			return $error;
 		}
 
 		$staff = $this->get_staff( isset( $session_data['staff_id'] ) ? (int) $session_data['staff_id'] : 0 );
 		if ( ! $staff ) {
-			return new WP_Error( 'missing_staff', __( 'Staff member not found', 'bookit-booking-system' ) );
+			$error = new WP_Error( 'missing_staff', __( 'Staff member not found', 'bookit-booking-system' ) );
+			$this->fail_idempotency_operation( $error->get_error_message() );
+			return $error;
 		}
 
 		$deposit_amount = $this->calculate_deposit( $service );
 		if ( is_wp_error( $deposit_amount ) ) {
+			$this->fail_idempotency_operation( $deposit_amount->get_error_message() );
 			return $deposit_amount;
 		}
 		if ( $deposit_amount <= 0 ) {
-			return new WP_Error( 'invalid_amount', __( 'Deposit amount must be greater than zero', 'bookit-booking-system' ) );
+			$error = new WP_Error( 'invalid_amount', __( 'Deposit amount must be greater than zero', 'bookit-booking-system' ) );
+			$this->fail_idempotency_operation( $error->get_error_message() );
+			return $error;
 		}
 
 		$stripe_config = new Bookit_Stripe_Config();
 		$secret_key    = $stripe_config->get_secret_key();
 		if ( empty( $secret_key ) ) {
-			return new WP_Error( 'missing_api_key', __( 'Stripe API key not configured', 'bookit-booking-system' ) );
+			$error = new WP_Error( 'missing_api_key', __( 'Stripe API key not configured', 'bookit-booking-system' ) );
+			$this->fail_idempotency_operation( $error->get_error_message() );
+			return $error;
 		}
 
 		if ( apply_filters( 'bookit_stripe_api_mode', 'live' ) === 'mock' ) {
 			$mock_result = apply_filters( 'bookit_mock_stripe_session', $session_data );
 			if ( is_object( $mock_result ) && isset( $mock_result->id ) ) {
+				// Complete idempotency for successful mock.
+				$this->complete_idempotency_operation(
+					array(
+						'session_id'   => $mock_result->id,
+						'amount_total' => $mock_result->amount_total ?? 0,
+						'currency'     => $mock_result->currency ?? 'gbp',
+						'created_at'   => gmdate( 'Y-m-d H:i:s' ),
+						'mock'         => true,
+					)
+				);
 				return $mock_result->id;
 			}
-			return is_string( $mock_result ) ? $mock_result : new WP_Error( 'mock_error', __( 'Mock session failed', 'bookit-booking-system' ) );
+			if ( is_string( $mock_result ) && ! empty( $mock_result ) ) {
+				// Complete idempotency for string session ID.
+				$this->complete_idempotency_operation(
+					array(
+						'session_id' => $mock_result,
+						'created_at' => gmdate( 'Y-m-d H:i:s' ),
+						'mock'       => true,
+					)
+				);
+				return $mock_result;
+			}
+			// Mock failed.
+			$error = new WP_Error( 'mock_error', __( 'Mock session failed', 'bookit-booking-system' ) );
+			$this->fail_idempotency_operation( $error->get_error_message() );
+			return $error;
 		}
 
 		if ( ! class_exists( '\Stripe\Stripe' ) ) {
@@ -73,13 +135,140 @@ class Booking_System_Stripe_Checkout {
 
 		try {
 			$checkout_session = \Stripe\Checkout\Session::create( $params );
-			return $checkout_session->id;
+			$session_id       = $checkout_session->id;
+
+			// Mark idempotency operation as completed with session details.
+			$this->complete_idempotency_operation(
+				array(
+					'session_id'   => $session_id,
+					'amount_total' => $checkout_session->amount_total,
+					'currency'     => $checkout_session->currency,
+					'created_at'   => gmdate( 'Y-m-d H:i:s' ),
+				)
+			);
+
+			return $session_id;
 		} catch ( \Exception $e ) {
+			$error_message = $e->getMessage();
+
 			if ( function_exists( 'error_log' ) ) {
-				error_log( 'Stripe Checkout Session Error: ' . $e->getMessage() );
+				error_log( 'Stripe Checkout Session Error: ' . $error_message );
 			}
-			return new WP_Error( 'stripe_error', __( 'Unable to create checkout session: ', 'bookit-booking-system' ) . $e->getMessage() );
+
+			// Mark idempotency operation as failed (allows retry).
+			$this->fail_idempotency_operation( $error_message );
+
+			return new WP_Error( 'stripe_error', __( 'Unable to create checkout session: ', 'bookit-booking-system' ) . $error_message );
 		}
+	}
+
+	/**
+	 * Initialize idempotency tracking for checkout session creation.
+	 *
+	 * @param array<string, mixed> $session_data Session data.
+	 * @return string|true|\WP_Error Cached session ID, true to continue, or error.
+	 */
+	private function init_idempotency( $session_data ) {
+		// Load idempotency handler if not already loaded.
+		$handler_file = dirname( __DIR__ ) . '/core/class-idempotency-handler.php';
+		if ( ! class_exists( 'Booking_System_Idempotency_Handler' ) && file_exists( $handler_file ) ) {
+			require_once $handler_file;
+		}
+
+		// Skip idempotency if handler not available (graceful degradation).
+		if ( ! class_exists( 'Booking_System_Idempotency_Handler' ) ) {
+			if ( function_exists( 'error_log' ) ) {
+				error_log( 'Stripe Checkout: Idempotency handler not available, proceeding without idempotency' );
+			}
+			return true;
+		}
+
+		$this->idempotency_handler = new Booking_System_Idempotency_Handler();
+
+		// Generate idempotency key from session data.
+		// Key is based on: service, staff, date, time, customer email (core booking identity).
+		$key_data = array(
+			'service_id'     => $session_data['service_id'] ?? '',
+			'staff_id'       => $session_data['staff_id'] ?? '',
+			'date'           => $session_data['date'] ?? '',
+			'time'           => $session_data['time'] ?? '',
+			'customer_email' => $session_data['customer_email'] ?? '',
+		);
+		$this->current_idempotency_key = 'stripe_checkout_' . hash( 'sha256', wp_json_encode( $key_data ) );
+
+		// Start idempotency operation (or get existing).
+		$operation = $this->idempotency_handler->start_operation(
+			'stripe_checkout',
+			$this->current_idempotency_key,
+			$session_data
+		);
+
+		if ( is_wp_error( $operation ) ) {
+			// Log but don't fail - allow checkout to proceed without idempotency.
+			if ( function_exists( 'error_log' ) ) {
+				error_log( 'Stripe Checkout: Idempotency error - ' . $operation->get_error_message() );
+			}
+
+			// If it's a data mismatch, that's a real error - return it.
+			if ( 'idempotency_data_mismatch' === $operation->get_error_code() ) {
+				return $operation;
+			}
+
+			// For other errors, proceed without idempotency.
+			$this->idempotency_handler     = null;
+			$this->current_idempotency_key = null;
+			return true;
+		}
+
+		// If operation already completed, return cached session ID.
+		if ( 'completed' === $operation['status'] && ! empty( $operation['response_data'] ) ) {
+			$cached_data = json_decode( $operation['response_data'], true );
+			if ( ! empty( $cached_data['session_id'] ) ) {
+				if ( function_exists( 'error_log' ) ) {
+					error_log( 'Stripe Checkout: Returning cached session ID ' . $cached_data['session_id'] );
+				}
+				return $cached_data['session_id'];
+			}
+		}
+
+		// Continue with checkout session creation.
+		return true;
+	}
+
+	/**
+	 * Mark idempotency operation as completed.
+	 *
+	 * @param array<string, mixed> $response_data Response data to cache.
+	 * @return void
+	 */
+	private function complete_idempotency_operation( $response_data ) {
+		if ( null === $this->idempotency_handler || null === $this->current_idempotency_key ) {
+			return;
+		}
+
+		$this->idempotency_handler->complete_operation( $this->current_idempotency_key, $response_data );
+
+		// Clear state.
+		$this->idempotency_handler     = null;
+		$this->current_idempotency_key = null;
+	}
+
+	/**
+	 * Mark idempotency operation as failed.
+	 *
+	 * @param string $error_message Error message.
+	 * @return void
+	 */
+	private function fail_idempotency_operation( $error_message ) {
+		if ( null === $this->idempotency_handler || null === $this->current_idempotency_key ) {
+			return;
+		}
+
+		$this->idempotency_handler->fail_operation( $this->current_idempotency_key, $error_message );
+
+		// Clear state.
+		$this->idempotency_handler     = null;
+		$this->current_idempotency_key = null;
 	}
 
 	/**

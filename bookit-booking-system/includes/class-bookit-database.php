@@ -21,7 +21,7 @@ class Bookit_Database {
 	 *
 	 * @var string
 	 */
-	const DB_VERSION = '1.0';
+	const DB_VERSION = '1.0.1';
 
 
 	/**
@@ -66,13 +66,16 @@ class Bookit_Database {
 			self::create_working_hours_table( $table_prefix, $charset_collate );
 			self::create_settings_table( $table_prefix, $charset_collate );
 
+			// Sprint 2: Idempotency table (Task 6).
+			self::create_idempotency_table( $table_prefix, $charset_collate );
+
 			// Update database version.
 			update_option( 'bookit_db_version', self::DB_VERSION );
 
 			Bookit_Logger::info(
 				'Database tables created successfully',
 				array(
-					'tables_created' => 10,
+					'tables_created' => 11,
 				)
 			);
 		} else {
@@ -409,6 +412,41 @@ class Bookit_Database {
 	}
 
 	/**
+	 * Create wp_bookings_idempotency table.
+	 *
+	 * Tracks idempotency keys to prevent duplicate operations
+	 * (Stripe checkouts, emails, webhooks).
+	 *
+	 * Sprint 2, Task 6.
+	 *
+	 * @param string $table_prefix    WordPress table prefix.
+	 * @param string $charset_collate Database charset collation.
+	 * @return void
+	 */
+	private static function create_idempotency_table( $table_prefix, $charset_collate ) {
+		$table_name = $table_prefix . 'bookings_idempotency';
+
+		$sql = "CREATE TABLE $table_name (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			idempotency_key VARCHAR(255) NOT NULL,
+			operation_type VARCHAR(50) NOT NULL,
+			request_hash VARCHAR(64) NOT NULL,
+			response_data TEXT NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'processing',
+			created_at DATETIME NOT NULL,
+			completed_at DATETIME NULL,
+			expires_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY unique_key (idempotency_key),
+			KEY idx_expires (expires_at),
+			KEY idx_status (status),
+			KEY idx_operation_type (operation_type)
+		) $charset_collate;";
+
+		dbDelta( $sql );
+	}
+
+	/**
 	 * Drop all plugin tables.
 	 *
 	 * WARNING: This deletes all data. Only call from uninstall.php.
@@ -421,6 +459,8 @@ class Bookit_Database {
 		$table_prefix = $wpdb->prefix;
 
 		$tables = array(
+			// Sprint 2 tables.
+			$table_prefix . 'bookings_idempotency',
 			// Part 2 tables (drop first due to dependencies).
 			$table_prefix . 'bookings_payments',
 			$table_prefix . 'bookings',

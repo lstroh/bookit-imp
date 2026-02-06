@@ -259,6 +259,9 @@ class Bookit_Loader {
 
 		// Abandoned session cleanup cron.
 		add_action( 'bookit_cleanup_abandoned_sessions', array( 'Bookit_Session_Cleanup', 'run_cleanup' ) );
+
+		// Idempotency cleanup cron (Sprint 2, Task 6).
+		add_action( 'bookit_cleanup_expired_idempotency', array( 'Bookit_Idempotency_Cleanup', 'run_cleanup_with_tracking' ) );
 	}
 
 	/**
