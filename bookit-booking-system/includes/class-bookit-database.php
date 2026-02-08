@@ -21,7 +21,7 @@ class Bookit_Database {
 	 *
 	 * @var string
 	 */
-	const DB_VERSION = '1.0.1';
+	const DB_VERSION = '1.0.2';
 
 
 	/**
@@ -288,7 +288,7 @@ class Bookit_Database {
 			start_time TIME NOT NULL,
 			end_time TIME NOT NULL,
 			duration INT UNSIGNED NOT NULL COMMENT 'Duration in minutes (cached from service)',
-			status ENUM('pending','confirmed','cancelled','completed','no_show') DEFAULT 'pending',
+			status ENUM('pending','pending_payment','confirmed','cancelled','completed','no_show') DEFAULT 'pending',
 			total_price DECIMAL(10,2) NOT NULL,
 			deposit_amount DECIMAL(10,2) NULL DEFAULT NULL COMMENT 'Service deposit config amount',
 			deposit_paid DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Actual amount paid as deposit',

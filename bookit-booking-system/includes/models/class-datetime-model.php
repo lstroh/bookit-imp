@@ -252,7 +252,7 @@ class Bookit_DateTime_Model {
 				FROM {$wpdb->prefix}bookings
 				WHERE staff_id = %d
 				  AND booking_date = %s
-				  AND status IN ('confirmed', 'pending')
+				  AND status NOT IN ('cancelled')
 				  AND ( deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00' )",
 				$staff_id,
 				$date

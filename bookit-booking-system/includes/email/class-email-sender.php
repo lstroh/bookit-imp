@@ -174,15 +174,39 @@ class Booking_System_Email_Sender {
 						<h3><?php esc_html_e( 'Payment Summary', 'booking-system' ); ?></h3>
 						<div class="detail-row">
 							<span class="label"><?php esc_html_e( 'Total:', 'booking-system' ); ?></span>
-							<span class="value">£<?php echo esc_html( number_format( (float) $booking['total_price'], 2 ) ); ?></span>
+							<span class="value">&pound;<?php echo esc_html( number_format( (float) $booking['total_price'], 2 ) ); ?></span>
 						</div>
+
+						<?php if ( isset( $booking['payment_method'] ) && 'pay_on_arrival' === $booking['payment_method'] ) : ?>
+							<div style="background: #fff3cd; padding: 15px; margin: 15px 0; border-left: 4px solid #ffc107; border-radius: 4px;">
+								<strong style="color: #856404;"><?php esc_html_e( 'Payment Due on Arrival', 'booking-system' ); ?></strong>
+								<p style="margin: 10px 0 0; color: #856404;">
+									<?php
+									printf(
+										/* translators: %s: formatted total price */
+										esc_html__( 'Please bring %s to pay when you arrive for your appointment.', 'booking-system' ),
+										'<strong>&pound;' . esc_html( number_format( (float) $booking['total_price'], 2 ) ) . '</strong>'
+									);
+									?>
+								</p>
+								<p style="margin: 10px 0 0; font-size: 14px; color: #856404;">
+									<?php esc_html_e( 'We accept cash and card payments.', 'booking-system' ); ?>
+								</p>
+							</div>
+						<?php else : ?>
+							<div class="detail-row">
+								<span class="label"><?php esc_html_e( 'Paid:', 'booking-system' ); ?></span>
+								<span class="value">&pound;<?php echo esc_html( number_format( (float) $booking['deposit_paid'], 2 ) ); ?></span>
+							</div>
+							<div class="detail-row">
+								<span class="label"><?php esc_html_e( 'Balance Due:', 'booking-system' ); ?></span>
+								<span class="value">&pound;<?php echo esc_html( number_format( (float) $booking['balance_due'], 2 ) ); ?></span>
+							</div>
+						<?php endif; ?>
+
 						<div class="detail-row">
-							<span class="label"><?php esc_html_e( 'Paid:', 'booking-system' ); ?></span>
-							<span class="value">£<?php echo esc_html( number_format( (float) $booking['deposit_paid'], 2 ) ); ?></span>
-						</div>
-						<div class="detail-row">
-							<span class="label"><?php esc_html_e( 'Balance Due:', 'booking-system' ); ?></span>
-							<span class="value">£<?php echo esc_html( number_format( (float) $booking['balance_due'], 2 ) ); ?></span>
+							<span class="label"><?php esc_html_e( 'Payment Method:', 'booking-system' ); ?></span>
+							<span class="value"><?php echo esc_html( ucwords( str_replace( '_', ' ', $booking['payment_method'] ?? '' ) ) ); ?></span>
 						</div>
 					</div>
 
@@ -241,8 +265,22 @@ class Booking_System_Email_Sender {
 
 			<hr>
 
-			<p><strong><?php esc_html_e( 'Payment:', 'booking-system' ); ?></strong> £<?php echo esc_html( number_format( (float) $booking['deposit_paid'], 2 ) ); ?> via <?php echo esc_html( ucfirst( $booking['payment_method'] ) ); ?></p>
-			<p><strong><?php esc_html_e( 'Balance Due:', 'booking-system' ); ?></strong> £<?php echo esc_html( number_format( (float) $booking['balance_due'], 2 ) ); ?></p>
+			<p><strong><?php esc_html_e( 'Payment:', 'booking-system' ); ?></strong> &pound;<?php echo esc_html( number_format( (float) $booking['deposit_paid'], 2 ) ); ?> via <?php echo esc_html( ucwords( str_replace( '_', ' ', $booking['payment_method'] ?? '' ) ) ); ?></p>
+
+			<?php if ( isset( $booking['payment_method'] ) && 'pay_on_arrival' === $booking['payment_method'] ) : ?>
+				<p style="background: #fff3cd; padding: 10px; border-left: 3px solid #ffc107;">
+					<strong><?php esc_html_e( 'Payment Due on Arrival:', 'booking-system' ); ?></strong>
+					<?php
+					printf(
+						/* translators: %s: formatted total price */
+						esc_html__( 'Customer will pay %s when they arrive.', 'booking-system' ),
+						'&pound;' . esc_html( number_format( (float) $booking['total_price'], 2 ) )
+					);
+					?>
+				</p>
+			<?php endif; ?>
+
+			<p><strong><?php esc_html_e( 'Balance Due:', 'booking-system' ); ?></strong> &pound;<?php echo esc_html( number_format( (float) $booking['balance_due'], 2 ) ); ?></p>
 
 			<?php if ( ! empty( $booking['special_requests'] ) ) : ?>
 				<hr>

@@ -86,6 +86,11 @@ class Booking_System_Booking_Creator {
 		$deposit_amount = $amount_paid;
 		$balance_due    = max( 0, $total_price - $amount_paid );
 
+		// Pay on arrival bookings start as pending_payment; paid bookings are confirmed immediately.
+		$status = ( isset( $data['payment_method'] ) && 'pay_on_arrival' === $data['payment_method'] )
+			? 'pending_payment'
+			: 'confirmed';
+
 		$booking_data = array(
 			'customer_id'       => $customer_id,
 			'service_id'        => $data['service_id'],
@@ -94,7 +99,7 @@ class Booking_System_Booking_Creator {
 			'start_time'        => $start_time,
 			'end_time'          => $end_time,
 			'duration'          => $duration,
-			'status'            => 'confirmed',
+			'status'            => $status,
 			'total_price'       => $total_price,
 			'deposit_amount'    => $deposit_amount,
 			'deposit_paid'      => $amount_paid,

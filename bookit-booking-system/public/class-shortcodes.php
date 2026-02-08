@@ -45,8 +45,20 @@ class Bookit_Shortcodes {
 			Bookit_Session_Manager::clear();
 		}
 
-		// Get current step.
+		// Get current step from session.
 		$current_step = (int) Bookit_Session_Manager::get( 'current_step', 1 );
+
+		// Allow backward navigation via ?step= URL parameter.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['step'] ) ) {
+			$requested_step = (int) $_GET['step'];
+
+			// Only allow navigating backwards (to a step already completed) or to the current step.
+			if ( $requested_step >= 1 && $requested_step <= $current_step ) {
+				$current_step = $requested_step;
+				Bookit_Session_Manager::set( 'current_step', $current_step );
+			}
+		}
 
 		// Validate step range.
 		if ( $current_step < 1 || $current_step > 5 ) {
