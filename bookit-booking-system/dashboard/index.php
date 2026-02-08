@@ -15,7 +15,7 @@ require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-auth.php';
 
 // If already logged in, redirect to dashboard.
 if ( Bookit_Auth::is_logged_in() ) {
-	wp_redirect( home_url( '/bookit-dashboard/home/' ) );
+	wp_redirect( home_url( '/bookit-dashboard/app/' ) );
 	exit;
 }
 
@@ -42,7 +42,7 @@ if ( 'POST' === $_SERVER['REQUEST_METHOD'] && isset( $_POST['booking_login_submi
 
 				$redirect_to = isset( $_GET['redirect_to'] ) ? (string) wp_unslash( $_GET['redirect_to'] ) : '';
 				if ( empty( $redirect_to ) ) {
-					$redirect_to = home_url( '/bookit-dashboard/home/' );
+					$redirect_to = home_url( '/bookit-dashboard/app/' );
 				}
 
 				wp_redirect( $redirect_to );

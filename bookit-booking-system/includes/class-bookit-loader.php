@@ -160,6 +160,13 @@ class Bookit_Loader {
 			'index.php?bookit_dashboard_page=logout',
 			'top'
 		);
+
+		// Dashboard Vue app (SPA catch-all).
+		add_rewrite_rule(
+			'^bookit-dashboard/app(/.*)?$',
+			'index.php?bookit_dashboard_page=app',
+			'top'
+		);
 	}
 
 	/**
@@ -196,6 +203,10 @@ class Bookit_Loader {
 
 			case 'logout':
 				require_once BOOKIT_PLUGIN_DIR . 'dashboard/logout.php';
+				exit;
+
+			case 'app':
+				require_once BOOKIT_PLUGIN_DIR . 'dashboard/app/index.php';
 				exit;
 
 			default:
