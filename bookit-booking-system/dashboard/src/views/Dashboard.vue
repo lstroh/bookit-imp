@@ -1,5 +1,6 @@
 <template>
   <div>
+    <!-- Header -->
     <div class="mb-6">
       <h2 class="text-lg font-semibold text-gray-900">
         Today's Schedule
@@ -17,12 +18,24 @@
 
     <!-- Error State -->
     <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
-      <p class="text-sm text-red-800">{{ error }}</p>
+      <div class="flex items-start">
+        <span class="text-2xl mr-3">&#x26A0;&#xFE0F;</span>
+        <div>
+          <h3 class="text-sm font-medium text-red-800">Error Loading Bookings</h3>
+          <p class="text-sm text-red-700 mt-1">{{ error }}</p>
+          <button
+            @click="loadBookings"
+            class="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Empty State -->
     <div v-else-if="bookings.length === 0" class="bg-white rounded-lg shadow p-12 text-center">
-      <div class="text-6xl mb-4">📅</div>
+      <div class="text-6xl mb-4">&#x1F4C5;</div>
       <h3 class="text-lg font-medium text-gray-900 mb-2">
         No bookings today
       </h3>
@@ -36,43 +49,93 @@
       <div
         v-for="booking in bookings"
         :key="booking.id"
-        class="bg-white rounded-lg shadow p-6"
+        class="bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+        :class="{ 'ring-2 ring-orange-400': booking.is_starting_soon }"
       >
-        <div class="flex items-start justify-between">
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-lg font-semibold text-gray-900">
-                {{ booking.start_time }}
-              </span>
-              <span
-                class="px-2 py-1 text-xs font-medium rounded-full"
-                :class="statusClass(booking.status)"
+        <div class="p-6">
+          <!-- Header Row -->
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex-1">
+              <!-- Time and Status -->
+              <div class="flex items-center gap-3 mb-2">
+                <span class="text-xl font-semibold text-gray-900">
+                  {{ booking.start_time }}
+                </span>
+                <span
+                  class="px-2 py-1 text-xs font-medium rounded-full"
+                  :class="getStatusClass(booking.status)"
+                >
+                  {{ formatStatus(booking.status) }}
+                </span>
+                <span
+                  v-if="booking.is_starting_soon && booking.status !== 'completed' && booking.status !== 'cancelled'"
+                  class="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full animate-pulse"
+                >
+                  Starting Soon
+                </span>
+                <span
+                  v-if="booking.has_passed && booking.status !== 'completed' && booking.status !== 'cancelled'"
+                  class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full"
+                >
+                  Overdue
+                </span>
+              </div>
+
+              <!-- Service Name -->
+              <h3 class="text-base font-medium text-gray-900 mb-3">
+                {{ booking.service_name }}
+              </h3>
+
+              <!-- Details Grid -->
+              <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                <div>
+                  <span class="text-gray-500">Customer:</span>
+                  <span class="ml-2 text-gray-900 font-medium">{{ booking.customer_name }}</span>
+                </div>
+                <div>
+                  <span class="text-gray-500">Staff:</span>
+                  <span class="ml-2 text-gray-900">{{ booking.staff_name }}</span>
+                </div>
+                <div>
+                  <span class="text-gray-500">Duration:</span>
+                  <span class="ml-2 text-gray-900">{{ booking.duration }} min</span>
+                </div>
+                <div>
+                  <span class="text-gray-500">Payment:</span>
+                  <span class="ml-2 text-gray-900">{{ formatPaymentStatus(booking) }}</span>
+                </div>
+              </div>
+
+              <!-- Special Requests -->
+              <div v-if="booking.special_requests" class="mt-3 text-sm">
+                <span class="text-gray-500">Note:</span>
+                <span class="ml-2 text-gray-700 italic">{{ booking.special_requests }}</span>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex flex-col gap-2 ml-4">
+              <button
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
+                @click="viewDetails(booking)"
               >
-                {{ booking.status }}
+                View Details
+              </button>
+              <button
+                v-if="booking.status !== 'completed' && booking.status !== 'cancelled'"
+                class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors whitespace-nowrap"
+                :disabled="markingComplete === booking.id"
+                @click="markComplete(booking)"
+              >
+                {{ markingComplete === booking.id ? 'Updating...' : 'Mark Complete' }}
+              </button>
+              <span
+                v-else-if="booking.status === 'completed'"
+                class="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 rounded-lg text-center"
+              >
+                Completed
               </span>
             </div>
-
-            <p class="text-sm text-gray-600 mt-1">
-              {{ booking.service_name }}
-            </p>
-
-            <div class="mt-2 text-sm text-gray-700">
-              <p><strong>Customer:</strong> {{ booking.customer_name }}</p>
-              <p><strong>Staff:</strong> {{ booking.staff_name }}</p>
-            </div>
-          </div>
-
-          <div class="flex gap-2">
-            <button
-              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-            >
-              View Details
-            </button>
-            <button
-              class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700"
-            >
-              Mark Complete
-            </button>
           </div>
         </div>
       </div>
@@ -89,6 +152,7 @@ const api = useApi()
 const loading = ref(true)
 const error = ref(null)
 const bookings = ref([])
+const markingComplete = ref(null)
 
 const formattedDate = computed(() => {
   return new Date().toLocaleDateString('en-GB', {
@@ -99,7 +163,7 @@ const formattedDate = computed(() => {
   })
 })
 
-const statusClass = (status) => {
+const getStatusClass = (status) => {
   const classes = {
     'confirmed': 'bg-green-100 text-green-800',
     'pending': 'bg-yellow-100 text-yellow-800',
@@ -111,20 +175,101 @@ const statusClass = (status) => {
   return classes[status] || 'bg-gray-100 text-gray-800'
 }
 
-onMounted(async () => {
+const formatStatus = (status) => {
+  const labels = {
+    'confirmed': 'Confirmed',
+    'pending': 'Pending',
+    'pending_payment': 'Pending Payment',
+    'completed': 'Completed',
+    'cancelled': 'Cancelled',
+    'no_show': 'No Show'
+  }
+  return labels[status] || status
+}
+
+const formatPaymentStatus = (booking) => {
+  if (booking.full_amount_paid) {
+    return `\u00A3${booking.total_price.toFixed(2)} (Paid)`
+  }
+
+  if (booking.deposit_paid > 0) {
+    return `\u00A3${booking.deposit_paid.toFixed(2)} paid, \u00A3${booking.balance_due.toFixed(2)} due`
+  }
+
+  if (booking.payment_method === 'pay_on_arrival') {
+    return `\u00A3${booking.total_price.toFixed(2)} (Pay on Arrival)`
+  }
+
+  return `\u00A3${booking.total_price.toFixed(2)}`
+}
+
+const loadBookings = async () => {
+  loading.value = true
+  error.value = null
+
   try {
-    // This endpoint doesn't exist yet - will create in Task 3.
-    // For now, just show empty state.
-    bookings.value = []
+    const response = await api.get('/bookings/today')
 
-    // Uncomment when endpoint is ready:
-    // const response = await api.get('/bookings/today')
-    // bookings.value = response.data
-
+    if (response.data.success) {
+      bookings.value = response.data.bookings
+    } else {
+      throw new Error(response.data.message || 'Failed to load bookings')
+    }
   } catch (err) {
-    error.value = err.message || 'Failed to load bookings'
+    console.error('Error loading bookings:', err)
+    error.value = err.message || 'Failed to load bookings. Please try again.'
   } finally {
     loading.value = false
   }
+}
+
+const viewDetails = (booking) => {
+  // TODO: Implement in Task 6 - Edit Booking Modal.
+  alert(
+    `View booking details for ${booking.customer_name}\n\n` +
+    'This will be implemented in Task 6 (Edit Booking Modal)'
+  )
+}
+
+const markComplete = async (booking) => {
+  if (markingComplete.value) return
+
+  // Simple confirmation for now.
+  const confirmed = confirm(
+    'Mark booking as complete?\n\n' +
+    `Customer: ${booking.customer_name}\n` +
+    `Service: ${booking.service_name}\n` +
+    `Time: ${booking.start_time}\n\n` +
+    'Note: A full completion interface with notes will be available in Task 6.'
+  )
+
+  if (!confirmed) return
+
+  markingComplete.value = booking.id
+
+  try {
+    const response = await api.post(`/bookings/${booking.id}/complete`)
+
+    if (response.data.success) {
+      // Update local state.
+      const index = bookings.value.findIndex(b => b.id === booking.id)
+      if (index !== -1) {
+        bookings.value[index].status = 'completed'
+      }
+
+      alert('Booking marked as complete!')
+    } else {
+      throw new Error(response.data.message || 'Failed to mark complete')
+    }
+  } catch (err) {
+    console.error('Error marking complete:', err)
+    alert(`Error: ${err.message || 'Failed to mark booking as complete'}`)
+  } finally {
+    markingComplete.value = null
+  }
+}
+
+onMounted(() => {
+  loadBookings()
 })
 </script>
