@@ -154,6 +154,104 @@ class Bookit_Dashboard_Bookings_API {
 				'permission_callback' => array( $this, 'check_dashboard_permission' ),
 			)
 		);
+
+		// Manual booking creation.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/bookings/create',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'create_manual_booking' ),
+				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+				'args'                => array(
+					'customer_id'         => array(
+						'required'          => false,
+						'validate_callback' => function ( $param ) {
+							return empty( $param ) || is_numeric( $param );
+						},
+					),
+					'customer_email'      => array(
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_email',
+						'validate_callback' => function ( $param ) {
+							return empty( $param ) || is_email( $param );
+						},
+					),
+					'customer_first_name' => array(
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'customer_last_name'  => array(
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'customer_phone'      => array(
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'service_id'          => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param );
+						},
+					),
+					'staff_id'            => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param );
+						},
+					),
+					'booking_date'        => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $param );
+						},
+					),
+					'booking_time'        => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return preg_match( '/^\d{2}:\d{2}(:\d{2})?$/', $param );
+						},
+					),
+					'payment_method'      => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							$valid_methods = array( 'pay_on_arrival', 'manual', 'cash', 'card_external', 'check', 'complimentary', 'stripe' );
+							return in_array( $param, $valid_methods, true );
+						},
+					),
+					'amount_paid'         => array(
+						'default'           => 0,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param ) && $param >= 0;
+						},
+					),
+					'special_requests'    => array(
+						'sanitize_callback' => 'sanitize_textarea_field',
+					),
+					'send_confirmation'   => array(
+						'default'           => true,
+						'validate_callback' => function ( $param ) {
+							return is_bool( $param ) || in_array( $param, array( 'true', 'false', '1', '0', 1, 0 ), true );
+						},
+					),
+				),
+			)
+		);
+
+		// Customer search endpoint.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/customers/search',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'search_customers' ),
+				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+				'args'                => array(
+					'search' => array(
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -621,6 +719,258 @@ class Bookit_Dashboard_Bookings_API {
 				'success'    => true,
 				'message'    => __( 'Booking marked as complete.', 'bookit-booking-system' ),
 				'booking_id' => $booking_id,
+			)
+		);
+	}
+
+	/**
+	 * Create manual booking via dashboard.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function create_manual_booking( $request ) {
+		global $wpdb;
+
+		// Verify staff is logged in.
+		$current_staff = Bookit_Auth::get_current_staff();
+		if ( ! $current_staff ) {
+			return new WP_Error(
+				'unauthorized',
+				'Could not retrieve staff information.',
+				array( 'status' => 401 )
+			);
+		}
+
+		// Get or create customer.
+		$customer_id = $request->get_param( 'customer_id' );
+
+		if ( empty( $customer_id ) ) {
+			// Create new customer.
+			$customer_email = $request->get_param( 'customer_email' );
+			$customer_first = $request->get_param( 'customer_first_name' );
+			$customer_last  = $request->get_param( 'customer_last_name' );
+			$customer_phone = $request->get_param( 'customer_phone' );
+
+			if ( empty( $customer_email ) || empty( $customer_first ) || empty( $customer_last ) ) {
+				return new WP_Error(
+					'missing_customer_data',
+					'Customer email, first name, and last name are required for new customers.',
+					array( 'status' => 400 )
+				);
+			}
+
+			// Check if customer already exists.
+			$existing_customer = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT id FROM {$wpdb->prefix}bookings_customers WHERE email = %s AND deleted_at IS NULL",
+					$customer_email
+				)
+			);
+
+			if ( $existing_customer ) {
+				$customer_id = $existing_customer;
+			} else {
+				// Create new customer.
+				$result = $wpdb->insert(
+					$wpdb->prefix . 'bookings_customers',
+					array(
+						'email'      => $customer_email,
+						'first_name' => $customer_first,
+						'last_name'  => $customer_last,
+						'phone'      => $customer_phone,
+						'created_at' => current_time( 'mysql' ),
+						'updated_at' => current_time( 'mysql' ),
+					),
+					array( '%s', '%s', '%s', '%s', '%s', '%s' )
+				);
+
+				if ( ! $result ) {
+					return new WP_Error(
+						'customer_creation_failed',
+						'Failed to create customer.',
+						array( 'status' => 500 )
+					);
+				}
+
+				$customer_id = $wpdb->insert_id;
+			}
+		}
+
+		// Verify customer exists.
+		$customer = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookings_customers WHERE id = %d AND deleted_at IS NULL",
+				$customer_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $customer ) {
+			return new WP_Error(
+				'customer_not_found',
+				'Customer not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Prepare booking data for Booking_Creator.
+		$booking_data = array(
+			'service_id'          => (int) $request->get_param( 'service_id' ),
+			'staff_id'            => (int) $request->get_param( 'staff_id' ),
+			'booking_date'        => $request->get_param( 'booking_date' ),
+			'booking_time'        => $request->get_param( 'booking_time' ),
+			'customer_email'      => $customer['email'],
+			'customer_first_name' => $customer['first_name'],
+			'customer_last_name'  => $customer['last_name'],
+			'customer_phone'      => $customer['phone'],
+			'payment_method'      => $request->get_param( 'payment_method' ),
+			'amount_paid'         => (float) $request->get_param( 'amount_paid' ),
+			'special_requests'    => $request->get_param( 'special_requests' ),
+		);
+
+		// Load booking creator if not loaded.
+		if ( ! class_exists( 'Booking_System_Booking_Creator' ) ) {
+			require_once plugin_dir_path( dirname( __DIR__ ) ) . 'booking/class-booking-creator.php';
+		}
+
+		// Create booking.
+		$creator = new Booking_System_Booking_Creator();
+		$result  = $creator->create_booking( $booking_data );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$booking_id = $result;
+
+		// Send confirmation emails if requested.
+		$send_confirmation = filter_var( $request->get_param( 'send_confirmation' ), FILTER_VALIDATE_BOOLEAN );
+
+		if ( $send_confirmation ) {
+			// Load email sender.
+			if ( ! class_exists( 'Booking_System_Email_Sender' ) ) {
+				require_once plugin_dir_path( dirname( __DIR__ ) ) . 'email/class-email-sender.php';
+			}
+
+			// Get full booking details for email.
+			$booking = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT
+						b.*,
+						c.first_name AS customer_first_name,
+						c.last_name AS customer_last_name,
+						c.email AS customer_email,
+						c.phone AS customer_phone,
+						s.name AS service_name,
+						s.duration,
+						st.first_name AS staff_first_name,
+						st.last_name AS staff_last_name
+					FROM {$wpdb->prefix}bookings b
+					INNER JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
+					INNER JOIN {$wpdb->prefix}bookings_services s ON b.service_id = s.id
+					INNER JOIN {$wpdb->prefix}bookings_staff st ON b.staff_id = st.id
+					WHERE b.id = %d",
+					$booking_id
+				),
+				ARRAY_A
+			);
+
+			// Add composite name fields expected by the email sender.
+			$booking['customer_name'] = $booking['customer_first_name'] . ' ' . $booking['customer_last_name'];
+			$booking['staff_name']    = $booking['staff_first_name'] . ' ' . $booking['staff_last_name'];
+
+			$email_sender = new Booking_System_Email_Sender();
+			$email_sender->send_customer_confirmation( $booking );
+			$email_sender->send_business_notification( $booking );
+		}
+
+		// Get created booking for response.
+		$created_booking = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT
+					b.*,
+					c.first_name AS customer_first_name,
+					c.last_name AS customer_last_name,
+					c.email AS customer_email,
+					c.phone AS customer_phone,
+					s.name AS service_name,
+					st.first_name AS staff_first_name,
+					st.last_name AS staff_last_name
+				FROM {$wpdb->prefix}bookings b
+				INNER JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
+				INNER JOIN {$wpdb->prefix}bookings_services s ON b.service_id = s.id
+				INNER JOIN {$wpdb->prefix}bookings_staff st ON b.staff_id = st.id
+				WHERE b.id = %d",
+				$booking_id
+			),
+			ARRAY_A
+		);
+
+		return rest_ensure_response(
+			array(
+				'success'    => true,
+				'message'    => 'Booking created successfully.',
+				'booking_id' => $booking_id,
+				'booking'    => $this->format_booking( $created_booking ),
+				'email_sent' => $send_confirmation,
+			)
+		);
+	}
+
+	/**
+	 * Search customers by name or email.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function search_customers( $request ) {
+		global $wpdb;
+
+		$search = $request->get_param( 'search' );
+
+		if ( strlen( $search ) < 2 ) {
+			return rest_ensure_response(
+				array(
+					'success'   => true,
+					'customers' => array(),
+				)
+			);
+		}
+
+		$search_param = '%' . $wpdb->esc_like( $search ) . '%';
+
+		$customers = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					id,
+					email,
+					first_name,
+					last_name,
+					phone,
+					CONCAT(first_name, ' ', last_name) AS full_name
+				FROM {$wpdb->prefix}bookings_customers
+				WHERE deleted_at IS NULL
+				AND (
+					first_name LIKE %s OR
+					last_name LIKE %s OR
+					email LIKE %s OR
+					CONCAT(first_name, ' ', last_name) LIKE %s
+				)
+				ORDER BY first_name ASC, last_name ASC
+				LIMIT 20",
+				$search_param,
+				$search_param,
+				$search_param,
+				$search_param
+			),
+			ARRAY_A
+		);
+
+		return rest_ensure_response(
+			array(
+				'success'   => true,
+				'customers' => $customers,
 			)
 		);
 	}

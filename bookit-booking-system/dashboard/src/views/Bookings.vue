@@ -333,12 +333,20 @@
         </div>
       </div>
     </div>
+
+    <!-- Booking Creation Modal -->
+    <BookingModal
+      v-if="showBookingModal"
+      @close="closeBookingModal"
+      @created="handleBookingCreated"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useApi } from '../composables/useApi'
+import BookingModal from '../components/BookingModal.vue'
 
 const api = useApi()
 
@@ -511,9 +519,21 @@ const viewBooking = (booking) => {
   )
 }
 
+const showBookingModal = ref(false)
+
 const createBooking = () => {
-  // TODO: Implement in Task 5 - Manual Booking Creation
-  alert('Manual booking creation will be implemented in Task 5')
+  showBookingModal.value = true
+}
+
+const closeBookingModal = () => {
+  showBookingModal.value = false
+}
+
+const handleBookingCreated = (booking) => {
+  // Refresh bookings list
+  loadBookings(pagination.value.current_page)
+  showBookingModal.value = false
+  alert(`\u2713 Booking created successfully!\n\nID: ${booking.id}\nCustomer: ${booking.customer_name}`)
 }
 
 const formatDate = (dateString) => {
