@@ -144,6 +144,17 @@ class Bookit_Dashboard_Bookings_API {
 			)
 		);
 
+		// Get staff list for specific service (filtered by staff_services).
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/staff/by-service/(?P<service_id>\d+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'get_staff_by_service' ),
+				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+			)
+		);
+
 		// Get services list for filter dropdown.
 		register_rest_route(
 			self::NAMESPACE,
@@ -577,6 +588,46 @@ class Bookit_Dashboard_Bookings_API {
 	}
 
 	/**
+	 * Get staff list for a specific service.
+	 *
+	 * Only returns staff who can provide the service (via staff_services junction table).
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_staff_by_service( $request ) {
+		global $wpdb;
+
+		$service_id = (int) $request->get_param( 'service_id' );
+
+		$staff = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT DISTINCT
+					s.id,
+					CONCAT(s.first_name, ' ', s.last_name) AS name,
+					s.first_name,
+					s.last_name,
+					ss.custom_price
+				FROM {$wpdb->prefix}bookings_staff s
+				INNER JOIN {$wpdb->prefix}bookings_staff_services ss ON s.id = ss.staff_id
+				WHERE s.is_active = 1
+				AND s.deleted_at IS NULL
+				AND ss.service_id = %d
+				ORDER BY s.first_name ASC",
+				$service_id
+			),
+			ARRAY_A
+		);
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'staff'   => $staff,
+			)
+		);
+	}
+
+	/**
 	 * Get services list for filter dropdown.
 	 *
 	 * @return WP_REST_Response|WP_Error
@@ -587,7 +638,9 @@ class Bookit_Dashboard_Bookings_API {
 		$services = $wpdb->get_results(
 			"SELECT
 				id,
-				name
+				name,
+				price,
+				duration
 			FROM {$wpdb->prefix}bookings_services
 			WHERE is_active = 1
 			AND deleted_at IS NULL
@@ -814,12 +867,77 @@ class Bookit_Dashboard_Bookings_API {
 			);
 		}
 
+		// Get staff ID (handle "no preference" = 0).
+		$requested_staff_id = (int) $request->get_param( 'staff_id' );
+		$service_id         = (int) $request->get_param( 'service_id' );
+		$booking_date       = $request->get_param( 'booking_date' );
+		$booking_time       = $request->get_param( 'booking_time' );
+
+		// If staff_id is 0 (no preference), find first available staff for this service.
+		if ( 0 === $requested_staff_id ) {
+			// Get all staff who can provide this service.
+			$available_staff = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT DISTINCT s.id
+					FROM {$wpdb->prefix}bookings_staff s
+					INNER JOIN {$wpdb->prefix}bookings_staff_services ss ON s.id = ss.staff_id
+					WHERE s.is_active = 1
+					AND s.deleted_at IS NULL
+					AND ss.service_id = %d
+					ORDER BY s.first_name ASC",
+					$service_id
+				),
+				ARRAY_A
+			);
+
+			if ( empty( $available_staff ) ) {
+				return new WP_Error(
+					'no_staff_available',
+					'No staff members can provide this service.',
+					array( 'status' => 400 )
+				);
+			}
+
+			// Load datetime model to check availability.
+			if ( ! class_exists( 'Bookit_DateTime_Model' ) ) {
+				require_once plugin_dir_path( dirname( __FILE__ ) ) . 'models/class-datetime-model.php';
+			}
+			$datetime_model = new Bookit_DateTime_Model();
+
+			// Normalize booking_time to H:i:s for comparison with model output.
+			$time_check = $booking_time;
+			if ( strlen( $time_check ) === 5 ) {
+				$time_check .= ':00';
+			}
+
+			// Find first staff with availability at this time.
+			$assigned_staff_id = null;
+			foreach ( $available_staff as $staff ) {
+				$slots = $datetime_model->get_available_slots( $booking_date, $service_id, (int) $staff['id'] );
+
+				if ( ! empty( $slots ) && in_array( $time_check, $slots, true ) ) {
+					$assigned_staff_id = (int) $staff['id'];
+					break;
+				}
+			}
+
+			if ( ! $assigned_staff_id ) {
+				return new WP_Error(
+					'no_staff_available_at_time',
+					'No staff members are available at the selected time.',
+					array( 'status' => 400 )
+				);
+			}
+
+			$requested_staff_id = $assigned_staff_id;
+		}
+
 		// Prepare booking data for Booking_Creator.
 		$booking_data = array(
-			'service_id'          => (int) $request->get_param( 'service_id' ),
-			'staff_id'            => (int) $request->get_param( 'staff_id' ),
-			'booking_date'        => $request->get_param( 'booking_date' ),
-			'booking_time'        => $request->get_param( 'booking_time' ),
+			'service_id'          => $service_id,
+			'staff_id'            => $requested_staff_id,
+			'booking_date'        => $booking_date,
+			'booking_time'        => $booking_time,
 			'customer_email'      => $customer['email'],
 			'customer_first_name' => $customer['first_name'],
 			'customer_last_name'  => $customer['last_name'],
