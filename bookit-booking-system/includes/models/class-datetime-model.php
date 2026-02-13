@@ -49,12 +49,13 @@ class Bookit_DateTime_Model {
 	 * Get available time slots for a date (real-time availability).
 	 * Filters by staff working hours, existing bookings, service duration + buffers.
 	 *
-	 * @param string $date       Date in Y-m-d format.
-	 * @param int    $service_id Service ID.
-	 * @param int    $staff_id   Staff ID or 0 for "No Preference".
+	 * @param string   $date               Date in Y-m-d format.
+	 * @param int      $service_id         Service ID.
+	 * @param int      $staff_id           Staff ID or 0 for "No Preference".
+	 * @param int|null $exclude_booking_id Booking ID to exclude from conflict check (for edits).
 	 * @return array<int, string> Available time slots ['09:00:00', '09:15:00', ...].
 	 */
-	public function get_available_slots( $date, $service_id, $staff_id ) {
+	public function get_available_slots( $date, $service_id, $staff_id, $exclude_booking_id = null ) {
 		global $wpdb;
 
 		$service = $wpdb->get_row(
@@ -78,7 +79,7 @@ class Bookit_DateTime_Model {
 			return $this->get_no_preference_slots( $date, $service_id, $total_time_needed );
 		}
 
-		return $this->get_staff_availability( (int) $staff_id, $date, $total_time_needed );
+		return $this->get_staff_availability( (int) $staff_id, $date, $total_time_needed, $exclude_booking_id );
 	}
 
 	/**
@@ -123,12 +124,13 @@ class Bookit_DateTime_Model {
 	/**
 	 * Get availability for a single staff member.
 	 *
-	 * @param int    $staff_id           Staff ID.
-	 * @param string $date               Date in Y-m-d format.
-	 * @param int    $total_time_needed  Total minutes needed for the slot.
+	 * @param int      $staff_id           Staff ID.
+	 * @param string   $date               Date in Y-m-d format.
+	 * @param int      $total_time_needed  Total minutes needed for the slot.
+	 * @param int|null $exclude_booking_id Booking ID to exclude from conflict check (for edits).
 	 * @return array<int, string> Available time slots.
 	 */
-	private function get_staff_availability( $staff_id, $date, $total_time_needed ) {
+	private function get_staff_availability( $staff_id, $date, $total_time_needed, $exclude_booking_id = null ) {
 		global $wpdb;
 
 		Bookit_Logger::info( 'get_staff_availability: start', array(
@@ -246,19 +248,40 @@ class Bookit_DateTime_Model {
 			return array();
 		}
 
-		$existing_bookings = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT start_time, end_time
-				FROM {$wpdb->prefix}bookings
-				WHERE staff_id = %d
-				  AND booking_date = %s
-				  AND status NOT IN ('cancelled')
-				  AND ( deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00' )",
-				$staff_id,
-				$date
-			),
-			ARRAY_A
-		);
+		// Build query to get booked slots, excluding current booking if editing.
+		if ( $exclude_booking_id ) {
+			// Exclude the booking being edited from conflict check.
+			$existing_bookings = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT start_time, end_time
+					FROM {$wpdb->prefix}bookings
+					WHERE staff_id = %d
+					  AND booking_date = %s
+					  AND id != %d
+					  AND status NOT IN ('cancelled')
+					  AND ( deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00' )",
+					$staff_id,
+					$date,
+					$exclude_booking_id
+				),
+				ARRAY_A
+			);
+		} else {
+			// Normal query without exclusion (for new bookings).
+			$existing_bookings = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT start_time, end_time
+					FROM {$wpdb->prefix}bookings
+					WHERE staff_id = %d
+					  AND booking_date = %s
+					  AND status NOT IN ('cancelled')
+					  AND ( deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00' )",
+					$staff_id,
+					$date
+				),
+				ARRAY_A
+			);
+		}
 
 		$existing_bookings = $existing_bookings ? $existing_bookings : array();
 		Bookit_Logger::info( 'get_staff_availability: existing bookings count', array(

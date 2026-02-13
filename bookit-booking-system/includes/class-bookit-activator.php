@@ -67,6 +67,11 @@ class Bookit_Activator {
 
 		add_option( 'bookit_settings', $default_settings );
 
+		// Add default setting for approval requirement.
+		if ( false === get_option( 'bookit_require_approval' ) ) {
+			add_option( 'bookit_require_approval', false );
+		}
+
 		// Create database tables (Part 1: Tables 1-5).
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-database.php';
 		Bookit_Database::create_tables();

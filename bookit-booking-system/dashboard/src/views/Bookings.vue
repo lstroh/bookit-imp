@@ -340,6 +340,15 @@
       @close="closeBookingModal"
       @created="handleBookingCreated"
     />
+
+    <!-- Booking View/Edit Modal -->
+    <BookingViewModal
+      v-if="showViewModal && selectedBookingId"
+      :booking-id="selectedBookingId"
+      @close="closeViewModal"
+      @updated="handleBookingUpdated"
+      @cancelled="handleBookingCancelled"
+    />
   </div>
 </template>
 
@@ -347,6 +356,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useApi } from '../composables/useApi'
 import BookingModal from '../components/BookingModal.vue'
+import BookingViewModal from '../components/BookingViewModal.vue'
 
 const api = useApi()
 
@@ -505,20 +515,33 @@ const goToPage = (page) => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+// View/Edit modal state.
+const selectedBookingId = ref(null)
+const showViewModal = ref(false)
+
 const viewBooking = (booking) => {
-  // TODO: Implement in Task 6 - Edit Booking Modal
-  alert(
-    `View Booking Details\n\n` +
-    `ID: ${booking.id}\n` +
-    `Customer: ${booking.customer_name}\n` +
-    `Service: ${booking.service_name}\n` +
-    `Date: ${formatDate(booking.booking_date)}\n` +
-    `Time: ${booking.start_time}\n` +
-    `Status: ${formatStatus(booking.status)}\n\n` +
-    `Full booking details will be available in Task 6 (Edit Booking Modal)`
-  )
+  selectedBookingId.value = booking.id
+  showViewModal.value = true
 }
 
+const handleBookingUpdated = (updatedBooking) => {
+  // Refresh bookings list.
+  loadBookings(pagination.value.current_page)
+  showViewModal.value = false
+}
+
+const handleBookingCancelled = (bookingId) => {
+  // Refresh bookings list.
+  loadBookings(pagination.value.current_page)
+  showViewModal.value = false
+}
+
+const closeViewModal = () => {
+  showViewModal.value = false
+  selectedBookingId.value = null
+}
+
+// Create modal state.
 const showBookingModal = ref(false)
 
 const createBooking = () => {
@@ -570,16 +593,38 @@ const getStatusClass = (status) => {
 }
 
 const getPaymentLabel = (booking) => {
-  if (booking.full_amount_paid) {
-    return 'Paid'
+  const total = parseFloat(booking.total_price) || 0
+  const paid = parseFloat(booking.deposit_paid) || 0
+
+  if (paid > total && total > 0) {
+    // Overpayment (tip included).
+    const tip = paid - total
+    return `\u00A3${paid.toFixed(2)} paid (incl. \u00A3${tip.toFixed(2)} tip)`
   }
-  if (booking.deposit_paid > 0) {
-    return `\u00A3${booking.balance_due.toFixed(2)} due`
+  if (paid >= total && total > 0) {
+    // Fully paid (exact amount).
+    return `\u00A3${paid.toFixed(2)} paid in full`
+  }
+  if (paid > 0) {
+    // Partially paid.
+    return `\u00A3${paid.toFixed(2)} paid, \u00A3${(total - paid).toFixed(2)} due`
   }
   if (booking.payment_method === 'pay_on_arrival') {
     return 'Pay on arrival'
   }
-  return 'Unpaid'
+  return `${formatPaymentMethod(booking.payment_method)} - Unpaid`
+}
+
+const formatPaymentMethod = (method) => {
+  const labels = {
+    'pay_on_arrival': 'Pay on Arrival',
+    'cash': 'Cash',
+    'card_external': 'Card',
+    'check': 'Check',
+    'complimentary': 'Complimentary',
+    'stripe': 'Stripe'
+  }
+  return labels[method] || method || 'Unknown'
 }
 
 // Lifecycle

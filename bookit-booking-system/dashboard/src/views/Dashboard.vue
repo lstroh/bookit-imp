@@ -141,11 +141,21 @@
       </div>
     </div>
   </div>
+
+  <!-- Booking View/Edit Modal -->
+  <BookingViewModal
+    v-if="showViewModal && selectedBookingId"
+    :booking-id="selectedBookingId"
+    @close="closeViewModal"
+    @updated="handleBookingUpdated"
+    @cancelled="handleBookingCancelled"
+  />
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useApi } from '../composables/useApi'
+import BookingViewModal from '../components/BookingViewModal.vue'
 
 const api = useApi()
 
@@ -153,6 +163,8 @@ const loading = ref(true)
 const error = ref(null)
 const bookings = ref([])
 const markingComplete = ref(null)
+const showViewModal = ref(false)
+const selectedBookingId = ref(null)
 
 const formattedDate = computed(() => {
   return new Date().toLocaleDateString('en-GB', {
@@ -188,19 +200,25 @@ const formatStatus = (status) => {
 }
 
 const formatPaymentStatus = (booking) => {
-  if (booking.full_amount_paid) {
-    return `\u00A3${booking.total_price.toFixed(2)} (Paid)`
-  }
+  const total = parseFloat(booking.total_price) || 0
+  const paid = parseFloat(booking.deposit_paid) || 0
 
-  if (booking.deposit_paid > 0) {
-    return `\u00A3${booking.deposit_paid.toFixed(2)} paid, \u00A3${booking.balance_due.toFixed(2)} due`
+  if (paid > total && total > 0) {
+    // Overpayment (tip included).
+    return `\u2713 \u00A3${paid.toFixed(2)} paid (incl. tip)`
   }
-
+  if (paid >= total && total > 0) {
+    // Fully paid (exact amount).
+    return `\u2713 \u00A3${paid.toFixed(2)} paid in full`
+  }
+  if (paid > 0) {
+    // Partially paid.
+    return `\u00A3${paid.toFixed(2)} paid, \u00A3${(total - paid).toFixed(2)} due`
+  }
   if (booking.payment_method === 'pay_on_arrival') {
-    return `\u00A3${booking.total_price.toFixed(2)} (Pay on Arrival)`
+    return `\u00A3${total.toFixed(2)} (Pay on Arrival)`
   }
-
-  return `\u00A3${booking.total_price.toFixed(2)}`
+  return `\u00A3${total.toFixed(2)} (Unpaid)`
 }
 
 const loadBookings = async () => {
@@ -224,11 +242,27 @@ const loadBookings = async () => {
 }
 
 const viewDetails = (booking) => {
-  // TODO: Implement in Task 6 - Edit Booking Modal.
-  alert(
-    `View booking details for ${booking.customer_name}\n\n` +
-    'This will be implemented in Task 6 (Edit Booking Modal)'
-  )
+  selectedBookingId.value = booking.id
+  showViewModal.value = true
+}
+
+const closeViewModal = () => {
+  showViewModal.value = false
+  selectedBookingId.value = null
+}
+
+const handleBookingUpdated = (updatedBooking) => {
+  // Refresh today's schedule after booking update.
+  loadBookings()
+  showViewModal.value = false
+  selectedBookingId.value = null
+}
+
+const handleBookingCancelled = (bookingId) => {
+  // Refresh today's schedule after cancellation.
+  loadBookings()
+  showViewModal.value = false
+  selectedBookingId.value = null
 }
 
 const markComplete = async (booking) => {

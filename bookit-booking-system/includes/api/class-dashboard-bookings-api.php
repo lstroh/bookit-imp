@@ -247,6 +247,104 @@ class Bookit_Dashboard_Bookings_API {
 			)
 		);
 
+		// Get single booking details.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/bookings/(?P<id>\d+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'get_booking_details' ),
+				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+			)
+		);
+
+		// Update booking.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/bookings/(?P<id>\d+)',
+			array(
+				'methods'             => 'PUT',
+				'callback'            => array( $this, 'update_booking' ),
+				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+				'args'                => array(
+					'service_id'        => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param );
+						},
+					),
+					'staff_id'          => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param );
+						},
+					),
+					'booking_date'      => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $param );
+						},
+					),
+					'booking_time'      => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return preg_match( '/^\d{2}:\d{2}(:\d{2})?$/', $param );
+						},
+					),
+					'status'            => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							$valid_statuses = array( 'pending', 'pending_payment', 'confirmed', 'completed', 'cancelled', 'no_show' );
+							return in_array( $param, $valid_statuses, true );
+						},
+					),
+					'payment_method'    => array(
+						'required'          => true,
+					),
+					'amount_paid'       => array(
+						'default'           => 0,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param ) && $param >= 0;
+						},
+					),
+					'special_requests'  => array(
+						'sanitize_callback' => 'sanitize_textarea_field',
+					),
+					'staff_notes'       => array(
+						'sanitize_callback' => 'sanitize_textarea_field',
+					),
+					'send_notification' => array(
+						'default'           => false,
+						'validate_callback' => function ( $param ) {
+							return is_bool( $param ) || in_array( $param, array( 'true', 'false', '1', '0', 1, 0 ), true );
+						},
+					),
+				),
+			)
+		);
+
+		// Cancel booking.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/bookings/(?P<id>\d+)/cancel',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'cancel_booking' ),
+				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+				'args'                => array(
+					'cancellation_reason' => array(
+						'sanitize_callback' => 'sanitize_textarea_field',
+					),
+					'send_notification'   => array(
+						'default'           => true,
+						'validate_callback' => function ( $param ) {
+							return is_bool( $param ) || in_array( $param, array( 'true', 'false', '1', '0', 1, 0 ), true );
+						},
+					),
+				),
+			)
+		);
+
 		// Customer search endpoint.
 		register_rest_route(
 			self::NAMESPACE,
@@ -678,6 +776,8 @@ class Bookit_Dashboard_Bookings_API {
 
 		return array(
 			'id'               => (int) $booking['id'],
+			'service_id'       => isset( $booking['service_id'] ) ? (int) $booking['service_id'] : null,
+			'staff_id'         => isset( $booking['staff_id'] ) ? (int) $booking['staff_id'] : null,
 			'booking_date'     => $booking['booking_date'],
 			'start_time'       => substr( $booking['start_time'], 0, 5 ), // HH:MM format.
 			'end_time'         => substr( $booking['end_time'], 0, 5 ),
@@ -692,11 +792,13 @@ class Bookit_Dashboard_Bookings_API {
 			'staff_notes'      => $booking['staff_notes'],
 			'customer_name'    => $booking['customer_first_name'] . ' ' . $booking['customer_last_name'],
 			'customer_email'   => $booking['customer_email'],
-			'customer_phone'   => $booking['customer_phone'],
+			'customer_phone'   => $booking['customer_phone'] ?? null,
 			'service_name'     => $booking['service_name'],
 			'staff_name'       => $booking['staff_first_name'] . ' ' . $booking['staff_last_name'],
 			'is_starting_soon' => $is_starting_soon,
 			'has_passed'       => $has_passed,
+			'created_at'       => $booking['created_at'] ?? null,
+			'updated_at'       => $booking['updated_at'] ?? null,
 		);
 	}
 
@@ -772,6 +874,436 @@ class Bookit_Dashboard_Bookings_API {
 				'success'    => true,
 				'message'    => __( 'Booking marked as complete.', 'bookit-booking-system' ),
 				'booking_id' => $booking_id,
+			)
+		);
+	}
+
+	/**
+	 * Get single booking details.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_booking_details( $request ) {
+		global $wpdb;
+
+		$booking_id = (int) $request->get_param( 'id' );
+
+		$current_staff = Bookit_Auth::get_current_staff();
+		if ( ! $current_staff ) {
+			return new WP_Error(
+				'unauthorized',
+				'Could not retrieve staff information.',
+				array( 'status' => 401 )
+			);
+		}
+
+		// Get booking with all related data.
+		$booking = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT
+					b.*,
+					c.id as customer_id,
+					c.first_name AS customer_first_name,
+					c.last_name AS customer_last_name,
+					c.email AS customer_email,
+					c.phone AS customer_phone,
+					s.id as service_id,
+					s.name AS service_name,
+					s.duration as service_duration,
+					s.price as service_price,
+					st.id as staff_id,
+					st.first_name AS staff_first_name,
+					st.last_name AS staff_last_name,
+					CONCAT(st.first_name, ' ', st.last_name) as staff_name
+				FROM {$wpdb->prefix}bookings b
+				INNER JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
+				INNER JOIN {$wpdb->prefix}bookings_services s ON b.service_id = s.id
+				INNER JOIN {$wpdb->prefix}bookings_staff st ON b.staff_id = st.id
+				WHERE b.id = %d
+				AND b.deleted_at IS NULL",
+				$booking_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $booking ) {
+			return new WP_Error(
+				'booking_not_found',
+				'Booking not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Permission check: staff can only view their own bookings.
+		if ( 'staff' === $current_staff['role'] && (int) $booking['staff_id'] !== (int) $current_staff['id'] ) {
+			return new WP_Error(
+				'forbidden',
+				'You do not have permission to view this booking.',
+				array( 'status' => 403 )
+			);
+		}
+
+		// Format booking for response.
+		$formatted = $this->format_booking( $booking );
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'booking' => $formatted,
+			)
+		);
+	}
+
+	/**
+	 * Update existing booking.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function update_booking( $request ) {
+		global $wpdb;
+
+		$booking_id = (int) $request->get_param( 'id' );
+
+		$current_staff = Bookit_Auth::get_current_staff();
+		if ( ! $current_staff ) {
+			return new WP_Error(
+				'unauthorized',
+				'Could not retrieve staff information.',
+				array( 'status' => 401 )
+			);
+		}
+
+		// Get existing booking.
+		$existing = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookings WHERE id = %d AND deleted_at IS NULL",
+				$booking_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $existing ) {
+			return new WP_Error(
+				'booking_not_found',
+				'Booking not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Permission check: staff can only edit their own bookings.
+		if ( 'staff' === $current_staff['role'] && (int) $existing['staff_id'] !== (int) $current_staff['id'] ) {
+			return new WP_Error(
+				'forbidden',
+				'You do not have permission to edit this booking.',
+				array( 'status' => 403 )
+			);
+		}
+
+		// Get new values.
+		$new_service_id = (int) $request->get_param( 'service_id' );
+		$new_staff_id   = (int) $request->get_param( 'staff_id' );
+		$new_date       = $request->get_param( 'booking_date' );
+		$new_time       = $request->get_param( 'booking_time' );
+		$new_status     = $request->get_param( 'status' );
+
+		// Check if date/time/staff/service changed - need to verify availability.
+		$datetime_changed =
+			$existing['booking_date'] !== $new_date ||
+			$existing['start_time'] !== $new_time ||
+			(int) $existing['staff_id'] !== $new_staff_id ||
+			(int) $existing['service_id'] !== $new_service_id;
+
+		if ( $datetime_changed ) {
+			// Load datetime model for availability check.
+			if ( ! class_exists( 'Bookit_DateTime_Model' ) ) {
+				require_once plugin_dir_path( dirname( __FILE__ ) ) . 'models/class-datetime-model.php';
+			}
+			$datetime_model = new Bookit_DateTime_Model();
+
+			// Normalize booking_time to H:i:s for comparison.
+			$time_check = $new_time;
+			if ( strlen( $time_check ) === 5 ) {
+				$time_check .= ':00';
+			}
+
+			// Check if new time slot is available.
+			// Pass the booking ID to exclude it from conflict checking.
+			$slots = $datetime_model->get_available_slots( $new_date, $new_service_id, $new_staff_id, $booking_id );
+
+			if ( empty( $slots ) || ! in_array( $time_check, $slots, true ) ) {
+				return new WP_Error(
+					'time_not_available',
+					'The selected time slot is not available for this staff member.',
+					array( 'status' => 400 )
+				);
+			}
+		}
+
+		// Get service details for duration calculation.
+		$service = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT duration, price FROM {$wpdb->prefix}bookings_services WHERE id = %d",
+				$new_service_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $service ) {
+			return new WP_Error(
+				'service_not_found',
+				'Service not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Calculate end time.
+		$start_datetime = new DateTime( $new_date . ' ' . $new_time );
+		$end_datetime   = clone $start_datetime;
+		$end_datetime->modify( '+' . $service['duration'] . ' minutes' );
+
+		// Calculate payment values.
+		$service_price = (float) $service['price'];
+		$amount_paid   = (float) $request->get_param( 'amount_paid' );
+
+		// Update booking.
+		$update_data = array(
+			'service_id'       => $new_service_id,
+			'staff_id'         => $new_staff_id,
+			'booking_date'     => $new_date,
+			'start_time'       => $new_time,
+			'end_time'         => $end_datetime->format( 'H:i:s' ),
+			'duration'         => (int) $service['duration'],
+			'status'           => $new_status,
+			'payment_method'   => $request->get_param( 'payment_method' ),
+			'special_requests' => $request->get_param( 'special_requests' ),
+			'staff_notes'      => $request->get_param( 'staff_notes' ),
+			'updated_at'       => current_time( 'mysql' ),
+			'total_price'      => $service_price,
+			'deposit_paid'     => $amount_paid,
+			'balance_due'      => $service_price - $amount_paid,
+			'full_amount_paid' => $amount_paid >= $service_price ? 1 : 0,
+		);
+
+		$result = $wpdb->update(
+			$wpdb->prefix . 'bookings',
+			$update_data,
+			array( 'id' => $booking_id ),
+			array( '%d', '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%f', '%f', '%f', '%d' ),
+			array( '%d' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'update_failed',
+				'Failed to update booking.',
+				array( 'status' => 500 )
+			);
+		}
+
+		// Send notification email if requested.
+		$send_notification = filter_var( $request->get_param( 'send_notification' ), FILTER_VALIDATE_BOOLEAN );
+
+		if ( $send_notification ) {
+			// Load email sender.
+			if ( ! class_exists( 'Booking_System_Email_Sender' ) ) {
+				require_once plugin_dir_path( dirname( __DIR__ ) ) . 'email/class-email-sender.php';
+			}
+
+			// Get full booking details for email.
+			$booking = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT
+						b.*,
+						c.first_name AS customer_first_name,
+						c.last_name AS customer_last_name,
+						c.email AS customer_email,
+						c.phone AS customer_phone,
+						s.name AS service_name,
+						s.duration,
+						st.first_name AS staff_first_name,
+						st.last_name AS staff_last_name
+					FROM {$wpdb->prefix}bookings b
+					INNER JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
+					INNER JOIN {$wpdb->prefix}bookings_services s ON b.service_id = s.id
+					INNER JOIN {$wpdb->prefix}bookings_staff st ON b.staff_id = st.id
+					WHERE b.id = %d",
+					$booking_id
+				),
+				ARRAY_A
+			);
+
+			// Add composite name fields expected by the email sender.
+			$booking['customer_name'] = $booking['customer_first_name'] . ' ' . $booking['customer_last_name'];
+			$booking['staff_name']    = $booking['staff_first_name'] . ' ' . $booking['staff_last_name'];
+
+			$email_sender = new Booking_System_Email_Sender();
+			$email_sender->send_customer_confirmation( $booking );
+		}
+
+		// Get updated booking for response.
+		$updated_booking = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT
+					b.*,
+					c.first_name AS customer_first_name,
+					c.last_name AS customer_last_name,
+					c.email AS customer_email,
+					c.phone AS customer_phone,
+					s.name AS service_name,
+					st.first_name AS staff_first_name,
+					st.last_name AS staff_last_name
+				FROM {$wpdb->prefix}bookings b
+				INNER JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
+				INNER JOIN {$wpdb->prefix}bookings_services s ON b.service_id = s.id
+				INNER JOIN {$wpdb->prefix}bookings_staff st ON b.staff_id = st.id
+				WHERE b.id = %d",
+				$booking_id
+			),
+			ARRAY_A
+		);
+
+		return rest_ensure_response(
+			array(
+				'success'    => true,
+				'message'    => 'Booking updated successfully.',
+				'booking'    => $this->format_booking( $updated_booking ),
+				'email_sent' => $send_notification,
+			)
+		);
+	}
+
+	/**
+	 * Cancel booking.
+	 *
+	 * Sets status to 'cancelled' and deleted_at timestamp.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function cancel_booking( $request ) {
+		global $wpdb;
+
+		$booking_id = (int) $request->get_param( 'id' );
+
+		$current_staff = Bookit_Auth::get_current_staff();
+		if ( ! $current_staff ) {
+			return new WP_Error(
+				'unauthorized',
+				'Could not retrieve staff information.',
+				array( 'status' => 401 )
+			);
+		}
+
+		// Get existing booking.
+		$existing = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookings WHERE id = %d AND deleted_at IS NULL",
+				$booking_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $existing ) {
+			return new WP_Error(
+				'booking_not_found',
+				'Booking not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Permission check: staff can only cancel their own bookings.
+		if ( 'staff' === $current_staff['role'] && (int) $existing['staff_id'] !== (int) $current_staff['id'] ) {
+			return new WP_Error(
+				'forbidden',
+				'You do not have permission to cancel this booking.',
+				array( 'status' => 403 )
+			);
+		}
+
+		$cancellation_reason = $request->get_param( 'cancellation_reason' );
+
+		// Update booking: set status to cancelled AND soft delete.
+		$update_data = array(
+			'status'     => 'cancelled',
+			'deleted_at' => current_time( 'mysql' ),
+			'updated_at' => current_time( 'mysql' ),
+		);
+
+		$format = array( '%s', '%s', '%s' );
+
+		// Add cancellation reason to staff notes.
+		if ( ! empty( $cancellation_reason ) ) {
+			$existing_notes    = $existing['staff_notes'] ?? '';
+			$cancellation_note = "\n\n[Cancelled " . current_time( 'Y-m-d H:i:s' ) . "]\n" . $cancellation_reason;
+			$update_data['staff_notes'] = $existing_notes . $cancellation_note;
+			$format[] = '%s';
+		}
+
+		$result = $wpdb->update(
+			$wpdb->prefix . 'bookings',
+			$update_data,
+			array( 'id' => $booking_id ),
+			$format,
+			array( '%d' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'cancellation_failed',
+				'Failed to cancel booking.',
+				array( 'status' => 500 )
+			);
+		}
+
+		// Send cancellation email if requested.
+		$send_notification = filter_var( $request->get_param( 'send_notification' ), FILTER_VALIDATE_BOOLEAN );
+
+		if ( $send_notification ) {
+			// Load email sender.
+			if ( ! class_exists( 'Booking_System_Email_Sender' ) ) {
+				require_once plugin_dir_path( dirname( __DIR__ ) ) . 'email/class-email-sender.php';
+			}
+
+			// Get full booking details for email.
+			$booking = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT
+						b.*,
+						c.first_name AS customer_first_name,
+						c.last_name AS customer_last_name,
+						c.email AS customer_email,
+						c.phone AS customer_phone,
+						s.name AS service_name,
+						s.duration,
+						st.first_name AS staff_first_name,
+						st.last_name AS staff_last_name
+					FROM {$wpdb->prefix}bookings b
+					INNER JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
+					INNER JOIN {$wpdb->prefix}bookings_services s ON b.service_id = s.id
+					INNER JOIN {$wpdb->prefix}bookings_staff st ON b.staff_id = st.id
+					WHERE b.id = %d",
+					$booking_id
+				),
+				ARRAY_A
+			);
+
+			// Add composite name fields expected by the email sender.
+			$booking['customer_name'] = $booking['customer_first_name'] . ' ' . $booking['customer_last_name'];
+			$booking['staff_name']    = $booking['staff_first_name'] . ' ' . $booking['staff_last_name'];
+
+			$email_sender = new Booking_System_Email_Sender();
+			// TODO: Add specific cancellation email template in future.
+			// For now, reuse confirmation template.
+			$email_sender->send_customer_confirmation( $booking );
+		}
+
+		return rest_ensure_response(
+			array(
+				'success'    => true,
+				'message'    => 'Booking cancelled successfully.',
+				'email_sent' => $send_notification,
 			)
 		);
 	}
@@ -961,6 +1493,35 @@ class Bookit_Dashboard_Bookings_API {
 		}
 
 		$booking_id = $result;
+
+		// Determine initial status based on settings and payment.
+		$require_approval = get_option( 'bookit_require_approval', false );
+		$payment_method   = $request->get_param( 'payment_method' );
+
+		if ( $require_approval ) {
+			// When approval required, all bookings start as pending.
+			$initial_status = 'pending';
+		} else {
+			// When no approval required, use payment-based logic.
+			if ( 'pay_on_arrival' === $payment_method ) {
+				$initial_status = 'confirmed';
+			} elseif ( in_array( $payment_method, array( 'cash', 'card_external', 'check', 'complimentary' ), true ) ) {
+				$initial_status = 'confirmed';
+			} elseif ( 'stripe' === $payment_method && (float) $request->get_param( 'amount_paid' ) > 0 ) {
+				$initial_status = 'confirmed';
+			} else {
+				$initial_status = 'pending_payment';
+			}
+		}
+
+		// Update booking status.
+		$wpdb->update(
+			$wpdb->prefix . 'bookings',
+			array( 'status' => $initial_status ),
+			array( 'id' => $booking_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
 
 		// Send confirmation emails if requested.
 		$send_confirmation = filter_var( $request->get_param( 'send_confirmation' ), FILTER_VALIDATE_BOOLEAN );
