@@ -18,6 +18,12 @@ export default [
     meta: { title: 'Services' }
   },
   {
+    path: '/categories',
+    name: 'categories',
+    component: () => import('../views/Categories.vue'),
+    meta: { title: 'Categories' }
+  },
+  {
     path: '/staff',
     name: 'staff',
     component: () => import('../views/Staff.vue'),

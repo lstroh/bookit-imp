@@ -59,6 +59,7 @@ const navigation = [
   { name: 'dashboard', path: '/', icon: '📅', label: 'Today' },
   { name: 'bookings', path: '/bookings', icon: '📋', label: 'Bookings' },
   { name: 'services', path: '/services', icon: '✂️', label: 'Services' },
+  { name: 'categories', path: '/categories', icon: '🏷️', label: 'Categories' },
   { name: 'staff', path: '/staff', icon: '👥', label: 'Staff' },
   { name: 'settings', path: '/settings', icon: '⚙️', label: 'Settings' }
 ]
