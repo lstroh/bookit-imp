@@ -7,6 +7,7 @@
         <p class="text-sm text-gray-600 mt-1">Manage your service offerings</p>
       </div>
       <button
+        v-if="isAdmin"
         @click="openCreateModal"
         class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
       >
@@ -82,11 +83,15 @@
       <h3 class="text-lg font-medium text-gray-900 mb-2">No services found</h3>
       <p class="text-sm text-gray-600 mb-4">Get started by creating a new service.</p>
       <button
+        v-if="isAdmin"
         @click="openCreateModal"
         class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
       >
         + New Service
       </button>
+      <p v-else class="mt-2 text-sm text-gray-500">
+        Contact your administrator to add services.
+      </p>
     </div>
 
     <!-- Services Table -->
@@ -215,18 +220,21 @@
 
               <!-- Actions -->
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button
-                  @click="openEditModal(service)"
-                  class="text-primary-600 hover:text-primary-900 mr-3"
-                >
-                  Edit
-                </button>
-                <button
-                  @click="confirmDelete(service)"
-                  class="text-red-600 hover:text-red-900"
-                >
-                  Delete
-                </button>
+                <span v-if="!isAdmin" class="text-xs text-gray-400">View only</span>
+                <template v-else>
+                  <button
+                    @click="openEditModal(service)"
+                    class="text-primary-600 hover:text-primary-900 mr-3"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    @click="confirmDelete(service)"
+                    class="text-red-600 hover:text-red-900"
+                  >
+                    Delete
+                  </button>
+                </template>
               </td>
             </tr>
           </tbody>
@@ -370,6 +378,10 @@ const resultsStart = computed(() => {
 const resultsEnd = computed(() => {
   const end = pagination.value.current_page * pagination.value.per_page
   return Math.min(end, pagination.value.total)
+})
+
+const isAdmin = computed(() => {
+  return window.BOOKIT_DASHBOARD?.staff?.role === 'admin'
 })
 
 const visiblePages = computed(() => {
