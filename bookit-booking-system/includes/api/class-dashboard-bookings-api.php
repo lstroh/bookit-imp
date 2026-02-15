@@ -163,6 +163,208 @@ class Bookit_Dashboard_Bookings_API {
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_services_list' ),
 				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+				'args'                => array(
+					'search'      => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'category_id' => array(
+						'type'              => 'integer',
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param );
+						},
+					),
+					'status'      => array(
+						'type'    => 'string',
+						'enum'    => array( 'active', 'inactive', 'all' ),
+						'default' => 'all',
+					),
+					'page'        => array(
+						'type'    => 'integer',
+						'default' => 1,
+						'minimum' => 1,
+					),
+					'per_page'    => array(
+						'type'    => 'integer',
+						'default' => 50,
+						'minimum' => 1,
+						'maximum' => 100,
+					),
+				),
+			)
+		);
+
+		// Get/Update/Delete single service.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/services/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( $this, 'get_service_details' ),
+					'permission_callback' => array( $this, 'check_admin_permission' ),
+				),
+				array(
+					'methods'             => 'PUT',
+					'callback'            => array( $this, 'update_service' ),
+					'permission_callback' => array( $this, 'check_admin_permission' ),
+					'args'                => array(
+						'name'           => array(
+							'required'          => true,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'description'    => array(
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_textarea_field',
+						),
+						'duration'       => array(
+							'required'          => true,
+							'type'              => 'integer',
+							'validate_callback' => function ( $param ) {
+								return is_numeric( $param ) && $param > 0;
+							},
+						),
+						'price'          => array(
+							'required'          => true,
+							'type'              => 'number',
+							'validate_callback' => function ( $param ) {
+								return is_numeric( $param ) && $param >= 0;
+							},
+						),
+						'deposit_amount' => array(
+							'type'              => 'number',
+							'validate_callback' => function ( $param ) {
+								return null === $param || ( is_numeric( $param ) && $param >= 0 );
+							},
+						),
+						'deposit_type'   => array(
+							'type'    => 'string',
+							'enum'    => array( 'fixed', 'percentage' ),
+							'default' => 'fixed',
+						),
+						'buffer_before'  => array(
+							'type'    => 'integer',
+							'default' => 0,
+						),
+						'buffer_after'   => array(
+							'type'    => 'integer',
+							'default' => 0,
+						),
+						'category_ids'   => array(
+							'type'  => 'array',
+							'items' => array(
+								'type' => 'integer',
+							),
+						),
+						'is_active'      => array(
+							'type'    => 'boolean',
+							'default' => true,
+						),
+						'display_order'  => array(
+							'type'    => 'integer',
+							'default' => 0,
+						),
+					),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => array( $this, 'delete_service' ),
+					'permission_callback' => array( $this, 'check_admin_permission' ),
+				),
+			)
+		);
+
+		// Create new service.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/services/create',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'create_service' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'name'           => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'description'    => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_textarea_field',
+					),
+					'duration'       => array(
+						'required'          => true,
+						'type'              => 'integer',
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param ) && $param > 0;
+						},
+					),
+					'price'          => array(
+						'required'          => true,
+						'type'              => 'number',
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param ) && $param >= 0;
+						},
+					),
+					'deposit_amount' => array(
+						'type'              => 'number',
+						'validate_callback' => function ( $param ) {
+							return null === $param || ( is_numeric( $param ) && $param >= 0 );
+						},
+					),
+					'deposit_type'   => array(
+						'type'    => 'string',
+						'enum'    => array( 'fixed', 'percentage' ),
+						'default' => 'fixed',
+					),
+					'buffer_before'  => array(
+						'type'    => 'integer',
+						'default' => 0,
+					),
+					'buffer_after'   => array(
+						'type'    => 'integer',
+						'default' => 0,
+					),
+					'category_ids'   => array(
+						'type'  => 'array',
+						'items' => array(
+							'type' => 'integer',
+						),
+					),
+					'is_active'      => array(
+						'type'    => 'boolean',
+						'default' => true,
+					),
+					'display_order'  => array(
+						'type'    => 'integer',
+						'default' => 0,
+					),
+				),
+			)
+		);
+
+		// Update display order for multiple services.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/services/reorder',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'reorder_services' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'services' => array(
+						'required' => true,
+						'type'     => 'array',
+						'items'    => array(
+							'type'       => 'object',
+							'properties' => array(
+								'id'            => array( 'type' => 'integer' ),
+								'display_order' => array( 'type' => 'integer' ),
+							),
+						),
+					),
+				),
 			)
 		);
 
@@ -345,6 +547,17 @@ class Bookit_Dashboard_Bookings_API {
 			)
 		);
 
+		// Get categories list for dropdowns.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/categories/list',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'get_categories_list' ),
+				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+			)
+		);
+
 		// Customer search endpoint.
 		register_rest_route(
 			self::NAMESPACE,
@@ -383,6 +596,42 @@ class Bookit_Dashboard_Bookings_API {
 				'unauthorized',
 				__( 'You must be logged in to access the dashboard.', 'bookit-booking-system' ),
 				array( 'status' => 401 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Check if user has admin permission.
+	 * Only admins can manage services.
+	 *
+	 * @return bool|WP_Error
+	 */
+	public function check_admin_permission() {
+		// Load auth classes if not loaded.
+		if ( ! class_exists( 'Bookit_Session' ) ) {
+			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'class-bookit-session.php';
+		}
+		if ( ! class_exists( 'Bookit_Auth' ) ) {
+			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'class-bookit-auth.php';
+		}
+
+		if ( ! Bookit_Auth::is_logged_in() ) {
+			return new WP_Error(
+				'unauthorized',
+				'You must be logged in to access the dashboard.',
+				array( 'status' => 401 )
+			);
+		}
+
+		$current_staff = Bookit_Auth::get_current_staff();
+
+		if ( ! $current_staff || 'admin' !== $current_staff['role'] ) {
+			return new WP_Error(
+				'forbidden',
+				'Only administrators can manage services.',
+				array( 'status' => 403 )
 			);
 		}
 
@@ -726,30 +975,225 @@ class Bookit_Dashboard_Bookings_API {
 	}
 
 	/**
-	 * Get services list for filter dropdown.
+	 * Get services list with filters and pagination.
 	 *
+	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response|WP_Error
 	 */
-	public function get_services_list() {
+	public function get_services_list( $request ) {
 		global $wpdb;
 
-		$services = $wpdb->get_results(
-			"SELECT
-				id,
-				name,
-				price,
-				duration
-			FROM {$wpdb->prefix}bookings_services
-			WHERE is_active = 1
-			AND deleted_at IS NULL
-			ORDER BY name ASC",
-			ARRAY_A
-		);
+		// Get query parameters.
+		$search      = $request->get_param( 'search' );
+		$category_id = $request->get_param( 'category_id' );
+		$status      = $request->get_param( 'status' ); // 'active', 'inactive', 'all'.
+		$page        = max( 1, (int) $request->get_param( 'page' ) );
+		$per_page    = min( 100, max( 1, (int) $request->get_param( 'per_page' ) ) ); // Default 50, max 100.
+
+		if ( ! $per_page ) {
+			$per_page = 50;
+		}
+
+		$offset = ( $page - 1 ) * $per_page;
+
+		// Build WHERE clauses.
+		$where_clauses = array( 's.deleted_at IS NULL' );
+		$where_params  = array();
+
+		// Search filter.
+		if ( ! empty( $search ) ) {
+			$where_clauses[] = '(s.name LIKE %s OR s.description LIKE %s)';
+			$search_term     = '%' . $wpdb->esc_like( $search ) . '%';
+			$where_params[]  = $search_term;
+			$where_params[]  = $search_term;
+		}
+
+		// Status filter.
+		if ( 'active' === $status ) {
+			$where_clauses[] = 's.is_active = 1';
+		} elseif ( 'inactive' === $status ) {
+			$where_clauses[] = 's.is_active = 0';
+		}
+		// 'all' or null = no status filter.
+
+		// Category filter.
+		if ( ! empty( $category_id ) ) {
+			$where_clauses[] = 'EXISTS (
+				SELECT 1 FROM ' . $wpdb->prefix . 'bookings_service_categories sc2
+				WHERE sc2.service_id = s.id
+				AND sc2.category_id = %d
+			)';
+			$where_params[]  = (int) $category_id;
+		}
+
+		$where_sql = implode( ' AND ', $where_clauses );
+
+		// Get total count.
+		$count_query = "SELECT COUNT(DISTINCT s.id)
+						FROM {$wpdb->prefix}bookings_services s
+						WHERE $where_sql";
+
+		if ( ! empty( $where_params ) ) {
+			$count_query = $wpdb->prepare( $count_query, $where_params );
+		}
+
+		$total = (int) $wpdb->get_var( $count_query );
+
+		// Get services with category information.
+		$query = "SELECT
+					s.id,
+					s.name,
+					s.description,
+					s.duration,
+					s.price,
+					s.deposit_amount,
+					s.deposit_type,
+					s.buffer_before,
+					s.buffer_after,
+					s.is_active,
+					s.display_order,
+					s.created_at,
+					s.updated_at,
+					GROUP_CONCAT(
+						DISTINCT CONCAT(c.id, ':', c.name)
+						ORDER BY c.name
+						SEPARATOR '||'
+					) as categories_data
+				FROM {$wpdb->prefix}bookings_services s
+				LEFT JOIN {$wpdb->prefix}bookings_service_categories sc ON s.id = sc.service_id
+				LEFT JOIN {$wpdb->prefix}bookings_categories c ON sc.category_id = c.id AND c.deleted_at IS NULL
+				WHERE $where_sql
+				GROUP BY s.id
+				ORDER BY s.display_order ASC, s.name ASC
+				LIMIT %d OFFSET %d";
+
+		$query_params = array_merge( $where_params, array( $per_page, $offset ) );
+		$query        = $wpdb->prepare( $query, $query_params );
+
+		$services = $wpdb->get_results( $query, ARRAY_A );
+
+		// Process categories data for each service.
+		foreach ( $services as &$service ) {
+			$categories = array();
+
+			if ( ! empty( $service['categories_data'] ) ) {
+				$categories_raw = explode( '||', $service['categories_data'] );
+				foreach ( $categories_raw as $cat_data ) {
+					if ( ! empty( $cat_data ) ) {
+						list( $cat_id, $cat_name ) = explode( ':', $cat_data, 2 );
+						$categories[] = array(
+							'id'   => (int) $cat_id,
+							'name' => $cat_name,
+						);
+					}
+				}
+			}
+
+			$service['categories'] = $categories;
+			unset( $service['categories_data'] );
+
+			// Convert numeric fields to proper types.
+			$service['id']             = (int) $service['id'];
+			$service['duration']       = (int) $service['duration'];
+			$service['price']          = (float) $service['price'];
+			$service['deposit_amount'] = $service['deposit_amount'] ? (float) $service['deposit_amount'] : null;
+			$service['buffer_before']  = (int) $service['buffer_before'];
+			$service['buffer_after']   = (int) $service['buffer_after'];
+			$service['is_active']      = (bool) $service['is_active'];
+			$service['display_order']  = (int) $service['display_order'];
+		}
+
+		// Calculate pagination.
+		$total_pages = ceil( $total / $per_page );
 
 		return rest_ensure_response(
 			array(
-				'success'  => true,
-				'services' => $services,
+				'success'    => true,
+				'services'   => $services,
+				'pagination' => array(
+					'total'        => $total,
+					'per_page'     => $per_page,
+					'current_page' => $page,
+					'total_pages'  => $total_pages,
+				),
+			)
+		);
+	}
+
+	/**
+	 * Get single service details.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_service_details( $request ) {
+		global $wpdb;
+
+		$service_id = (int) $request->get_param( 'id' );
+
+		// Get service with categories.
+		$service = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT
+					s.*,
+					GROUP_CONCAT(
+						DISTINCT CONCAT(c.id, ':', c.name)
+						ORDER BY c.name
+						SEPARATOR '||'
+					) as categories_data
+				FROM {$wpdb->prefix}bookings_services s
+				LEFT JOIN {$wpdb->prefix}bookings_service_categories sc ON s.id = sc.service_id
+				LEFT JOIN {$wpdb->prefix}bookings_categories c ON sc.category_id = c.id AND c.deleted_at IS NULL
+				WHERE s.id = %d
+				AND s.deleted_at IS NULL
+				GROUP BY s.id",
+				$service_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $service ) {
+			return new WP_Error(
+				'service_not_found',
+				'Service not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Process categories.
+		$categories = array();
+
+		if ( ! empty( $service['categories_data'] ) ) {
+			$categories_raw = explode( '||', $service['categories_data'] );
+			foreach ( $categories_raw as $cat_data ) {
+				if ( ! empty( $cat_data ) ) {
+					list( $cat_id, $cat_name ) = explode( ':', $cat_data, 2 );
+					$categories[] = array(
+						'id'   => (int) $cat_id,
+						'name' => $cat_name,
+					);
+				}
+			}
+		}
+
+		$service['categories']   = $categories;
+		$service['category_ids'] = array_column( $categories, 'id' );
+		unset( $service['categories_data'] );
+
+		// Convert numeric fields.
+		$service['id']             = (int) $service['id'];
+		$service['duration']       = (int) $service['duration'];
+		$service['price']          = (float) $service['price'];
+		$service['deposit_amount'] = $service['deposit_amount'] ? (float) $service['deposit_amount'] : null;
+		$service['buffer_before']  = (int) $service['buffer_before'];
+		$service['buffer_after']   = (int) $service['buffer_after'];
+		$service['is_active']      = (bool) $service['is_active'];
+		$service['display_order']  = (int) $service['display_order'];
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'service' => $service,
 			)
 		);
 	}
@@ -1650,6 +2094,387 @@ class Bookit_Dashboard_Bookings_API {
 			array(
 				'success'   => true,
 				'customers' => $customers,
+			)
+		);
+	}
+
+	/**
+	 * Get categories list for dropdowns and filters.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function get_categories_list() {
+		global $wpdb;
+
+		$categories = $wpdb->get_results(
+			"SELECT id, name, description
+			FROM {$wpdb->prefix}bookings_categories
+			WHERE deleted_at IS NULL
+			AND is_active = 1
+			ORDER BY display_order ASC, name ASC",
+			ARRAY_A
+		);
+
+		// Convert numeric fields.
+		foreach ( $categories as &$category ) {
+			$category['id'] = (int) $category['id'];
+		}
+
+		return rest_ensure_response(
+			array(
+				'success'    => true,
+				'categories' => $categories,
+			)
+		);
+	}
+
+	/**
+	 * Create new service.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function create_service( $request ) {
+		global $wpdb;
+
+		// Get parameters.
+		$name           = $request->get_param( 'name' );
+		$description    = $request->get_param( 'description' );
+		$duration       = (int) $request->get_param( 'duration' );
+		$price          = (float) $request->get_param( 'price' );
+		$deposit_amount = $request->get_param( 'deposit_amount' );
+		$deposit_type   = $request->get_param( 'deposit_type' ) ?: 'fixed';
+		$buffer_before  = (int) $request->get_param( 'buffer_before' );
+		$buffer_after   = (int) $request->get_param( 'buffer_after' );
+		$category_ids   = $request->get_param( 'category_ids' ) ?: array();
+		$is_active      = filter_var( $request->get_param( 'is_active' ), FILTER_VALIDATE_BOOLEAN );
+		$display_order  = (int) $request->get_param( 'display_order' );
+
+		// Insert service.
+		$result = $wpdb->insert(
+			$wpdb->prefix . 'bookings_services',
+			array(
+				'name'           => $name,
+				'description'    => $description,
+				'duration'       => $duration,
+				'price'          => $price,
+				'deposit_amount' => $deposit_amount,
+				'deposit_type'   => $deposit_type,
+				'buffer_before'  => $buffer_before,
+				'buffer_after'   => $buffer_after,
+				'is_active'      => $is_active ? 1 : 0,
+				'display_order'  => $display_order,
+				'created_at'     => current_time( 'mysql' ),
+				'updated_at'     => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%d', '%f', '%f', '%s', '%d', '%d', '%d', '%d', '%s', '%s' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'creation_failed',
+				'Failed to create service.',
+				array( 'status' => 500 )
+			);
+		}
+
+		$service_id = $wpdb->insert_id;
+
+		// Insert category relationships.
+		if ( ! empty( $category_ids ) ) {
+			foreach ( $category_ids as $category_id ) {
+				$wpdb->insert(
+					$wpdb->prefix . 'bookings_service_categories',
+					array(
+						'service_id'  => $service_id,
+						'category_id' => (int) $category_id,
+						'created_at'  => current_time( 'mysql' ),
+					),
+					array( '%d', '%d', '%s' )
+				);
+			}
+		}
+
+		// Get created service with categories.
+		$service = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT s.* FROM {$wpdb->prefix}bookings_services s WHERE s.id = %d",
+				$service_id
+			),
+			ARRAY_A
+		);
+
+		// Get categories.
+		$categories = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT c.id, c.name
+				FROM {$wpdb->prefix}bookings_categories c
+				INNER JOIN {$wpdb->prefix}bookings_service_categories sc ON c.id = sc.category_id
+				WHERE sc.service_id = %d
+				AND c.deleted_at IS NULL",
+				$service_id
+			),
+			ARRAY_A
+		);
+
+		$service['categories']   = $categories;
+		$service['category_ids'] = array_column( $categories, 'id' );
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => 'Service created successfully.',
+				'service' => $service,
+			)
+		);
+	}
+
+	/**
+	 * Update existing service.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function update_service( $request ) {
+		global $wpdb;
+
+		$service_id = (int) $request->get_param( 'id' );
+
+		// Check if service exists.
+		$existing = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_services WHERE id = %d AND deleted_at IS NULL",
+				$service_id
+			)
+		);
+
+		if ( ! $existing ) {
+			return new WP_Error(
+				'service_not_found',
+				'Service not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Get parameters.
+		$name           = $request->get_param( 'name' );
+		$description    = $request->get_param( 'description' );
+		$duration       = (int) $request->get_param( 'duration' );
+		$price          = (float) $request->get_param( 'price' );
+		$deposit_amount = $request->get_param( 'deposit_amount' );
+		$deposit_type   = $request->get_param( 'deposit_type' ) ?: 'fixed';
+		$buffer_before  = (int) $request->get_param( 'buffer_before' );
+		$buffer_after   = (int) $request->get_param( 'buffer_after' );
+		$category_ids   = $request->get_param( 'category_ids' ) ?: array();
+		$is_active      = filter_var( $request->get_param( 'is_active' ), FILTER_VALIDATE_BOOLEAN );
+		$display_order  = (int) $request->get_param( 'display_order' );
+
+		// Update service.
+		$result = $wpdb->update(
+			$wpdb->prefix . 'bookings_services',
+			array(
+				'name'           => $name,
+				'description'    => $description,
+				'duration'       => $duration,
+				'price'          => $price,
+				'deposit_amount' => $deposit_amount,
+				'deposit_type'   => $deposit_type,
+				'buffer_before'  => $buffer_before,
+				'buffer_after'   => $buffer_after,
+				'is_active'      => $is_active ? 1 : 0,
+				'display_order'  => $display_order,
+				'updated_at'     => current_time( 'mysql' ),
+			),
+			array( 'id' => $service_id ),
+			array( '%s', '%s', '%d', '%f', '%f', '%s', '%d', '%d', '%d', '%d', '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'update_failed',
+				'Failed to update service.',
+				array( 'status' => 500 )
+			);
+		}
+
+		// Delete existing category relationships.
+		$wpdb->delete(
+			$wpdb->prefix . 'bookings_service_categories',
+			array( 'service_id' => $service_id ),
+			array( '%d' )
+		);
+
+		// Insert new category relationships.
+		if ( ! empty( $category_ids ) ) {
+			foreach ( $category_ids as $category_id ) {
+				$wpdb->insert(
+					$wpdb->prefix . 'bookings_service_categories',
+					array(
+						'service_id'  => $service_id,
+						'category_id' => (int) $category_id,
+						'created_at'  => current_time( 'mysql' ),
+					),
+					array( '%d', '%d', '%s' )
+				);
+			}
+		}
+
+		// Get updated service with categories.
+		$service = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT s.* FROM {$wpdb->prefix}bookings_services s WHERE s.id = %d",
+				$service_id
+			),
+			ARRAY_A
+		);
+
+		// Get categories.
+		$categories = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT c.id, c.name
+				FROM {$wpdb->prefix}bookings_categories c
+				INNER JOIN {$wpdb->prefix}bookings_service_categories sc ON c.id = sc.category_id
+				WHERE sc.service_id = %d
+				AND c.deleted_at IS NULL",
+				$service_id
+			),
+			ARRAY_A
+		);
+
+		$service['categories']   = $categories;
+		$service['category_ids'] = array_column( $categories, 'id' );
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => 'Service updated successfully.',
+				'service' => $service,
+			)
+		);
+	}
+
+	/**
+	 * Delete service (soft delete).
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function delete_service( $request ) {
+		global $wpdb;
+
+		$service_id = (int) $request->get_param( 'id' );
+
+		// Check if service exists.
+		$existing = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, name FROM {$wpdb->prefix}bookings_services WHERE id = %d AND deleted_at IS NULL",
+				$service_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $existing ) {
+			return new WP_Error(
+				'service_not_found',
+				'Service not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Check if service has future bookings.
+		$future_bookings = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}bookings
+				WHERE service_id = %d
+				AND booking_date >= CURDATE()
+				AND deleted_at IS NULL
+				AND status NOT IN ('cancelled', 'no_show')",
+				$service_id
+			)
+		);
+
+		if ( $future_bookings > 0 ) {
+			return new WP_Error(
+				'service_has_bookings',
+				sprintf(
+					'Cannot delete service "%s" because it has %d future booking(s). Please cancel or complete these bookings first, or deactivate the service instead.',
+					$existing['name'],
+					$future_bookings
+				),
+				array( 'status' => 409 )
+			);
+		}
+
+		// Soft delete the service.
+		$result = $wpdb->update(
+			$wpdb->prefix . 'bookings_services',
+			array(
+				'deleted_at' => current_time( 'mysql' ),
+				'updated_at' => current_time( 'mysql' ),
+			),
+			array( 'id' => $service_id ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'deletion_failed',
+				'Failed to delete service.',
+				array( 'status' => 500 )
+			);
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => 'Service deleted successfully.',
+			)
+		);
+	}
+
+	/**
+	 * Update display order for multiple services.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function reorder_services( $request ) {
+		global $wpdb;
+
+		$services = $request->get_param( 'services' );
+
+		if ( empty( $services ) ) {
+			return new WP_Error(
+				'invalid_data',
+				'Services array is required.',
+				array( 'status' => 400 )
+			);
+		}
+
+		// Update display order for each service.
+		foreach ( $services as $service_data ) {
+			if ( ! isset( $service_data['id'] ) || ! isset( $service_data['display_order'] ) ) {
+				continue;
+			}
+
+			$wpdb->update(
+				$wpdb->prefix . 'bookings_services',
+				array(
+					'display_order' => (int) $service_data['display_order'],
+					'updated_at'    => current_time( 'mysql' ),
+				),
+				array( 'id' => (int) $service_data['id'] ),
+				array( '%d', '%s' ),
+				array( '%d' )
+			);
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => 'Services reordered successfully.',
 			)
 		);
 	}
