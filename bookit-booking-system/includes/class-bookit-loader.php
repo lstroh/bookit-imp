@@ -153,6 +153,13 @@ class Bookit_Loader {
 			'top'
 		);
 
+		// First admin setup page (one-time).
+		add_rewrite_rule(
+			'^bookit-dashboard/setup/?$',
+			'index.php?bookit_dashboard_page=setup',
+			'top'
+		);
+
 		// Dashboard home page.
 		add_rewrite_rule(
 			'^bookit-dashboard/home/?$',
@@ -199,6 +206,10 @@ class Bookit_Loader {
 		}
 
 		switch ( $page ) {
+			case 'setup':
+				require_once BOOKIT_PLUGIN_DIR . 'dashboard/setup.php';
+				exit;
+
 			case 'login':
 				require_once BOOKIT_PLUGIN_DIR . 'dashboard/index.php';
 				exit;

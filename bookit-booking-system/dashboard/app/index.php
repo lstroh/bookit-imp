@@ -28,6 +28,9 @@ if ( ! $current_staff ) {
 
 // Get WordPress REST API nonce.
 $rest_nonce = wp_create_nonce( 'wp_rest' );
+
+// Enqueue WordPress media library for photo uploads.
+wp_enqueue_media();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -39,6 +42,8 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 	<?php if ( file_exists( BOOKIT_PLUGIN_DIR . 'dashboard/dist/style.css' ) ) : ?>
 		<link rel="stylesheet" href="<?php echo esc_url( BOOKIT_PLUGIN_URL . 'dashboard/dist/style.css' ); ?>">
 	<?php endif; ?>
+
+	<?php wp_print_styles(); ?>
 </head>
 <body>
 	<div id="app"></div>
@@ -53,6 +58,12 @@ $rest_nonce = wp_create_nonce( 'wp_rest' );
 			logoutUrl: '<?php echo esc_url( home_url( '/bookit-dashboard/logout/' ) ); ?>'
 		};
 	</script>
+
+	<?php
+	// Print WordPress media library scripts and templates.
+	wp_print_scripts();
+	wp_print_media_templates();
+	?>
 
 	<?php if ( file_exists( BOOKIT_PLUGIN_DIR . 'dashboard/dist/index.js' ) ) : ?>
 		<script type="module" src="<?php echo esc_url( BOOKIT_PLUGIN_URL . 'dashboard/dist/index.js' ); ?>"></script>

@@ -13,6 +13,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-session.php';
 require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-auth.php';
 
+// Check if setup is needed (no admin users exist yet).
+if ( ! Bookit_Auth::has_admin_users() ) {
+	wp_redirect( home_url( '/bookit-dashboard/setup/' ) );
+	exit;
+}
+
 // If already logged in, redirect to dashboard.
 if ( Bookit_Auth::is_logged_in() ) {
 	wp_redirect( home_url( '/bookit-dashboard/app/' ) );

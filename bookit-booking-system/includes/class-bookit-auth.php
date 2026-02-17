@@ -179,6 +179,27 @@ class Bookit_Auth {
 	}
 
 	/**
+	 * Check if any ACTIVE admin users exist.
+	 *
+	 * Used to determine if setup wizard should be shown.
+	 * Checks for active AND non-deleted admins only.
+	 *
+	 * @return bool True if at least one active admin exists.
+	 */
+	public static function has_admin_users() {
+		global $wpdb;
+
+		$admin_count = $wpdb->get_var(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}bookings_staff 
+			WHERE role = 'admin' 
+			AND is_active = 1
+			AND deleted_at IS NULL"
+		);
+
+		return (int) $admin_count > 0;
+	}
+
+	/**
 	 * Hash password (for creating staff accounts).
 	 *
 	 * @param string $password Plain text password.

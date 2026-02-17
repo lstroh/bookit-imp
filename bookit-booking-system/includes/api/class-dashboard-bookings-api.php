@@ -133,7 +133,7 @@ class Bookit_Dashboard_Bookings_API {
 			)
 		);
 
-		// Get staff list for filter dropdown.
+		// Get staff list.
 		register_rest_route(
 			self::NAMESPACE,
 			'/dashboard/staff/list',
@@ -141,6 +141,28 @@ class Bookit_Dashboard_Bookings_API {
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_staff_list' ),
 				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+				'args'                => array(
+					'search'     => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'role'       => array(
+						'type'    => 'string',
+						'enum'    => array( 'admin', 'staff', 'all' ),
+						'default' => 'all',
+					),
+					'status'     => array(
+						'type'    => 'string',
+						'enum'    => array( 'active', 'inactive', 'all' ),
+						'default' => 'all',
+					),
+					'service_id' => array(
+						'type'              => 'integer',
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param );
+						},
+					),
+				),
 			)
 		);
 
@@ -152,6 +174,215 @@ class Bookit_Dashboard_Bookings_API {
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_staff_by_service' ),
 				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+			)
+		);
+
+		// Get/Update/Delete single staff.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/staff/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( $this, 'get_staff_details' ),
+					'permission_callback' => array( $this, 'check_admin_permission' ),
+				),
+				array(
+					'methods'             => 'PUT',
+					'callback'            => array( $this, 'update_staff' ),
+					'permission_callback' => array( $this, 'check_admin_permission' ),
+					'args'                => array(
+						'email'               => array(
+							'required'          => true,
+							'type'              => 'string',
+							'validate_callback' => function ( $param ) {
+								return is_email( $param );
+							},
+						),
+						'first_name'          => array(
+							'required'          => true,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'last_name'           => array(
+							'required'          => true,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'phone'               => array(
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'photo_url'           => array(
+							'type'              => 'string',
+							'sanitize_callback' => 'esc_url_raw',
+						),
+						'bio'                 => array(
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_textarea_field',
+						),
+						'title'               => array(
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'role'                => array(
+							'required' => true,
+							'type'     => 'string',
+							'enum'     => array( 'staff', 'admin' ),
+						),
+						'google_calendar_id'  => array(
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'is_active'           => array(
+							'type'    => 'boolean',
+							'default' => true,
+						),
+						'display_order'       => array(
+							'type'    => 'integer',
+							'default' => 0,
+						),
+						'service_assignments' => array(
+							'type'              => 'array',
+							'default'           => array(),
+							'sanitize_callback' => function ( $param ) {
+								// Allow the array through, we'll validate in the method.
+								return is_array( $param ) ? $param : array();
+							},
+						),
+					),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => array( $this, 'delete_staff' ),
+					'permission_callback' => array( $this, 'check_admin_permission' ),
+				),
+			)
+		);
+
+		// Create new staff.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/staff/create',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'create_staff' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'email'               => array(
+						'required'          => true,
+						'type'              => 'string',
+						'validate_callback' => function ( $param ) {
+							return is_email( $param );
+						},
+					),
+					'password'            => array(
+						'required'          => true,
+						'type'              => 'string',
+						'validate_callback' => function ( $param ) {
+							return strlen( $param ) >= 8;
+						},
+					),
+					'first_name'          => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'last_name'           => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'phone'               => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'photo_url'           => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'esc_url_raw',
+					),
+					'bio'                 => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_textarea_field',
+					),
+					'title'               => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'role'                => array(
+						'required' => true,
+						'type'     => 'string',
+						'enum'     => array( 'staff', 'admin' ),
+					),
+					'google_calendar_id'  => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'is_active'           => array(
+						'type'    => 'boolean',
+						'default' => true,
+					),
+					'display_order'       => array(
+						'type'    => 'integer',
+						'default' => 0,
+					),
+					'service_assignments' => array(
+						'type'              => 'array',
+						'default'           => array(),
+						'sanitize_callback' => function ( $param ) {
+							// Allow the array through, we'll validate in the method.
+							return is_array( $param ) ? $param : array();
+						},
+					),
+				),
+			)
+		);
+
+		// Reset staff password.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/staff/(?P<id>\d+)/reset-password',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'reset_staff_password' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'new_password' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'validate_callback' => function ( $param ) {
+							return strlen( $param ) >= 8;
+						},
+					),
+					'send_email'   => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
+				),
+			)
+		);
+
+		// Reorder staff.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/staff/reorder',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'reorder_staff' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'staff' => array(
+						'required' => true,
+						'type'     => 'array',
+						'items'    => array(
+							'type'       => 'object',
+							'properties' => array(
+								'id'            => array( 'type' => 'integer' ),
+								'display_order' => array( 'type' => 'integer' ),
+							),
+						),
+					),
+				),
 			)
 		);
 
@@ -1019,28 +1250,112 @@ class Bookit_Dashboard_Bookings_API {
 	}
 
 	/**
-	 * Get staff list for filter dropdown.
+	 * Get staff list with filters.
 	 *
-	 * @return WP_REST_Response|WP_Error
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response
 	 */
-	public function get_staff_list() {
+	public function get_staff_list( $request ) {
 		global $wpdb;
 
-		$staff = $wpdb->get_results(
-			"SELECT
-				id,
-				CONCAT(first_name, ' ', last_name) AS name
-			FROM {$wpdb->prefix}bookings_staff
-			WHERE is_active = 1
-			AND deleted_at IS NULL
-			ORDER BY first_name ASC",
-			ARRAY_A
-		);
+		// Get query parameters.
+		$search     = $request->get_param( 'search' );
+		$role       = $request->get_param( 'role' );
+		$status     = $request->get_param( 'status' );
+		$service_id = $request->get_param( 'service_id' );
+
+		// Build WHERE clauses.
+		$where_clauses = array( 'st.deleted_at IS NULL' );
+		$where_params  = array();
+
+		// Search filter.
+		if ( ! empty( $search ) ) {
+			$where_clauses[] = '(st.first_name LIKE %s OR st.last_name LIKE %s OR st.email LIKE %s OR st.title LIKE %s)';
+			$search_term     = '%' . $wpdb->esc_like( $search ) . '%';
+			$where_params[]  = $search_term;
+			$where_params[]  = $search_term;
+			$where_params[]  = $search_term;
+			$where_params[]  = $search_term;
+		}
+
+		// Role filter.
+		if ( 'admin' === $role ) {
+			$where_clauses[] = "st.role = 'admin'";
+		} elseif ( 'staff' === $role ) {
+			$where_clauses[] = "st.role = 'staff'";
+		}
+
+		// Status filter.
+		if ( 'active' === $status ) {
+			$where_clauses[] = 'st.is_active = 1';
+		} elseif ( 'inactive' === $status ) {
+			$where_clauses[] = 'st.is_active = 0';
+		}
+
+		// Service filter.
+		if ( ! empty( $service_id ) ) {
+			$where_clauses[] = 'EXISTS (
+				SELECT 1 FROM ' . $wpdb->prefix . 'bookings_staff_services ss2
+				WHERE ss2.staff_id = st.id
+				AND ss2.service_id = %d
+			)';
+			$where_params[]  = (int) $service_id;
+		}
+
+		$where_sql = implode( ' AND ', $where_clauses );
+
+		// Get staff with service count and working hours status.
+		$query = "SELECT
+					st.id,
+					st.email,
+					st.first_name,
+					st.last_name,
+					CONCAT(st.first_name, ' ', st.last_name) as full_name,
+					st.phone,
+					st.photo_url,
+					st.bio,
+					st.title,
+					st.role,
+					st.google_calendar_id,
+					st.is_active,
+					st.display_order,
+					st.created_at,
+					st.updated_at,
+					COUNT(DISTINCT ss.service_id) as service_count,
+					COUNT(DISTINCT wh.id) as working_hours_count,
+					COUNT(DISTINCT CASE WHEN b.booking_date >= CURDATE() AND b.deleted_at IS NULL THEN b.id END) as future_bookings_count
+				FROM {$wpdb->prefix}bookings_staff st
+				LEFT JOIN {$wpdb->prefix}bookings_staff_services ss ON st.id = ss.staff_id
+				LEFT JOIN {$wpdb->prefix}bookings_staff_working_hours wh ON st.id = wh.staff_id AND wh.is_working = 1
+				LEFT JOIN {$wpdb->prefix}bookings b ON st.id = b.staff_id
+				WHERE $where_sql
+				GROUP BY st.id
+				ORDER BY st.display_order ASC, st.first_name ASC, st.last_name ASC";
+
+		if ( ! empty( $where_params ) ) {
+			$query = $wpdb->prepare( $query, $where_params );
+		}
+
+		$staff_list = $wpdb->get_results( $query, ARRAY_A );
+
+		// Process each staff member.
+		foreach ( $staff_list as &$staff ) {
+			$staff['id']                    = (int) $staff['id'];
+			$staff['display_order']         = (int) $staff['display_order'];
+			$staff['is_active']             = (bool) $staff['is_active'];
+			$staff['service_count']         = (int) $staff['service_count'];
+			$staff['working_hours_count']   = (int) $staff['working_hours_count'];
+			$staff['future_bookings_count'] = (int) $staff['future_bookings_count'];
+			$staff['has_working_hours']     = $staff['working_hours_count'] > 0;
+
+			// Remove password hash from response.
+			unset( $staff['password_hash'] );
+		}
 
 		return rest_ensure_response(
 			array(
 				'success' => true,
-				'staff'   => $staff,
+				'staff'   => $staff_list,
 			)
 		);
 	}
@@ -1081,6 +1396,504 @@ class Bookit_Dashboard_Bookings_API {
 			array(
 				'success' => true,
 				'staff'   => $staff,
+			)
+		);
+	}
+
+	/**
+	 * Get single staff details.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_staff_details( $request ) {
+		global $wpdb;
+
+		$staff_id = (int) $request->get_param( 'id' );
+
+		// Get staff with counts.
+		$staff = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT
+					st.*,
+					CONCAT(st.first_name, ' ', st.last_name) as full_name,
+					COUNT(DISTINCT ss.service_id) as service_count,
+					COUNT(DISTINCT wh.id) as working_hours_count,
+					COUNT(DISTINCT CASE WHEN b.booking_date >= CURDATE() AND b.deleted_at IS NULL THEN b.id END) as future_bookings_count
+				FROM {$wpdb->prefix}bookings_staff st
+				LEFT JOIN {$wpdb->prefix}bookings_staff_services ss ON st.id = ss.staff_id
+				LEFT JOIN {$wpdb->prefix}bookings_staff_working_hours wh ON st.id = wh.staff_id AND wh.is_working = 1
+				LEFT JOIN {$wpdb->prefix}bookings b ON st.id = b.staff_id
+				WHERE st.id = %d
+				AND st.deleted_at IS NULL
+				GROUP BY st.id",
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $staff ) {
+			return new WP_Error(
+				'staff_not_found',
+				'Staff member not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Get service assignments with custom pricing.
+		$service_assignments = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					ss.service_id,
+					ss.custom_price,
+					s.name as service_name,
+					s.price as base_price
+				FROM {$wpdb->prefix}bookings_staff_services ss
+				INNER JOIN {$wpdb->prefix}bookings_services s ON ss.service_id = s.id
+				WHERE ss.staff_id = %d
+				AND s.deleted_at IS NULL
+				ORDER BY s.name",
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		// Process service assignments.
+		foreach ( $service_assignments as &$assignment ) {
+			$assignment['service_id']   = (int) $assignment['service_id'];
+			$assignment['custom_price'] = $assignment['custom_price'] ? (float) $assignment['custom_price'] : null;
+			$assignment['base_price']   = (float) $assignment['base_price'];
+		}
+
+		// Convert numeric fields.
+		$staff['id']                    = (int) $staff['id'];
+		$staff['display_order']         = (int) $staff['display_order'];
+		$staff['is_active']             = (bool) $staff['is_active'];
+		$staff['service_count']         = (int) $staff['service_count'];
+		$staff['working_hours_count']   = (int) $staff['working_hours_count'];
+		$staff['future_bookings_count'] = (int) $staff['future_bookings_count'];
+		$staff['has_working_hours']     = $staff['working_hours_count'] > 0;
+		$staff['service_assignments']   = $service_assignments;
+
+		// Remove password hash.
+		unset( $staff['password_hash'] );
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'staff'   => $staff,
+			)
+		);
+	}
+
+	/**
+	 * Create new staff member.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function create_staff( $request ) {
+		global $wpdb;
+
+		$email = $request->get_param( 'email' );
+
+		// Check for duplicate email.
+		$existing = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_staff
+				WHERE email = %s AND deleted_at IS NULL",
+				$email
+			)
+		);
+
+		if ( $existing ) {
+			return new WP_Error(
+				'duplicate_email',
+				'A staff member with this email already exists.',
+				array( 'status' => 409 )
+			);
+		}
+
+		// Hash password.
+		$password      = $request->get_param( 'password' );
+		$password_hash = password_hash( $password, PASSWORD_DEFAULT );
+
+		// Insert staff.
+		$result = $wpdb->insert(
+			$wpdb->prefix . 'bookings_staff',
+			array(
+				'email'              => $email,
+				'password_hash'      => $password_hash,
+				'first_name'         => $request->get_param( 'first_name' ),
+				'last_name'          => $request->get_param( 'last_name' ),
+				'phone'              => $request->get_param( 'phone' ),
+				'photo_url'          => $request->get_param( 'photo_url' ),
+				'bio'                => $request->get_param( 'bio' ),
+				'title'              => $request->get_param( 'title' ),
+				'role'               => $request->get_param( 'role' ),
+				'google_calendar_id' => $request->get_param( 'google_calendar_id' ),
+				'is_active'          => filter_var( $request->get_param( 'is_active' ), FILTER_VALIDATE_BOOLEAN ) ? 1 : 0,
+				'display_order'      => (int) $request->get_param( 'display_order' ),
+				'created_at'         => current_time( 'mysql' ),
+				'updated_at'         => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'creation_failed',
+				'Failed to create staff member.',
+				array( 'status' => 500 )
+			);
+		}
+
+		$staff_id = $wpdb->insert_id;
+
+		// Insert service assignments.
+		$service_assignments = $request->get_param( 'service_assignments' );
+		if ( ! empty( $service_assignments ) ) {
+			foreach ( $service_assignments as $assignment ) {
+				$wpdb->insert(
+					$wpdb->prefix . 'bookings_staff_services',
+					array(
+						'staff_id'     => $staff_id,
+						'service_id'   => (int) $assignment['service_id'],
+						'custom_price' => isset( $assignment['custom_price'] ) ? (float) $assignment['custom_price'] : null,
+						'created_at'   => current_time( 'mysql' ),
+					),
+					array( '%d', '%d', '%f', '%s' )
+				);
+			}
+		}
+
+		// Get created staff.
+		$get_request = new WP_REST_Request( 'GET', self::NAMESPACE . "/dashboard/staff/{$staff_id}" );
+		$get_request->set_url_params( array( 'id' => $staff_id ) );
+		$staff_response = $this->get_staff_details( $get_request );
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => 'Staff member created successfully.',
+				'staff'   => $staff_response->data['staff'],
+			)
+		);
+	}
+
+	/**
+	 * Update existing staff member.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function update_staff( $request ) {
+		global $wpdb;
+
+		$staff_id = (int) $request->get_param( 'id' );
+
+		// Check if staff exists.
+		$existing = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, email FROM {$wpdb->prefix}bookings_staff
+				WHERE id = %d AND deleted_at IS NULL",
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $existing ) {
+			return new WP_Error(
+				'staff_not_found',
+				'Staff member not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		$email = $request->get_param( 'email' );
+
+		// Check for duplicate email (excluding current staff).
+		$duplicate = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_staff
+				WHERE email = %s AND id != %d AND deleted_at IS NULL",
+				$email,
+				$staff_id
+			)
+		);
+
+		if ( $duplicate ) {
+			return new WP_Error(
+				'duplicate_email',
+				'A staff member with this email already exists.',
+				array( 'status' => 409 )
+			);
+		}
+
+		// Update staff.
+		$result = $wpdb->update(
+			$wpdb->prefix . 'bookings_staff',
+			array(
+				'email'              => $email,
+				'first_name'         => $request->get_param( 'first_name' ),
+				'last_name'          => $request->get_param( 'last_name' ),
+				'phone'              => $request->get_param( 'phone' ),
+				'photo_url'          => $request->get_param( 'photo_url' ),
+				'bio'                => $request->get_param( 'bio' ),
+				'title'              => $request->get_param( 'title' ),
+				'role'               => $request->get_param( 'role' ),
+				'google_calendar_id' => $request->get_param( 'google_calendar_id' ),
+				'is_active'          => filter_var( $request->get_param( 'is_active' ), FILTER_VALIDATE_BOOLEAN ) ? 1 : 0,
+				'display_order'      => (int) $request->get_param( 'display_order' ),
+				'updated_at'         => current_time( 'mysql' ),
+			),
+			array( 'id' => $staff_id ),
+			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'update_failed',
+				'Failed to update staff member.',
+				array( 'status' => 500 )
+			);
+		}
+
+		// Delete existing service assignments.
+		$wpdb->delete(
+			$wpdb->prefix . 'bookings_staff_services',
+			array( 'staff_id' => $staff_id ),
+			array( '%d' )
+		);
+
+		// Insert new service assignments.
+		$service_assignments = $request->get_param( 'service_assignments' );
+		if ( ! empty( $service_assignments ) ) {
+			foreach ( $service_assignments as $assignment ) {
+				$wpdb->insert(
+					$wpdb->prefix . 'bookings_staff_services',
+					array(
+						'staff_id'     => $staff_id,
+						'service_id'   => (int) $assignment['service_id'],
+						'custom_price' => isset( $assignment['custom_price'] ) ? (float) $assignment['custom_price'] : null,
+						'created_at'   => current_time( 'mysql' ),
+					),
+					array( '%d', '%d', '%f', '%s' )
+				);
+			}
+		}
+
+		// Get updated staff.
+		$staff_response = $this->get_staff_details( $request );
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => 'Staff member updated successfully.',
+				'staff'   => $staff_response->data['staff'],
+			)
+		);
+	}
+
+	/**
+	 * Delete staff member (soft delete).
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function delete_staff( $request ) {
+		global $wpdb;
+
+		$staff_id = (int) $request->get_param( 'id' );
+
+		// Check if staff exists.
+		$existing = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, first_name, last_name FROM {$wpdb->prefix}bookings_staff
+				WHERE id = %d AND deleted_at IS NULL",
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $existing ) {
+			return new WP_Error(
+				'staff_not_found',
+				'Staff member not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Check for future bookings.
+		$future_bookings = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}bookings
+				WHERE staff_id = %d
+				AND booking_date >= CURDATE()
+				AND deleted_at IS NULL
+				AND status NOT IN ('cancelled', 'no_show')",
+				$staff_id
+			)
+		);
+
+		if ( $future_bookings > 0 ) {
+			return new WP_Error(
+				'staff_has_bookings',
+				sprintf(
+					'Cannot delete %s %s because they have %d future booking(s). Please reassign or cancel these bookings first, or deactivate the staff member instead.',
+					$existing['first_name'],
+					$existing['last_name'],
+					$future_bookings
+				),
+				array( 'status' => 409 )
+			);
+		}
+
+		// Soft delete the staff member.
+		$result = $wpdb->update(
+			$wpdb->prefix . 'bookings_staff',
+			array(
+				'deleted_at' => current_time( 'mysql' ),
+				'updated_at' => current_time( 'mysql' ),
+			),
+			array( 'id' => $staff_id ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'deletion_failed',
+				'Failed to delete staff member.',
+				array( 'status' => 500 )
+			);
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => 'Staff member deleted successfully.',
+			)
+		);
+	}
+
+	/**
+	 * Reorder staff members.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function reorder_staff( $request ) {
+		global $wpdb;
+
+		$staff = $request->get_param( 'staff' );
+
+		if ( empty( $staff ) ) {
+			return new WP_Error(
+				'invalid_data',
+				'Staff array is required.',
+				array( 'status' => 400 )
+			);
+		}
+
+		// Update display order for each staff member.
+		foreach ( $staff as $staff_data ) {
+			if ( ! isset( $staff_data['id'] ) || ! isset( $staff_data['display_order'] ) ) {
+				continue;
+			}
+
+			$wpdb->update(
+				$wpdb->prefix . 'bookings_staff',
+				array(
+					'display_order' => (int) $staff_data['display_order'],
+					'updated_at'    => current_time( 'mysql' ),
+				),
+				array( 'id' => (int) $staff_data['id'] ),
+				array( '%d', '%s' ),
+				array( '%d' )
+			);
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => 'Staff reordered successfully.',
+			)
+		);
+	}
+
+	/**
+	 * Reset staff member password.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function reset_staff_password( $request ) {
+		global $wpdb;
+
+		$staff_id     = (int) $request->get_param( 'id' );
+		$new_password = $request->get_param( 'new_password' );
+		$send_email   = filter_var( $request->get_param( 'send_email' ), FILTER_VALIDATE_BOOLEAN );
+
+		// Check if staff exists.
+		$staff = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, email, first_name, last_name FROM {$wpdb->prefix}bookings_staff
+				WHERE id = %d AND deleted_at IS NULL",
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $staff ) {
+			return new WP_Error(
+				'staff_not_found',
+				'Staff member not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Hash new password.
+		$password_hash = password_hash( $new_password, PASSWORD_DEFAULT );
+
+		// Update password.
+		$result = $wpdb->update(
+			$wpdb->prefix . 'bookings_staff',
+			array(
+				'password_hash' => $password_hash,
+				'updated_at'    => current_time( 'mysql' ),
+			),
+			array( 'id' => $staff_id ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'reset_failed',
+				'Failed to reset password.',
+				array( 'status' => 500 )
+			);
+		}
+
+		// Send email if requested.
+		if ( $send_email ) {
+			$to      = $staff['email'];
+			$subject = 'Your password has been reset';
+			$message = sprintf(
+				"Hello %s,\n\nYour password has been reset by an administrator.\n\nNew password: %s\n\nPlease log in and change your password.\n\nBooking System",
+				$staff['first_name'],
+				$new_password
+			);
+
+			wp_mail( $to, $subject, $message );
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => 'Password reset successfully.',
 			)
 		);
 	}
