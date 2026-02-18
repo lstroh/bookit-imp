@@ -916,6 +916,111 @@ class Bookit_Dashboard_Bookings_API {
 				),
 			)
 		);
+
+		// Get working hours for a staff member.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/staff/(?P<staff_id>\d+)/hours',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( $this, 'get_working_hours' ),
+					'permission_callback' => array( $this, 'check_admin_permission' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'save_working_hours' ),
+					'permission_callback' => array( $this, 'check_admin_permission' ),
+					'args'                => array(
+						'schedule' => array(
+							'required'          => true,
+							'type'              => 'array',
+							'sanitize_callback' => function ( $param ) {
+								return is_array( $param ) ? $param : array();
+							},
+						),
+					),
+				),
+			)
+		);
+
+		// Get/Update/Delete single working hours record.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/staff/(?P<staff_id>\d+)/hours/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => 'PUT',
+					'callback'            => array( $this, 'update_working_hours_record' ),
+					'permission_callback' => array( $this, 'check_admin_permission' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => array( $this, 'delete_working_hours_record' ),
+					'permission_callback' => array( $this, 'check_admin_permission' ),
+				),
+			)
+		);
+
+		// Exception management (specific dates).
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/staff/(?P<staff_id>\d+)/hours/exceptions',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( $this, 'get_exceptions' ),
+					'permission_callback' => array( $this, 'check_admin_permission' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'add_exception' ),
+					'permission_callback' => array( $this, 'check_admin_permission' ),
+					'args'                => array(
+						'specific_date' => array(
+							'required'          => true,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'is_working'    => array(
+							'required' => true,
+							'type'     => 'boolean',
+						),
+						'start_time'    => array(
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'end_time'      => array(
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'break_start'   => array(
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'break_end'     => array(
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'notes'         => array(
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_textarea_field',
+						),
+					),
+				),
+			)
+		);
+
+		// Delete exception.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/staff/(?P<staff_id>\d+)/hours/exceptions/(?P<id>\d+)',
+			array(
+				'methods'             => 'DELETE',
+				'callback'            => array( $this, 'delete_exception' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+			)
+		);
 	}
 
 	/**
@@ -3787,6 +3892,691 @@ class Bookit_Dashboard_Bookings_API {
 			array(
 				'success' => true,
 				'message' => 'Services reordered successfully.',
+			)
+		);
+	}
+
+	/**
+	 * Get weekly working hours schedule for a staff member.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_working_hours( $request ) {
+		global $wpdb;
+
+		$staff_id = (int) $request->get_param( 'staff_id' );
+
+		// Verify staff exists.
+		$staff = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, first_name, last_name
+				FROM {$wpdb->prefix}bookings_staff
+				WHERE id = %d AND deleted_at IS NULL",
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $staff ) {
+			return new WP_Error(
+				'staff_not_found',
+				'Staff member not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Get weekly recurring schedule (day_of_week patterns).
+		$weekly_schedule = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					id,
+					day_of_week,
+					start_time,
+					end_time,
+					is_working,
+					break_start,
+					break_end,
+					repeat_weekly,
+					valid_from,
+					valid_until,
+					notes
+				FROM {$wpdb->prefix}bookings_staff_working_hours
+				WHERE staff_id = %d
+				AND day_of_week IS NOT NULL
+				AND specific_date IS NULL
+				ORDER BY day_of_week ASC, start_time ASC",
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		// Build structured schedule by day (1-7).
+		$schedule = array();
+		for ( $day = 1; $day <= 7; $day++ ) {
+			$day_rows = array_filter(
+				$weekly_schedule,
+				function ( $row ) use ( $day ) {
+					return (int) $row['day_of_week'] === $day;
+				}
+			);
+
+			if ( empty( $day_rows ) ) {
+				// Day has no configuration = day off.
+				$schedule[ $day ] = array(
+					'day_of_week' => $day,
+					'is_working'  => false,
+					'records'     => array(),
+				);
+			} else {
+				$day_rows = array_values( $day_rows );
+
+				// Check if any record marks as working.
+				$is_working = false;
+				foreach ( $day_rows as $row ) {
+					if ( (int) $row['is_working'] === 1 ) {
+						$is_working = true;
+						break;
+					}
+				}
+
+				$schedule[ $day ] = array(
+					'day_of_week' => $day,
+					'is_working'  => $is_working,
+					'records'     => array_map(
+						function ( $row ) {
+							return array(
+								'id'            => (int) $row['id'],
+								'start_time'    => $row['start_time'],
+								'end_time'      => $row['end_time'],
+								'is_working'    => (bool) $row['is_working'],
+								'break_start'   => $row['break_start'],
+								'break_end'     => $row['break_end'],
+								'repeat_weekly' => (bool) $row['repeat_weekly'],
+								'valid_from'    => $row['valid_from'],
+								'valid_until'   => $row['valid_until'],
+								'notes'         => $row['notes'],
+							);
+						},
+						$day_rows
+					),
+				);
+			}
+		}
+
+		return rest_ensure_response(
+			array(
+				'success'  => true,
+				'staff'    => array(
+					'id'         => (int) $staff['id'],
+					'first_name' => $staff['first_name'],
+					'last_name'  => $staff['last_name'],
+					'full_name'  => $staff['first_name'] . ' ' . $staff['last_name'],
+				),
+				'schedule' => $schedule,
+			)
+		);
+	}
+
+	/**
+	 * Save weekly working hours schedule for a staff member.
+	 * Replaces all existing day_of_week records (not exceptions).
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function save_working_hours( $request ) {
+		global $wpdb;
+
+		$staff_id = (int) $request->get_param( 'staff_id' );
+		$schedule = $request->get_param( 'schedule' );
+
+		// Verify staff exists.
+		$staff = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_staff
+				WHERE id = %d AND deleted_at IS NULL",
+				$staff_id
+			)
+		);
+
+		if ( ! $staff ) {
+			return new WP_Error(
+				'staff_not_found',
+				'Staff member not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Delete existing weekly schedule (keep specific_date exceptions).
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->prefix}bookings_staff_working_hours
+				WHERE staff_id = %d
+				AND day_of_week IS NOT NULL
+				AND specific_date IS NULL",
+				$staff_id
+			)
+		);
+
+		// Insert new schedule records.
+		$inserted = 0;
+		foreach ( $schedule as $day_data ) {
+			$day_of_week = (int) ( $day_data['day_of_week'] ?? 0 );
+			$is_working  = filter_var( $day_data['is_working'] ?? false, FILTER_VALIDATE_BOOLEAN );
+
+			// Validate day_of_week.
+			if ( $day_of_week < 1 || $day_of_week > 7 ) {
+				continue;
+			}
+
+			// Skip days marked as not working (no record needed = day off).
+			if ( ! $is_working ) {
+				continue;
+			}
+
+			// Validate required times.
+			$start_time = sanitize_text_field( $day_data['start_time'] ?? '' );
+			$end_time   = sanitize_text_field( $day_data['end_time'] ?? '' );
+
+			if ( empty( $start_time ) || empty( $end_time ) ) {
+				continue;
+			}
+
+			// Validate time format (H:i or H:i:s).
+			if ( ! preg_match( '/^\d{2}:\d{2}(:\d{2})?$/', $start_time ) ||
+				! preg_match( '/^\d{2}:\d{2}(:\d{2})?$/', $end_time ) ) {
+				continue;
+			}
+
+			// Ensure seconds included.
+			if ( strlen( $start_time ) === 5 ) {
+				$start_time .= ':00';
+			}
+			if ( strlen( $end_time ) === 5 ) {
+				$end_time .= ':00';
+			}
+
+			// Validate start < end.
+			if ( strtotime( $start_time ) >= strtotime( $end_time ) ) {
+				continue;
+			}
+
+			// Break times.
+			$break_start = ! empty( $day_data['break_start'] ) ? sanitize_text_field( $day_data['break_start'] ) : null;
+			$break_end   = ! empty( $day_data['break_end'] ) ? sanitize_text_field( $day_data['break_end'] ) : null;
+
+			// Validate break if provided.
+			if ( $break_start && $break_end ) {
+				if ( strlen( $break_start ) === 5 ) {
+					$break_start .= ':00';
+				}
+				if ( strlen( $break_end ) === 5 ) {
+					$break_end .= ':00';
+				}
+				// Break must be within working hours.
+				if ( strtotime( $break_start ) <= strtotime( $start_time ) ||
+					strtotime( $break_end ) >= strtotime( $end_time ) ||
+					strtotime( $break_start ) >= strtotime( $break_end ) ) {
+					$break_start = null;
+					$break_end   = null;
+				}
+			} else {
+				$break_start = null;
+				$break_end   = null;
+			}
+
+			// Seasonal schedule.
+			$valid_from  = ! empty( $day_data['valid_from'] ) ? sanitize_text_field( $day_data['valid_from'] ) : null;
+			$valid_until = ! empty( $day_data['valid_until'] ) ? sanitize_text_field( $day_data['valid_until'] ) : null;
+
+			$result = $wpdb->insert(
+				$wpdb->prefix . 'bookings_staff_working_hours',
+				array(
+					'staff_id'      => $staff_id,
+					'day_of_week'   => $day_of_week,
+					'specific_date' => null,
+					'start_time'    => $start_time,
+					'end_time'      => $end_time,
+					'is_working'    => 1,
+					'break_start'   => $break_start,
+					'break_end'     => $break_end,
+					'repeat_weekly' => 1,
+					'valid_from'    => $valid_from,
+					'valid_until'   => $valid_until,
+					'notes'         => null,
+				),
+				array( '%d', '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s', '%s' )
+			);
+
+			if ( false !== $result ) {
+				$inserted++;
+			}
+		}
+
+		// Return updated schedule.
+		$get_request = new WP_REST_Request( 'GET' );
+		$get_request->set_param( 'staff_id', $staff_id );
+		$response = $this->get_working_hours( $get_request );
+
+		return rest_ensure_response(
+			array(
+				'success'  => true,
+				'message'  => sprintf( 'Working hours saved. %d day(s) configured.', $inserted ),
+				'schedule' => $response->data['schedule'],
+			)
+		);
+	}
+
+	/**
+	 * Get date exceptions for a staff member.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_exceptions( $request ) {
+		global $wpdb;
+
+		$staff_id = (int) $request->get_param( 'staff_id' );
+
+		// Verify staff exists.
+		$staff = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_staff
+				WHERE id = %d AND deleted_at IS NULL",
+				$staff_id
+			)
+		);
+
+		if ( ! $staff ) {
+			return new WP_Error(
+				'staff_not_found',
+				'Staff member not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Get exceptions (specific dates).
+		$exceptions = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					id,
+					specific_date,
+					start_time,
+					end_time,
+					is_working,
+					break_start,
+					break_end,
+					notes,
+					created_at
+				FROM {$wpdb->prefix}bookings_staff_working_hours
+				WHERE staff_id = %d
+				AND specific_date IS NOT NULL
+				AND day_of_week IS NULL
+				ORDER BY specific_date ASC",
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		// Convert types.
+		foreach ( $exceptions as &$exception ) {
+			$exception['id']         = (int) $exception['id'];
+			$exception['is_working'] = (bool) $exception['is_working'];
+		}
+
+		return rest_ensure_response(
+			array(
+				'success'    => true,
+				'exceptions' => $exceptions,
+			)
+		);
+	}
+
+	/**
+	 * Add a specific date exception for a staff member.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function add_exception( $request ) {
+		global $wpdb;
+
+		$staff_id      = (int) $request->get_param( 'staff_id' );
+		$specific_date = $request->get_param( 'specific_date' );
+		$is_working    = filter_var( $request->get_param( 'is_working' ), FILTER_VALIDATE_BOOLEAN );
+
+		// Verify staff exists.
+		$staff = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_staff
+				WHERE id = %d AND deleted_at IS NULL",
+				$staff_id
+			)
+		);
+
+		if ( ! $staff ) {
+			return new WP_Error(
+				'staff_not_found',
+				'Staff member not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Validate date format.
+		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $specific_date ) ) {
+			return new WP_Error(
+				'invalid_date',
+				'Invalid date format. Use Y-m-d.',
+				array( 'status' => 400 )
+			);
+		}
+
+		// Check for duplicate exception on same date.
+		$existing = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_staff_working_hours
+				WHERE staff_id = %d
+				AND specific_date = %s",
+				$staff_id,
+				$specific_date
+			)
+		);
+
+		if ( $existing ) {
+			return new WP_Error(
+				'duplicate_exception',
+				'An exception already exists for this date. Delete the existing one first.',
+				array( 'status' => 409 )
+			);
+		}
+
+		// Prepare time fields.
+		$start_time  = null;
+		$end_time    = null;
+		$break_start = null;
+		$break_end   = null;
+
+		if ( $is_working ) {
+			$start_time = sanitize_text_field( $request->get_param( 'start_time' ) ?? '' );
+			$end_time   = sanitize_text_field( $request->get_param( 'end_time' ) ?? '' );
+
+			if ( empty( $start_time ) || empty( $end_time ) ) {
+				return new WP_Error(
+					'missing_times',
+					'Start time and end time are required when is_working is true.',
+					array( 'status' => 400 )
+				);
+			}
+
+			// Ensure seconds.
+			if ( strlen( $start_time ) === 5 ) {
+				$start_time .= ':00';
+			}
+			if ( strlen( $end_time ) === 5 ) {
+				$end_time .= ':00';
+			}
+
+			// Break times.
+			$break_start_raw = $request->get_param( 'break_start' );
+			$break_end_raw   = $request->get_param( 'break_end' );
+
+			if ( ! empty( $break_start_raw ) && ! empty( $break_end_raw ) ) {
+				$break_start = sanitize_text_field( $break_start_raw );
+				$break_end   = sanitize_text_field( $break_end_raw );
+
+				if ( strlen( $break_start ) === 5 ) {
+					$break_start .= ':00';
+				}
+				if ( strlen( $break_end ) === 5 ) {
+					$break_end .= ':00';
+				}
+			}
+		}
+
+		// Notes.
+		$notes = $request->get_param( 'notes' ) ? sanitize_textarea_field( $request->get_param( 'notes' ) ) : null;
+
+		// Insert exception.
+		$result = $wpdb->insert(
+			$wpdb->prefix . 'bookings_staff_working_hours',
+			array(
+				'staff_id'      => $staff_id,
+				'day_of_week'   => null,
+				'specific_date' => $specific_date,
+				'start_time'    => $is_working ? $start_time : '00:00:00',
+				'end_time'      => $is_working ? $end_time : '00:00:00',
+				'is_working'    => $is_working ? 1 : 0,
+				'break_start'   => $break_start,
+				'break_end'     => $break_end,
+				'repeat_weekly' => 0,
+				'valid_from'    => null,
+				'valid_until'   => null,
+				'notes'         => $notes,
+			),
+			array( '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s', '%s' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'insert_failed',
+				'Failed to add exception.',
+				array( 'status' => 500 )
+			);
+		}
+
+		$exception_id = $wpdb->insert_id;
+
+		return rest_ensure_response(
+			array(
+				'success'   => true,
+				'message'   => 'Exception added successfully.',
+				'exception' => array(
+					'id'            => $exception_id,
+					'specific_date' => $specific_date,
+					'is_working'    => $is_working,
+					'start_time'    => $is_working ? $start_time : null,
+					'end_time'      => $is_working ? $end_time : null,
+					'break_start'   => $break_start,
+					'break_end'     => $break_end,
+					'notes'         => $notes,
+				),
+			)
+		);
+	}
+
+	/**
+	 * Delete a specific date exception.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function delete_exception( $request ) {
+		global $wpdb;
+
+		$staff_id     = (int) $request->get_param( 'staff_id' );
+		$exception_id = (int) $request->get_param( 'id' );
+
+		// Verify exception belongs to this staff member.
+		$exception = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, specific_date FROM {$wpdb->prefix}bookings_staff_working_hours
+				WHERE id = %d
+				AND staff_id = %d
+				AND specific_date IS NOT NULL",
+				$exception_id,
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $exception ) {
+			return new WP_Error(
+				'exception_not_found',
+				'Exception not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		$result = $wpdb->delete(
+			$wpdb->prefix . 'bookings_staff_working_hours',
+			array( 'id' => $exception_id ),
+			array( '%d' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'delete_failed',
+				'Failed to delete exception.',
+				array( 'status' => 500 )
+			);
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => 'Exception deleted successfully.',
+			)
+		);
+	}
+
+	/**
+	 * Update a single working hours record.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function update_working_hours_record( $request ) {
+		global $wpdb;
+
+		$staff_id  = (int) $request->get_param( 'staff_id' );
+		$record_id = (int) $request->get_param( 'id' );
+
+		// Verify record belongs to staff.
+		$record = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_staff_working_hours
+				WHERE id = %d AND staff_id = %d",
+				$record_id,
+				$staff_id
+			)
+		);
+
+		if ( ! $record ) {
+			return new WP_Error(
+				'record_not_found',
+				'Working hours record not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Build update data from request.
+		$update_data   = array();
+		$update_format = array();
+
+		$fields = array(
+			'start_time'  => '%s',
+			'end_time'    => '%s',
+			'break_start' => '%s',
+			'break_end'   => '%s',
+			'valid_from'  => '%s',
+			'valid_until' => '%s',
+			'notes'       => '%s',
+		);
+
+		foreach ( $fields as $field => $format ) {
+			$value = $request->get_param( $field );
+			if ( null !== $value ) {
+				$update_data[ $field ] = sanitize_text_field( $value );
+				$update_format[]       = $format;
+			}
+		}
+
+		if ( null !== $request->get_param( 'is_working' ) ) {
+			$update_data['is_working'] = filter_var( $request->get_param( 'is_working' ), FILTER_VALIDATE_BOOLEAN ) ? 1 : 0;
+			$update_format[]           = '%d';
+		}
+
+		if ( empty( $update_data ) ) {
+			return new WP_Error(
+				'no_data',
+				'No fields to update.',
+				array( 'status' => 400 )
+			);
+		}
+
+		$result = $wpdb->update(
+			$wpdb->prefix . 'bookings_staff_working_hours',
+			$update_data,
+			array( 'id' => $record_id ),
+			$update_format,
+			array( '%d' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'update_failed',
+				'Failed to update working hours.',
+				array( 'status' => 500 )
+			);
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => 'Working hours updated successfully.',
+			)
+		);
+	}
+
+	/**
+	 * Delete a working hours record.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function delete_working_hours_record( $request ) {
+		global $wpdb;
+
+		$staff_id  = (int) $request->get_param( 'staff_id' );
+		$record_id = (int) $request->get_param( 'id' );
+
+		// Verify record belongs to staff.
+		$record = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_staff_working_hours
+				WHERE id = %d AND staff_id = %d",
+				$record_id,
+				$staff_id
+			)
+		);
+
+		if ( ! $record ) {
+			return new WP_Error(
+				'record_not_found',
+				'Working hours record not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		$result = $wpdb->delete(
+			$wpdb->prefix . 'bookings_staff_working_hours',
+			array( 'id' => $record_id ),
+			array( '%d' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'delete_failed',
+				'Failed to delete working hours record.',
+				array( 'status' => 500 )
+			);
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => 'Working hours record deleted successfully.',
 			)
 		);
 	}

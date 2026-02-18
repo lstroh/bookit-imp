@@ -30,6 +30,12 @@ export default [
     meta: { title: 'Staff' }
   },
   {
+    path: '/staff/:staff_id/hours',
+    name: 'StaffHours',
+    component: () => import('../views/StaffHours.vue'),
+    meta: { title: 'Working Hours' }
+  },
+  {
     path: '/settings',
     name: 'settings',
     component: () => import('../views/Settings.vue'),

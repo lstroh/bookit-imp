@@ -250,6 +250,12 @@
                 >
                   Edit
                 </button>
+                <router-link
+                  :to="`/staff/${member.id}/hours`"
+                  class="text-green-600 hover:text-green-900 mr-3"
+                >
+                  Hours
+                </router-link>
                 <button
                   @click="confirmDelete(member)"
                   class="text-red-600 hover:text-red-900"

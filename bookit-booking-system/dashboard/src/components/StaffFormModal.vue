@@ -362,17 +362,33 @@
 
           <!-- Working Hours Info (editing only) -->
           <div v-if="isEditing && staffDetails?.has_working_hours" class="bg-blue-50 border border-blue-200 rounded p-3">
-            <p class="text-sm text-blue-800">
-              Working hours are <strong>configured</strong>.
-              <span class="text-blue-600">Configure working hours (Task 10)</span>
-            </p>
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-blue-800">
+                Working hours are <strong>configured</strong>.
+              </p>
+              <router-link
+                :to="`/staff/${staffMember.id}/hours`"
+                @click="$emit('close')"
+                class="text-sm font-medium text-blue-600 hover:text-blue-700 underline"
+              >
+                Edit Working Hours &rarr;
+              </router-link>
+            </div>
           </div>
           <div v-else-if="isEditing && staffDetails && !staffDetails.has_working_hours" class="bg-amber-50 border border-amber-200 rounded p-3">
-            <p class="text-sm text-amber-800">
-              Working hours are <strong>not configured</strong>.
-              This staff member won't appear in booking availability.
-              <span class="text-amber-600">Configure working hours (Task 10)</span>
-            </p>
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-amber-800">
+                Working hours <strong>not configured</strong>.
+                This staff member won't appear in booking availability.
+              </p>
+              <router-link
+                :to="`/staff/${staffMember.id}/hours`"
+                @click="$emit('close')"
+                class="text-sm font-medium text-amber-600 hover:text-amber-700 underline whitespace-nowrap ml-3"
+              >
+                Configure Now &rarr;
+              </router-link>
+            </div>
           </div>
 
           <!-- Bookings Info (editing only) -->
