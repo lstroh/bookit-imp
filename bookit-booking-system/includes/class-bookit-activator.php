@@ -129,6 +129,86 @@ class Bookit_Activator {
 				)
 			);
 		}
+		global $wpdb;  // Declare global first
+
+		// Add setting_type column to settings table if missing.
+		$column_exists = $wpdb->get_results(
+			"SHOW COLUMNS FROM {$wpdb->prefix}bookings_settings LIKE 'setting_type'"
+		);
+
+		if ( empty( $column_exists ) ) {
+			$wpdb->query(
+				"ALTER TABLE {$wpdb->prefix}bookings_settings
+				ADD COLUMN setting_type ENUM('string', 'integer', 'boolean', 'json') DEFAULT 'string'
+				AFTER setting_value"
+			);
+		}
+
+		// Create email templates table.
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+		$charset_collate = $wpdb->get_charset_collate();
+
+		$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bookings_email_templates (
+			id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+			template_key VARCHAR(50) NOT NULL UNIQUE,
+			subject VARCHAR(255) NOT NULL,
+			body TEXT NOT NULL,
+			enabled TINYINT(1) DEFAULT 1,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			INDEX idx_template_key (template_key)
+		) $charset_collate;";
+
+		dbDelta( $sql );
+
+		// Seed default email templates if table is empty.
+		$template_count = $wpdb->get_var(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}bookings_email_templates"
+		);
+
+		if ( 0 == $template_count ) {
+			$default_templates = array(
+				array(
+					'template_key' => 'booking_confirmation',
+					'subject'      => 'Booking Confirmed - {service_name}',
+					'body'         => "Hi {customer_name},\n\nYour booking is confirmed!\n\n**Booking Details:**\nService: {service_name}\nDate: {date}\nTime: {time}\nStaff: {staff_name}\nLocation: {business_address}\n\nIf you need to make changes:\n- Reschedule: {reschedule_link}\n- Cancel: {cancel_link}\n\nThank you,\n{business_name}\n{business_phone}",
+					'enabled'      => 1,
+				),
+				array(
+					'template_key' => 'booking_reminder',
+					'subject'      => 'Reminder: {service_name} tomorrow at {time}',
+					'body'         => "Hi {customer_name},\n\nThis is a reminder about your booking tomorrow.\n\n**Booking Details:**\nService: {service_name}\nDate: {date}\nTime: {time}\nStaff: {staff_name}\nLocation: {business_address}\n\nWe look forward to seeing you!\n\nIf you need to make changes:\n- Reschedule: {reschedule_link}\n- Cancel: {cancel_link}\n\nSee you soon,\n{business_name}\n{business_phone}",
+					'enabled'      => 1,
+				),
+				array(
+					'template_key' => 'booking_cancelled',
+					'subject'      => 'Booking Cancelled - {service_name}',
+					'body'         => "Hi {customer_name},\n\nYour booking has been cancelled.\n\n**Cancelled Booking:**\nService: {service_name}\nDate: {date}\nTime: {time}\n\nIf this was a mistake or you'd like to rebook, please contact us or visit our website.\n\nThank you,\n{business_name}\n{business_phone}",
+					'enabled'      => 1,
+				),
+				array(
+					'template_key' => 'admin_new_booking',
+					'subject'      => 'New Booking: {customer_name} - {service_name}',
+					'body'         => "New booking received!\n\n**Customer:**\n{customer_name}\n{customer_email}\n{customer_phone}\n\n**Booking Details:**\nService: {service_name}\nDate: {date}\nTime: {time}\nStaff: {staff_name}\nDuration: {duration} minutes\n\n**Payment:**\nTotal: £{total_price}\nDeposit Paid: £{deposit_paid}\n\nView in dashboard: {dashboard_link}",
+					'enabled'      => 1,
+				),
+				array(
+					'template_key' => 'staff_new_booking',
+					'subject'      => 'New Booking Assigned: {customer_name}',
+					'body'         => "Hi {staff_name},\n\nYou have a new booking!\n\n**Customer:**\n{customer_name}\n{customer_phone}\n\n**Booking Details:**\nService: {service_name}\nDate: {date}\nTime: {time}\nDuration: {duration} minutes\n\nView in dashboard: {dashboard_link}",
+					'enabled'      => 1,
+				),
+			);
+
+			foreach ( $default_templates as $template ) {
+				$wpdb->insert(
+					$wpdb->prefix . 'bookings_email_templates',
+					$template,
+					array( '%s', '%s', '%s', '%d' )
+				);
+			}
+		}
 
 		// Flush rewrite rules (for dashboard endpoints).
 		flush_rewrite_rules();

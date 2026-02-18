@@ -40,5 +40,23 @@ export default [
     name: 'settings',
     component: () => import('../views/Settings.vue'),
     meta: { title: 'Settings' }
+  },
+  {
+    path: '/profile',
+    name: 'MyProfile',
+    component: () => import('../views/MyProfile.vue'),
+    meta: { title: 'My Profile' }
+  },
+  {
+    path: '/settings/email',
+    name: 'EmailSettings',
+    component: () => import('../views/EmailSettings.vue'),
+    meta: { title: 'Email Configuration', requiresAdmin: true }
+  },
+  {
+    path: '/settings/templates',
+    name: 'EmailTemplates',
+    component: () => import('../views/EmailTemplates.vue'),
+    meta: { title: 'Email Templates', requiresAdmin: true }
   }
 ]

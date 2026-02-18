@@ -48,7 +48,7 @@ class Test_Plugin_Activation extends TestCase {
 	public function test_database_version_option() {
 		$db_version = get_option( 'bookit_db_version' );
 		$this->assertNotEmpty( $db_version );
-		$this->assertEquals( '1.0.2', $db_version );
+		$this->assertEquals( '1.0.3', $db_version );
 	}
 
 	/**

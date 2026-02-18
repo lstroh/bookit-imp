@@ -10,10 +10,10 @@
       </p>
     </div>
 
-    <!-- Navigation -->
+    <!-- Main Navigation -->
     <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
       <router-link
-        v-for="item in navigation"
+        v-for="item in mainNavigation"
         :key="item.name"
         :to="item.path"
         class="nav-item"
@@ -24,30 +24,30 @@
       </router-link>
     </nav>
 
-    <!-- User Info -->
-    <div class="px-4 py-4 border-t border-gray-200">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-          <span class="text-primary-600 font-semibold">
-            {{ initials }}
-          </span>
-        </div>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium text-gray-900 truncate">
-            {{ props.staff.name }}
-          </p>
-          <p class="text-xs text-gray-500 capitalize">
-            {{ props.staff.role }}
-          </p>
-        </div>
-      </div>
+    <!-- Settings Section (Admin Only) -->
+    <div
+      v-if="props.staff.role === 'admin'"
+      class="px-4 pb-4 border-t border-gray-200"
+    >
+      <p class="px-4 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+        Settings
+      </p>
+
+      <router-link
+        v-for="item in settingsNavigation"
+        :key="item.name"
+        :to="item.path"
+        class="nav-item"
+        :class="{ 'active': $route.path === item.path }"
+      >
+        <span class="text-xl mr-3">{{ item.icon }}</span>
+        <span>{{ item.label }}</span>
+      </router-link>
     </div>
   </aside>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-
 const props = defineProps({
   staff: {
     type: Object,
@@ -55,19 +55,19 @@ const props = defineProps({
   }
 })
 
-const navigation = [
+const mainNavigation = [
   { name: 'dashboard', path: '/', icon: '📅', label: 'Today' },
   { name: 'bookings', path: '/bookings', icon: '📋', label: 'Bookings' },
   { name: 'services', path: '/services', icon: '✂️', label: 'Services' },
   { name: 'categories', path: '/categories', icon: '🏷️', label: 'Categories' },
-  { name: 'staff', path: '/staff', icon: '👥', label: 'Staff' },
-  { name: 'settings', path: '/settings', icon: '⚙️', label: 'Settings' }
+  { name: 'staff', path: '/staff', icon: '👥', label: 'Staff' }
 ]
 
-const initials = computed(() => {
-  const names = props.staff.name.split(' ')
-  return names.map(n => n[0]).join('').toUpperCase()
-})
+const settingsNavigation = [
+  { name: 'settings', path: '/settings', icon: '⚙️', label: 'General' },
+  { name: 'emailSettings', path: '/settings/email', icon: '📧', label: 'Email Configuration' },
+  { name: 'emailTemplates', path: '/settings/templates', icon: '📝', label: 'Email Templates' }
+]
 </script>
 
 <style scoped>
