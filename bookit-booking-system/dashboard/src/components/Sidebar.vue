@@ -66,7 +66,8 @@ const mainNavigation = [
 const settingsNavigation = [
   { name: 'settings', path: '/settings', icon: '⚙️', label: 'General' },
   { name: 'emailSettings', path: '/settings/email', icon: '📧', label: 'Email Configuration' },
-  { name: 'emailTemplates', path: '/settings/templates', icon: '📝', label: 'Email Templates' }
+  { name: 'emailTemplates', path: '/settings/templates', icon: '📝', label: 'Email Templates' },
+  { name: 'bulkHours', path: '/settings/bulk-hours', icon: '👥', label: 'Bulk Working Hours' }
 ]
 </script>
 

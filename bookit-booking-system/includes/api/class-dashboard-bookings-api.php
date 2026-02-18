@@ -1022,6 +1022,119 @@ class Bookit_Dashboard_Bookings_API {
 			)
 		);
 
+		// Check for conflicts before bulk working hours operation.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/staff/bulk-hours/check-conflicts',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'check_bulk_conflicts' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'staff_ids'     => array(
+						'required'          => true,
+						'type'              => 'array',
+						'sanitize_callback' => function ( $param ) {
+							return is_array( $param ) ? array_map( 'intval', $param ) : array();
+						},
+					),
+					'specific_date' => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'day_of_week'   => array(
+						'type' => 'integer',
+					),
+				),
+			)
+		);
+
+		// Add exception to multiple staff.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/staff/bulk-hours/add-exception',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'bulk_add_exception' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'staff_ids'            => array(
+						'required'          => true,
+						'type'              => 'array',
+						'sanitize_callback' => function ( $param ) {
+							return is_array( $param ) ? array_map( 'intval', $param ) : array();
+						},
+					),
+					'specific_date'        => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'is_working'           => array(
+						'required' => true,
+						'type'     => 'boolean',
+					),
+					'start_time'           => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'end_time'             => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'break_start'          => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'break_end'            => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'notes'                => array(
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_textarea_field',
+					),
+					'overwrite_conflicts'  => array(
+						'type'              => 'array',
+						'sanitize_callback' => function ( $param ) {
+							return is_array( $param ) ? array_map( 'intval', $param ) : array();
+						},
+					),
+				),
+			)
+		);
+
+		// Update schedule for multiple staff.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/staff/bulk-hours/update-schedule',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'bulk_update_schedule' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'staff_ids'   => array(
+						'required'          => true,
+						'type'              => 'array',
+						'sanitize_callback' => function ( $param ) {
+							return is_array( $param ) ? array_map( 'intval', $param ) : array();
+						},
+					),
+					'day_of_week' => array(
+						'required' => true,
+						'type'     => 'integer',
+					),
+					'updates'     => array(
+						'required'          => true,
+						'type'              => 'object',
+						'sanitize_callback' => function ( $param ) {
+							return is_array( $param ) ? $param : array();
+						},
+					),
+				),
+			)
+		);
+
 		// Get/Update current user's profile.
 		register_rest_route(
 			self::NAMESPACE,
@@ -4776,6 +4889,342 @@ class Bookit_Dashboard_Bookings_API {
 			array(
 				'success' => true,
 				'message' => 'Working hours record deleted successfully.',
+			)
+		);
+	}
+
+	/**
+	 * Check for conflicts before bulk working hours operation.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response
+	 */
+	public function check_bulk_conflicts( $request ) {
+		global $wpdb;
+
+		$staff_ids     = $request->get_param( 'staff_ids' );
+		$specific_date = $request->get_param( 'specific_date' );
+
+		if ( empty( $staff_ids ) ) {
+			return rest_ensure_response(
+				array(
+					'success'   => true,
+					'conflicts' => array(),
+				)
+			);
+		}
+
+		$conflicts = array();
+
+		if ( $specific_date ) {
+			$placeholders = implode( ',', array_fill( 0, count( $staff_ids ), '%d' ) );
+
+			$existing = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT
+						h.staff_id,
+						h.id as exception_id,
+						h.specific_date,
+						h.is_working,
+						h.start_time,
+						h.end_time,
+						h.notes,
+						s.first_name,
+						s.last_name
+					FROM {$wpdb->prefix}bookings_staff_working_hours h
+					INNER JOIN {$wpdb->prefix}bookings_staff s ON h.staff_id = s.id
+					WHERE h.staff_id IN ($placeholders)
+					AND h.specific_date = %s",
+					array_merge( $staff_ids, array( $specific_date ) )
+				),
+				ARRAY_A
+			);
+
+			foreach ( $existing as $row ) {
+				$conflicts[] = array(
+					'staff_id'      => (int) $row['staff_id'],
+					'staff_name'    => $row['first_name'] . ' ' . $row['last_name'],
+					'exception_id'  => (int) $row['exception_id'],
+					'specific_date' => $row['specific_date'],
+					'is_working'    => (bool) $row['is_working'],
+					'start_time'    => $row['start_time'],
+					'end_time'      => $row['end_time'],
+					'notes'         => $row['notes'],
+					'conflict_type' => 'exception',
+				);
+			}
+		}
+
+		return rest_ensure_response(
+			array(
+				'success'   => true,
+				'conflicts' => $conflicts,
+			)
+		);
+	}
+
+	/**
+	 * Add exception to multiple staff.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function bulk_add_exception( $request ) {
+		global $wpdb;
+
+		$staff_ids           = $request->get_param( 'staff_ids' );
+		$specific_date       = $request->get_param( 'specific_date' );
+		$is_working          = filter_var( $request->get_param( 'is_working' ), FILTER_VALIDATE_BOOLEAN );
+		$overwrite_conflicts = $request->get_param( 'overwrite_conflicts' ) ?: array();
+
+		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $specific_date ) ) {
+			return new WP_Error(
+				'invalid_date',
+				'Invalid date format. Use Y-m-d.',
+				array( 'status' => 400 )
+			);
+		}
+
+		$start_time  = null;
+		$end_time    = null;
+		$break_start = null;
+		$break_end   = null;
+		$notes       = $request->get_param( 'notes' ) ? sanitize_textarea_field( $request->get_param( 'notes' ) ) : null;
+
+		if ( $is_working ) {
+			$start_time = sanitize_text_field( $request->get_param( 'start_time' ) ?? '' );
+			$end_time   = sanitize_text_field( $request->get_param( 'end_time' ) ?? '' );
+
+			if ( empty( $start_time ) || empty( $end_time ) ) {
+				return new WP_Error(
+					'missing_times',
+					'Start time and end time are required when is_working is true.',
+					array( 'status' => 400 )
+				);
+			}
+
+			if ( strlen( $start_time ) === 5 ) {
+				$start_time .= ':00';
+			}
+			if ( strlen( $end_time ) === 5 ) {
+				$end_time .= ':00';
+			}
+
+			$break_start_raw = $request->get_param( 'break_start' );
+			$break_end_raw   = $request->get_param( 'break_end' );
+
+			if ( ! empty( $break_start_raw ) && ! empty( $break_end_raw ) ) {
+				$break_start = sanitize_text_field( $break_start_raw );
+				$break_end   = sanitize_text_field( $break_end_raw );
+
+				if ( strlen( $break_start ) === 5 ) {
+					$break_start .= ':00';
+				}
+				if ( strlen( $break_end ) === 5 ) {
+					$break_end .= ':00';
+				}
+			}
+		}
+
+		$added   = 0;
+		$skipped = 0;
+		$results = array();
+
+		foreach ( $staff_ids as $staff_id ) {
+			$existing = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT id FROM {$wpdb->prefix}bookings_staff_working_hours
+					WHERE staff_id = %d AND specific_date = %s",
+					$staff_id,
+					$specific_date
+				)
+			);
+
+			if ( $existing ) {
+				if ( in_array( $staff_id, $overwrite_conflicts ) ) {
+					$wpdb->delete(
+						$wpdb->prefix . 'bookings_staff_working_hours',
+						array( 'id' => $existing ),
+						array( '%d' )
+					);
+				} else {
+					$skipped++;
+					$results[] = array(
+						'staff_id' => $staff_id,
+						'status'   => 'skipped',
+						'reason'   => 'conflict',
+					);
+					continue;
+				}
+			}
+
+			$result = $wpdb->insert(
+				$wpdb->prefix . 'bookings_staff_working_hours',
+				array(
+					'staff_id'      => $staff_id,
+					'day_of_week'   => null,
+					'specific_date' => $specific_date,
+					'start_time'    => $is_working ? $start_time : '00:00:00',
+					'end_time'      => $is_working ? $end_time : '00:00:00',
+					'is_working'    => $is_working ? 1 : 0,
+					'break_start'   => $break_start,
+					'break_end'     => $break_end,
+					'repeat_weekly' => 0,
+					'valid_from'    => null,
+					'valid_until'   => null,
+					'notes'         => $notes,
+				),
+				array( '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s', '%s' )
+			);
+
+			if ( false !== $result ) {
+				$added++;
+				$results[] = array(
+					'staff_id' => $staff_id,
+					'status'   => 'added',
+				);
+			} else {
+				$results[] = array(
+					'staff_id' => $staff_id,
+					'status'   => 'failed',
+				);
+			}
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => sprintf(
+					'Exception added to %d staff member(s). %d skipped due to conflicts.',
+					$added,
+					$skipped
+				),
+				'added'   => $added,
+				'skipped' => $skipped,
+				'results' => $results,
+			)
+		);
+	}
+
+	/**
+	 * Update schedule for multiple staff.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function bulk_update_schedule( $request ) {
+		global $wpdb;
+
+		$staff_ids   = $request->get_param( 'staff_ids' );
+		$day_of_week = (int) $request->get_param( 'day_of_week' );
+		$updates     = $request->get_param( 'updates' );
+
+		if ( $day_of_week < 1 || $day_of_week > 7 ) {
+			return new WP_Error(
+				'invalid_day',
+				'Day of week must be between 1 (Monday) and 7 (Sunday).',
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( empty( $updates ) ) {
+			return new WP_Error(
+				'no_updates',
+				'No updates provided.',
+				array( 'status' => 400 )
+			);
+		}
+
+		$updated = 0;
+		$results = array();
+
+		$allowed_fields = array(
+			'start_time'  => '%s',
+			'end_time'    => '%s',
+			'break_start' => '%s',
+			'break_end'   => '%s',
+			'is_working'  => '%d',
+		);
+
+		foreach ( $staff_ids as $staff_id ) {
+			$existing = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT * FROM {$wpdb->prefix}bookings_staff_working_hours
+					WHERE staff_id = %d
+					AND day_of_week = %d
+					AND specific_date IS NULL
+					LIMIT 1",
+					$staff_id,
+					$day_of_week
+				),
+				ARRAY_A
+			);
+
+			if ( ! $existing ) {
+				$results[] = array(
+					'staff_id' => $staff_id,
+					'status'   => 'skipped',
+					'reason'   => 'no_schedule',
+				);
+				continue;
+			}
+
+			$update_data   = array();
+			$update_format = array();
+
+			foreach ( $allowed_fields as $field => $format ) {
+				if ( isset( $updates[ $field ] ) ) {
+					$value = $updates[ $field ];
+
+					if ( 'is_working' === $field ) {
+						$update_data[ $field ] = filter_var( $value, FILTER_VALIDATE_BOOLEAN ) ? 1 : 0;
+					} else {
+						$value = sanitize_text_field( $value );
+						if ( in_array( $field, array( 'start_time', 'end_time', 'break_start', 'break_end' ), true ) && strlen( $value ) === 5 ) {
+							$value .= ':00';
+						}
+						$update_data[ $field ] = $value;
+					}
+
+					$update_format[] = $format;
+				}
+			}
+
+			if ( empty( $update_data ) ) {
+				continue;
+			}
+
+			$result = $wpdb->update(
+				$wpdb->prefix . 'bookings_staff_working_hours',
+				$update_data,
+				array(
+					'staff_id'    => $staff_id,
+					'day_of_week' => $day_of_week,
+				),
+				$update_format,
+				array( '%d', '%d' )
+			);
+
+			if ( false !== $result ) {
+				$updated++;
+				$results[] = array(
+					'staff_id' => $staff_id,
+					'status'   => 'updated',
+				);
+			} else {
+				$results[] = array(
+					'staff_id' => $staff_id,
+					'status'   => 'failed',
+				);
+			}
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => sprintf( 'Schedule updated for %d staff member(s).', $updated ),
+				'updated' => $updated,
+				'results' => $results,
 			)
 		);
 	}

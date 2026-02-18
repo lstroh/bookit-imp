@@ -58,5 +58,11 @@ export default [
     name: 'EmailTemplates',
     component: () => import('../views/EmailTemplates.vue'),
     meta: { title: 'Email Templates', requiresAdmin: true }
+  },
+  {
+    path: '/settings/bulk-hours',
+    name: 'BulkHours',
+    component: () => import('../views/BulkHours.vue'),
+    meta: { title: 'Bulk Working Hours', requiresAdmin: true }
   }
 ]
