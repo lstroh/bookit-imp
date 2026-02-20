@@ -17,7 +17,7 @@
 
       <!-- SMTP Configuration Card -->
       <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
           <div class="flex items-center justify-between">
             <div>
               <h2 class="text-lg font-semibold text-gray-900">SMTP Settings</h2>
@@ -40,7 +40,7 @@
           </div>
         </div>
 
-        <form @submit.prevent="saveSettings" class="px-6 py-6 space-y-6">
+        <form @submit.prevent="saveSettings" class="px-4 sm:px-6 py-6 space-y-6">
           <!-- Info Box -->
           <div class="bg-blue-50 border border-blue-200 rounded p-4">
             <div class="flex items-start gap-3">
@@ -60,8 +60,8 @@
           </div>
 
           <!-- SMTP Host and Port -->
-          <div class="grid grid-cols-3 gap-4">
-            <div class="col-span-2">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="sm:col-span-2">
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 SMTP Host *
               </label>
@@ -106,7 +106,7 @@
           </div>
 
           <!-- Authentication -->
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 Username *
@@ -137,7 +137,7 @@
           </div>
 
           <!-- From Name and Email -->
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 From Name *
@@ -172,7 +172,7 @@
             <button
               type="submit"
               :disabled="saving"
-              class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
             >
               {{ saving ? 'Saving...' : 'Save SMTP Settings' }}
             </button>
@@ -182,14 +182,14 @@
 
       <!-- Test Email Card -->
       <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
           <h2 class="text-lg font-semibold text-gray-900">Test Email</h2>
           <p class="text-sm text-gray-500 mt-1">
             Send a test email to verify your SMTP configuration is working
           </p>
         </div>
 
-        <div class="px-6 py-6">
+        <div class="px-4 sm:px-6 py-6">
           <!-- Test Email Success -->
           <div v-if="testSuccess" class="mb-4 bg-green-50 border border-green-200 rounded p-3">
             <p class="text-sm text-green-800">&#10003; {{ testSuccess }}</p>
@@ -229,7 +229,7 @@
               <button
                 type="submit"
                 :disabled="sendingTest || !testEmailAddress"
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 {{ sendingTest ? 'Sending...' : 'Send Test Email' }}
               </button>

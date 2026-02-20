@@ -1,12 +1,18 @@
 <template>
   <!-- Modal Backdrop -->
-  <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+  <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click.self="$emit('close')">
     <!-- Modal Content -->
-    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div
+      ref="modalRef"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="booking-modal-title"
+      class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+    >
       <!-- Header -->
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
+      <div class="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
         <div>
-          <h2 class="text-xl font-semibold text-gray-900">
+          <h2 id="booking-modal-title" class="text-xl font-semibold text-gray-900">
             Create New Booking
           </h2>
           <p class="text-sm text-gray-500 mt-1">
@@ -15,14 +21,17 @@
         </div>
         <button
           @click="$emit('close')"
-          class="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+          class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+          aria-label="Close dialog"
         >
-          &times;
+          <svg aria-hidden="true" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
       </div>
 
       <!-- Body -->
-      <div class="px-6 py-6">
+      <div class="px-4 sm:px-6 py-6">
         <!-- Step 1: Customer Selection -->
         <CustomerSelector
           v-if="currentStep === 1"
@@ -191,7 +200,7 @@
               <!-- Morning Slots -->
               <div v-if="timeslots.morning && timeslots.morning.length > 0">
                 <h4 class="text-sm font-medium text-gray-700 mb-2">Morning</h4>
-                <div class="grid grid-cols-4 gap-2">
+                <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   <button
                     v-for="slot in timeslots.morning"
                     :key="slot"
@@ -210,7 +219,7 @@
               <!-- Afternoon Slots -->
               <div v-if="timeslots.afternoon && timeslots.afternoon.length > 0">
                 <h4 class="text-sm font-medium text-gray-700 mb-2">Afternoon</h4>
-                <div class="grid grid-cols-4 gap-2">
+                <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   <button
                     v-for="slot in timeslots.afternoon"
                     :key="slot"
@@ -229,7 +238,7 @@
               <!-- Evening Slots -->
               <div v-if="timeslots.evening && timeslots.evening.length > 0">
                 <h4 class="text-sm font-medium text-gray-700 mb-2">Evening</h4>
-                <div class="grid grid-cols-4 gap-2">
+                <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   <button
                     v-for="slot in timeslots.evening"
                     :key="slot"
@@ -353,43 +362,45 @@
       </div>
 
       <!-- Footer -->
-      <div class="px-6 py-4 border-t border-gray-200 flex justify-between bg-gray-50 sticky bottom-0">
-        <button
-          v-if="currentStep > 1"
-          @click="previousStep"
-          :disabled="creating"
-          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          &larr; Back
-        </button>
-        <div v-else></div>
-
-        <div class="flex gap-2">
+      <div class="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 sticky bottom-0">
+        <div class="flex flex-col-reverse sm:flex-row justify-between gap-3">
           <button
-            @click="$emit('close')"
+            v-if="currentStep > 1"
+            @click="previousStep"
             :disabled="creating"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Cancel
+            &larr; Back
           </button>
+          <div v-else class="hidden sm:block"></div>
 
-          <button
-            v-if="currentStep < 5"
-            :disabled="!canProceed"
-            @click="nextStep"
-            class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Next: {{ nextStepLabel }} &rarr;
-          </button>
+          <div class="flex flex-col-reverse sm:flex-row gap-2">
+            <button
+              @click="$emit('close')"
+              :disabled="creating"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
 
-          <button
-            v-else
-            :disabled="!canCreate || creating"
-            @click="createBooking"
-            class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {{ creating ? 'Creating...' : 'Create Booking' }}
-          </button>
+            <button
+              v-if="currentStep < 5"
+              :disabled="!canProceed"
+              @click="nextStep"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next: {{ nextStepLabel }} &rarr;
+            </button>
+
+            <button
+              v-else
+              :disabled="!canCreate || creating"
+              @click="createBooking"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {{ creating ? 'Creating...' : 'Create Booking' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -397,13 +408,55 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useApi } from '../composables/useApi'
+import { useToast } from '../composables/useToast'
 import CustomerSelector from './CustomerSelector.vue'
 
 const api = useApi()
+const { error: toastError } = useToast()
 
 const emit = defineEmits(['close', 'created'])
+
+const modalRef = ref(null)
+const previousActiveElement = ref(null)
+
+const getFocusableElements = () => {
+  if (!modalRef.value) return []
+  return Array.from(
+    modalRef.value.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  )
+}
+
+const trapFocus = (e) => {
+  if (!modalRef.value) return
+
+  const focusable = getFocusableElements()
+  if (focusable.length === 0) return
+
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+
+  if (e.key === 'Tab') {
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        last.focus()
+        e.preventDefault()
+      }
+    } else {
+      if (document.activeElement === last) {
+        first.focus()
+        e.preventDefault()
+      }
+    }
+  }
+
+  if (e.key === 'Escape') {
+    emit('close')
+  }
+}
 
 // State.
 const currentStep = ref(1)
@@ -698,15 +751,31 @@ const createBooking = async () => {
     }
   } catch (err) {
     console.error('Error creating booking:', err)
-    alert(`Error creating booking: ${err.message}`)
+    toastError(`Error creating booking: ${err.message}`)
   } finally {
     creating.value = false
   }
 }
 
-// Lifecycle: pre-load services.
-onMounted(() => {
+// Lifecycle: pre-load services and set up focus trap.
+onMounted(async () => {
+  previousActiveElement.value = document.activeElement
+  document.addEventListener('keydown', trapFocus)
+
+  await nextTick()
+  const focusable = getFocusableElements()
+  if (focusable.length > 0) {
+    focusable[0].focus()
+  }
+
   loadServices()
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', trapFocus)
+  if (previousActiveElement.value && previousActiveElement.value.focus) {
+    previousActiveElement.value.focus()
+  }
 })
 
 // Watch for step 4 to set today as default date.

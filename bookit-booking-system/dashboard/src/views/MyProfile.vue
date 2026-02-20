@@ -8,23 +8,23 @@
 
     <div v-else class="space-y-6">
       <!-- Success/Error Messages -->
-      <div v-if="saveSuccess" class="bg-green-50 border border-green-200 rounded p-3">
+      <div v-if="saveSuccess" role="status" aria-live="polite" class="bg-green-50 border border-green-200 rounded p-3">
         <p class="text-sm text-green-800">&#10003; {{ saveSuccess }}</p>
       </div>
-      <div v-if="saveError" class="bg-red-50 border border-red-200 rounded p-3">
+      <div v-if="saveError" role="alert" aria-live="assertive" class="bg-red-50 border border-red-200 rounded p-3">
         <p class="text-sm text-red-800">{{ saveError }}</p>
       </div>
 
       <!-- Profile Information Card -->
       <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
           <h2 class="text-lg font-semibold text-gray-900">Profile Information</h2>
           <p class="text-sm text-gray-500 mt-1">
             Update your personal details and profile photo
           </p>
         </div>
 
-        <form @submit.prevent="saveProfile" class="px-6 py-6 space-y-6">
+        <form @submit.prevent="saveProfile" class="px-4 sm:px-6 py-6 space-y-6">
           <!-- Profile Photo -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -71,26 +71,30 @@
           </div>
 
           <!-- Name -->
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="profile-first-name" class="block text-sm font-medium text-gray-700 mb-1">
                 First Name *
               </label>
               <input
+                id="profile-first-name"
                 v-model="profile.first_name"
                 type="text"
                 required
+                aria-required="true"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="profile-last-name" class="block text-sm font-medium text-gray-700 mb-1">
                 Last Name *
               </label>
               <input
+                id="profile-last-name"
                 v-model="profile.last_name"
                 type="text"
                 required
+                aria-required="true"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
@@ -98,13 +102,15 @@
 
           <!-- Email (with password verification if changed) -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="profile-email" class="block text-sm font-medium text-gray-700 mb-1">
               Email Address *
             </label>
             <input
+              id="profile-email"
               v-model="profile.email"
               type="email"
               required
+              aria-required="true"
               @input="emailChanged = profile.email !== originalEmail"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
@@ -126,22 +132,24 @@
           </div>
 
           <!-- Phone and Title -->
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="profile-phone" class="block text-sm font-medium text-gray-700 mb-1">
                 Phone
               </label>
               <input
+                id="profile-phone"
                 v-model="profile.phone"
                 type="tel"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="profile-title" class="block text-sm font-medium text-gray-700 mb-1">
                 Job Title
               </label>
               <input
+                id="profile-title"
                 v-model="profile.title"
                 type="text"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -151,10 +159,11 @@
 
           <!-- Bio -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="profile-bio" class="block text-sm font-medium text-gray-700 mb-1">
               Bio
             </label>
             <textarea
+              id="profile-bio"
               v-model="profile.bio"
               rows="3"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -187,7 +196,7 @@
             <button
               type="submit"
               :disabled="savingProfile"
-              class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
             >
               {{ savingProfile ? 'Saving...' : 'Save Profile' }}
             </button>
@@ -197,23 +206,25 @@
 
       <!-- Change Password Card -->
       <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
           <h2 class="text-lg font-semibold text-gray-900">Change Password</h2>
           <p class="text-sm text-gray-500 mt-1">
             Update your password to keep your account secure
           </p>
         </div>
 
-        <form @submit.prevent="changePassword" class="px-6 py-6 space-y-4">
+        <form @submit.prevent="changePassword" class="px-4 sm:px-6 py-6 space-y-4">
           <!-- Current Password -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="current-password" class="block text-sm font-medium text-gray-700 mb-1">
               Current Password *
             </label>
             <input
+              id="current-password"
               v-model="passwordForm.current_password"
               type="password"
               required
+              aria-required="true"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               :class="{ 'border-red-500': passwordError }"
             />
@@ -221,13 +232,15 @@
 
           <!-- New Password -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="new-password" class="block text-sm font-medium text-gray-700 mb-1">
               New Password *
             </label>
             <input
+              id="new-password"
               v-model="passwordForm.new_password"
               type="password"
               required
+              aria-required="true"
               minlength="8"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
@@ -238,13 +251,15 @@
 
           <!-- Confirm New Password -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-1">
               Confirm New Password *
             </label>
             <input
+              id="confirm-password"
               v-model="passwordForm.confirm_password"
               type="password"
               required
+              aria-required="true"
               minlength="8"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               :class="{ 'border-red-500': passwordMismatch }"
@@ -255,12 +270,12 @@
           </div>
 
           <!-- Password Error -->
-          <div v-if="passwordError" class="bg-red-50 border border-red-200 rounded p-3">
+          <div v-if="passwordError" role="alert" aria-live="assertive" class="bg-red-50 border border-red-200 rounded p-3">
             <p class="text-sm text-red-800">{{ passwordError }}</p>
           </div>
 
           <!-- Password Success -->
-          <div v-if="passwordSuccess" class="bg-green-50 border border-green-200 rounded p-3">
+          <div v-if="passwordSuccess" role="status" aria-live="polite" class="bg-green-50 border border-green-200 rounded p-3">
             <p class="text-sm text-green-800">&#10003; {{ passwordSuccess }}</p>
           </div>
 
@@ -269,7 +284,7 @@
             <button
               type="submit"
               :disabled="changingPassword || passwordMismatch"
-              class="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50"
             >
               {{ changingPassword ? 'Changing...' : 'Change Password' }}
             </button>

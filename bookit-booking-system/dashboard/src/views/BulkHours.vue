@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6 max-w-6xl mx-auto">
+  <div class="p-4 sm:p-6 max-w-6xl mx-auto">
     <!-- Header -->
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-gray-900">Bulk Working Hours</h1>
@@ -18,7 +18,7 @@
 
     <!-- Staff Selection Card -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-      <div class="px-6 py-4 border-b border-gray-200">
+      <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-lg font-semibold text-gray-900">Select Staff Members</h2>
@@ -37,7 +37,7 @@
         <p class="mt-2 text-sm text-gray-600">Loading staff...</p>
       </div>
 
-      <div v-else class="px-6 py-4">
+      <div v-else class="px-4 sm:px-6 py-4">
         <!-- Select All -->
         <div class="mb-3 pb-3 border-b border-gray-200">
           <label class="flex items-center cursor-pointer">
@@ -54,32 +54,36 @@
         </div>
 
         <!-- Staff Checkboxes -->
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div class="space-y-1">
           <label
             v-for="staff in staffList"
             :key="staff.id"
-            class="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded"
+            class="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200 transition-colors"
           >
             <input
               type="checkbox"
               :value="staff.id"
               v-model="selectedStaffIds"
-              class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+              class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 flex-shrink-0"
             />
-            <div class="ml-2 flex items-center gap-2">
-              <div
+            <div class="flex-shrink-0">
+              <img
                 v-if="staff.photo_url"
-                class="w-8 h-8 rounded-full bg-cover bg-center"
-                :style="{ backgroundImage: `url(${staff.photo_url})` }"
-              ></div>
+                :src="staff.photo_url"
+                :alt="staff.full_name"
+                class="w-10 h-10 rounded-full object-cover"
+              />
               <div
                 v-else
-                class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold"
+                class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold"
                 :style="{ backgroundColor: getColorForInitials(staff.full_name) }"
               >
                 {{ getInitials(staff.full_name) }}
               </div>
-              <span class="text-sm text-gray-900">{{ staff.full_name }}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-900 truncate">{{ staff.full_name }}</p>
+              <p v-if="staff.title" class="text-xs text-gray-500 truncate">{{ staff.title }}</p>
             </div>
           </label>
         </div>
@@ -93,16 +97,16 @@
     <!-- Operation Selection -->
     <div v-if="selectedStaffIds.length > 0" class="space-y-6">
       <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
           <h2 class="text-lg font-semibold text-gray-900">Bulk Operations</h2>
           <p class="text-sm text-gray-500 mt-1">
             Choose an operation to apply to {{ selectedStaffIds.length }} selected staff
           </p>
         </div>
 
-        <div class="p-6 space-y-4">
+        <div class="p-4 sm:p-6 space-y-4">
           <!-- Operation Type Selection -->
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               @click="operationType = 'exception'"
               class="p-4 border-2 rounded-lg text-left transition-all"
@@ -161,7 +165,7 @@
 
               <!-- Times (if working) -->
               <div v-if="exceptionForm.is_working">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Start Time *</label>
                     <input
@@ -194,7 +198,7 @@
 
               <!-- Break Times (if working) -->
               <div v-if="exceptionForm.is_working">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Break Start</label>
                     <input
@@ -279,7 +283,7 @@
               </div>
 
               <div v-if="updateFields.working_hours">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Start Time *</label>
                     <input
@@ -311,7 +315,7 @@
               </div>
 
               <div v-if="updateFields.break_times">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Break Start</label>
                     <input
@@ -347,7 +351,7 @@
             <button
               @click="previewChanges"
               :disabled="!canPreview"
-              class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Preview Changes
             </button>
@@ -364,7 +368,7 @@
     >
       <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
         <!-- Modal Header -->
-        <div class="px-6 py-4 border-b border-gray-200">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900">Preview Changes</h3>
             <button
@@ -379,7 +383,7 @@
         </div>
 
         <!-- Modal Body -->
-        <div class="px-6 py-4 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <div class="px-4 sm:px-6 py-4 overflow-y-auto max-h-[calc(90vh-140px)]">
           <div v-if="checkingConflicts" class="text-center py-8">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             <p class="mt-2 text-sm text-gray-600">Checking for conflicts...</p>
@@ -484,20 +488,22 @@
         </div>
 
         <!-- Modal Footer -->
-        <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
-          <button
-            @click="showPreview = false"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            @click="applyChanges"
-            :disabled="applying"
-            class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
-          >
-            {{ applying ? 'Applying...' : 'Apply Changes' }}
-          </button>
+        <div class="px-4 sm:px-6 py-4 border-t border-gray-200">
+          <div class="flex flex-col-reverse sm:flex-row justify-end gap-2">
+            <button
+              @click="showPreview = false"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              @click="applyChanges"
+              :disabled="applying"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+            >
+              {{ applying ? 'Applying...' : 'Apply Changes' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>

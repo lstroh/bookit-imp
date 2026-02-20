@@ -1,32 +1,41 @@
 <template>
-  <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+  <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click.self="$emit('close')">
+    <div
+      ref="modalRef"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="staff-modal-title"
+      class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+    >
       <!-- Header -->
-      <div class="px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+      <div class="px-4 sm:px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
         <div class="flex items-center justify-between">
-          <h2 class="text-xl font-semibold text-gray-900">
+          <h2 id="staff-modal-title" class="text-xl font-semibold text-gray-900">
             {{ isEditing ? 'Edit Staff Member' : 'Add New Staff Member' }}
           </h2>
           <button
             @click="$emit('close')"
-            class="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+            class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+            aria-label="Close dialog"
           >
-            &times;
+            <svg aria-hidden="true" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
       </div>
 
       <!-- Loading Details -->
-      <div v-if="loadingDetails" class="px-6 py-12 text-center">
+      <div v-if="loadingDetails" class="px-4 sm:px-6 py-12 text-center">
         <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
         <p class="mt-2 text-sm text-gray-600">Loading staff details...</p>
       </div>
 
       <template v-else>
         <!-- Body -->
-        <form @submit.prevent="saveStaff" class="px-6 py-6 space-y-6">
+        <form @submit.prevent="saveStaff" class="px-4 sm:px-6 py-6 space-y-6">
           <!-- Error Message -->
-          <div v-if="errorMessage" class="bg-red-50 border border-red-200 rounded-lg p-3">
+          <div v-if="errorMessage" role="alert" aria-live="assertive" class="bg-red-50 border border-red-200 rounded-lg p-3">
             <p class="text-sm text-red-800">{{ errorMessage }}</p>
           </div>
 
@@ -75,27 +84,31 @@
           </div>
 
           <!-- Name -->
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="staff-first-name" class="block text-sm font-medium text-gray-700 mb-1">
                 First Name *
               </label>
               <input
+                id="staff-first-name"
                 v-model="formData.first_name"
                 type="text"
                 required
+                aria-required="true"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="John"
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="staff-last-name" class="block text-sm font-medium text-gray-700 mb-1">
                 Last Name *
               </label>
               <input
+                id="staff-last-name"
                 v-model="formData.last_name"
                 type="text"
                 required
+                aria-required="true"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Doe"
               />
@@ -103,27 +116,31 @@
           </div>
 
           <!-- Email and Password -->
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="staff-email" class="block text-sm font-medium text-gray-700 mb-1">
                 Email *
               </label>
               <input
+                id="staff-email"
                 v-model="formData.email"
                 type="email"
                 required
+                aria-required="true"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="john@example.com"
               />
             </div>
             <div v-if="!isEditing">
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="staff-password" class="block text-sm font-medium text-gray-700 mb-1">
                 Password *
               </label>
               <input
+                id="staff-password"
                 v-model="formData.password"
                 type="password"
                 :required="!isEditing"
+                aria-required="true"
                 minlength="8"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Min 8 characters"
@@ -200,12 +217,13 @@
           </div>
 
           <!-- Phone and Title -->
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="staff-phone" class="block text-sm font-medium text-gray-700 mb-1">
                 Phone
               </label>
               <input
+                id="staff-phone"
                 v-model="formData.phone"
                 type="tel"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -213,10 +231,11 @@
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="staff-title" class="block text-sm font-medium text-gray-700 mb-1">
                 Job Title
               </label>
               <input
+                id="staff-title"
                 v-model="formData.title"
                 type="text"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -227,10 +246,11 @@
 
           <!-- Bio -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="staff-bio" class="block text-sm font-medium text-gray-700 mb-1">
               Bio
             </label>
             <textarea
+              id="staff-bio"
               v-model="formData.bio"
               rows="3"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -305,14 +325,16 @@
           </div>
 
           <!-- Role, Status, and Display Order -->
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="staff-role" class="block text-sm font-medium text-gray-700 mb-1">
                 Role *
               </label>
               <select
+                id="staff-role"
                 v-model="formData.role"
                 required
+                aria-required="true"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="staff">Staff</option>
@@ -320,10 +342,11 @@
               </select>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="staff-display-order" class="block text-sm font-medium text-gray-700 mb-1">
                 Display Order
               </label>
               <input
+                id="staff-display-order"
                 v-model.number="formData.display_order"
                 type="number"
                 min="0"
@@ -346,10 +369,11 @@
 
           <!-- Google Calendar ID -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="staff-gcal-id" class="block text-sm font-medium text-gray-700 mb-1">
               Google Calendar ID (Optional)
             </label>
             <input
+              id="staff-gcal-id"
               v-model="formData.google_calendar_id"
               type="text"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -400,21 +424,23 @@
         </form>
 
         <!-- Footer -->
-        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2 sticky bottom-0">
-          <button
-            @click="$emit('close')"
-            :disabled="saving"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            @click="saveStaff"
-            :disabled="saving || !isValid"
-            class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {{ saving ? 'Saving...' : (isEditing ? 'Update Staff Member' : 'Create Staff Member') }}
-          </button>
+        <div class="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 sticky bottom-0">
+          <div class="flex flex-col-reverse sm:flex-row justify-end gap-2">
+            <button
+              @click="$emit('close')"
+              :disabled="saving"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              @click="saveStaff"
+              :disabled="saving || !isValid"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {{ saving ? 'Saving...' : (isEditing ? 'Update Staff Member' : 'Create Staff Member') }}
+            </button>
+          </div>
         </div>
       </template>
     </div>
@@ -422,10 +448,12 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useApi } from '../composables/useApi'
+import { useToast } from '../composables/useToast'
 
 const api = useApi()
+const { success: toastSuccess, error: toastError } = useToast()
 
 const props = defineProps({
   staffMember: {
@@ -435,6 +463,46 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'saved'])
+
+const modalRef = ref(null)
+const previousActiveElement = ref(null)
+
+const getFocusableElements = () => {
+  if (!modalRef.value) return []
+  return Array.from(
+    modalRef.value.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  )
+}
+
+const trapFocus = (e) => {
+  if (!modalRef.value) return
+
+  const focusable = getFocusableElements()
+  if (focusable.length === 0) return
+
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+
+  if (e.key === 'Tab') {
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        last.focus()
+        e.preventDefault()
+      }
+    } else {
+      if (document.activeElement === last) {
+        first.focus()
+        e.preventDefault()
+      }
+    }
+  }
+
+  if (e.key === 'Escape') {
+    emit('close')
+  }
+}
 
 // State
 const saving = ref(false)
@@ -619,7 +687,7 @@ const resetPassword = async () => {
     })
 
     if (response.data.success) {
-      alert('Password reset successfully!' + (sendPasswordEmail.value ? ' Email sent to staff member.' : ''))
+      toastSuccess('Password reset successfully!' + (sendPasswordEmail.value ? ' Email sent.' : ''))
       showPasswordReset.value = false
       newPassword.value = ''
     } else {
@@ -627,7 +695,7 @@ const resetPassword = async () => {
     }
   } catch (err) {
     console.error('Error resetting password:', err)
-    alert(`Error: ${err.message}`)
+    toastError(err.message || 'Failed to reset password')
   } finally {
     resettingPassword.value = false
   }
@@ -690,12 +758,28 @@ const saveStaff = async () => {
   }
 }
 
-// Initialize: load services and staff details if editing.
+// Initialize: load services, staff details, and set up focus trap.
 onMounted(async () => {
+  previousActiveElement.value = document.activeElement
+  document.addEventListener('keydown', trapFocus)
+
+  await nextTick()
+  const focusable = getFocusableElements()
+  if (focusable.length > 0) {
+    focusable[0].focus()
+  }
+
   await loadServices()
 
   if (props.staffMember) {
     await loadStaffDetails(props.staffMember.id)
+  }
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', trapFocus)
+  if (previousActiveElement.value && previousActiveElement.value.focus) {
+    previousActiveElement.value.focus()
   }
 })
 </script>

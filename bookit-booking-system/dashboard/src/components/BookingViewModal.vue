@@ -1,12 +1,18 @@
 <template>
   <!-- Modal Backdrop -->
-  <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+  <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click.self="$emit('close')">
     <!-- Modal Content -->
-    <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+    <div
+      ref="modalRef"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="booking-view-modal-title"
+      class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+    >
       <!-- Header -->
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
+      <div class="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
         <div>
-          <h2 class="text-xl font-semibold text-gray-900">
+          <h2 id="booking-view-modal-title" class="text-xl font-semibold text-gray-900">
             {{ editMode ? 'Edit Booking' : 'Booking Details' }}
           </h2>
           <p class="text-sm text-gray-500 mt-1">
@@ -23,15 +29,18 @@
           </button>
           <button
             @click="$emit('close')"
-            class="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+            class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+            aria-label="Close dialog"
           >
-            &times;
+            <svg aria-hidden="true" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
       </div>
 
       <!-- Body -->
-      <div class="px-6 py-6">
+      <div class="px-4 sm:px-6 py-6">
         <!-- Loading State -->
         <div v-if="loading" class="text-center py-12">
           <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -56,7 +65,7 @@
             <!-- Customer Information -->
             <div class="bg-gray-50 rounded-lg p-4">
               <h3 class="text-sm font-semibold text-gray-900 mb-3">Customer Information</h3>
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label class="text-xs text-gray-600">Name</label>
                   <p class="text-sm font-medium text-gray-900">{{ booking.customer_name }}</p>
@@ -73,7 +82,7 @@
             </div>
 
             <!-- Service & Staff -->
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div class="border border-gray-200 rounded-lg p-4">
                 <label class="text-xs text-gray-600">Service</label>
                 <p class="text-sm font-medium text-gray-900 mt-1">{{ booking.service_name }}</p>
@@ -97,7 +106,7 @@
             </div>
 
             <!-- Status & Payment -->
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div class="border border-gray-200 rounded-lg p-4">
                 <label class="text-xs text-gray-600">Status</label>
                 <div class="mt-2">
@@ -211,7 +220,7 @@
             </div>
 
             <!-- Date & Time Selection -->
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
                   Date *
@@ -300,7 +309,7 @@
             </div>
 
             <!-- Payment Method & Amount -->
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
                   Payment Method *
@@ -379,32 +388,32 @@
       </div>
 
       <!-- Footer -->
-      <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 sticky bottom-0">
-        <div class="flex justify-between items-center">
+      <div class="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 sticky bottom-0">
+        <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
           <!-- Cancel Booking Button (left side) -->
           <button
             v-if="!editMode && canEdit && booking?.status !== 'cancelled'"
             @click="showCancelModal = true"
-            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+            class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
           >
             Cancel Booking
           </button>
-          <div v-else></div>
+          <div v-else class="hidden sm:block"></div>
 
           <!-- Action Buttons (right side) -->
-          <div class="flex gap-2">
+          <div class="flex flex-col-reverse sm:flex-row gap-2">
             <button
               v-if="editMode"
               @click="cancelEdit"
               :disabled="saving"
-              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               v-if="!editMode"
               @click="$emit('close')"
-              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               Close
             </button>
@@ -412,7 +421,7 @@
               v-if="editMode"
               @click="saveChanges"
               :disabled="saving || !canSave"
-              class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {{ saving ? 'Saving...' : 'Save Changes' }}
             </button>
@@ -423,7 +432,7 @@
 
     <!-- Cancel Booking Modal -->
     <div v-if="showCancelModal" class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Cancel Booking</h3>
 
         <p class="text-sm text-gray-600 mb-4">
@@ -455,18 +464,18 @@
           </label>
         </div>
 
-        <div class="flex justify-end gap-2">
+        <div class="flex flex-col-reverse sm:flex-row justify-end gap-2">
           <button
             @click="showCancelModal = false; cancellationReason = ''"
             :disabled="cancelling"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             Keep Booking
           </button>
           <button
             @click="confirmCancel"
             :disabled="cancelling"
-            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+            class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
           >
             {{ cancelling ? 'Cancelling...' : 'Yes, Cancel Booking' }}
           </button>
@@ -476,7 +485,7 @@
 
     <!-- Payment Warning Modal -->
     <div v-if="showPaymentWarning" class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6">
         <div class="flex items-start mb-4">
           <span class="text-3xl mr-3">&#x26A0;&#xFE0F;</span>
           <div>
@@ -497,17 +506,17 @@
           </p>
         </div>
 
-        <div class="flex justify-end gap-2">
+        <div class="flex flex-col-reverse sm:flex-row justify-end gap-2">
           <button
             @click="showPaymentWarning = false"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             Go Back to Edit
           </button>
           <button
             @click="forceSaveWithPaymentIssue"
             :disabled="saving"
-            class="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50"
+            class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50"
           >
             {{ saving ? 'Saving...' : 'Save Anyway' }}
           </button>
@@ -518,10 +527,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useApi } from '../composables/useApi'
+import { useToast } from '../composables/useToast'
 
 const api = useApi()
+const { error: toastError } = useToast()
 
 const props = defineProps({
   bookingId: {
@@ -531,6 +542,46 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'updated', 'cancelled'])
+
+const modalRef = ref(null)
+const previousActiveElement = ref(null)
+
+const getFocusableElements = () => {
+  if (!modalRef.value) return []
+  return Array.from(
+    modalRef.value.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  )
+}
+
+const trapFocus = (e) => {
+  if (!modalRef.value) return
+
+  const focusable = getFocusableElements()
+  if (focusable.length === 0) return
+
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+
+  if (e.key === 'Tab') {
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        last.focus()
+        e.preventDefault()
+      }
+    } else {
+      if (document.activeElement === last) {
+        first.focus()
+        e.preventDefault()
+      }
+    }
+  }
+
+  if (e.key === 'Escape') {
+    emit('close')
+  }
+}
 
 // Get current user role.
 const currentUser = window.BOOKIT_DASHBOARD.staff
@@ -819,7 +870,7 @@ const executeSave = async () => {
     }
   } catch (err) {
     console.error('Error updating booking:', err)
-    alert(`Error updating booking: ${err.message}`)
+    toastError(`Error updating booking: ${err.message}`)
   } finally {
     saving.value = false
   }
@@ -858,7 +909,7 @@ const confirmCancel = async () => {
     }
   } catch (err) {
     console.error('Error cancelling booking:', err)
-    alert(`Error cancelling booking: ${err.message}`)
+    toastError(`Error cancelling booking: ${err.message}`)
   } finally {
     cancelling.value = false
   }
@@ -964,8 +1015,24 @@ const formatPrice = (price) => {
   return isNaN(num) ? '0.00' : num.toFixed(2)
 }
 
-// Lifecycle.
-onMounted(() => {
+// Lifecycle: load booking and set up focus trap.
+onMounted(async () => {
+  previousActiveElement.value = document.activeElement
+  document.addEventListener('keydown', trapFocus)
+
+  await nextTick()
+  const focusable = getFocusableElements()
+  if (focusable.length > 0) {
+    focusable[0].focus()
+  }
+
   loadBooking()
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', trapFocus)
+  if (previousActiveElement.value && previousActiveElement.value.focus) {
+    previousActiveElement.value.focus()
+  }
 })
 </script>

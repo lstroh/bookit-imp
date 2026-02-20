@@ -20,10 +20,11 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Search -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label for="cat-filter-search" class="block text-sm font-medium text-gray-700 mb-1">
             Search
           </label>
           <input
+            id="cat-filter-search"
             v-model="filters.search"
             type="text"
             placeholder="Search categories..."
@@ -34,10 +35,11 @@
 
         <!-- Status Filter -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label for="cat-filter-status" class="block text-sm font-medium text-gray-700 mb-1">
             Status
           </label>
           <select
+            id="cat-filter-status"
             v-model="filters.status"
             @change="loadCategories"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -51,48 +53,52 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading" class="text-center py-12 bg-white rounded-lg shadow">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-      <p class="mt-2 text-sm text-gray-600">Loading categories...</p>
+    <div v-if="loading" class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <LoadingSpinner size="lg" message="Loading categories..." full-height />
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="categories.length === 0" class="bg-white rounded-lg shadow p-12 text-center">
-      <div class="text-6xl mb-4">&#x1F3F7;&#xFE0F;</div>
-      <h3 class="text-lg font-medium text-gray-900 mb-2">No categories found</h3>
-      <p class="text-sm text-gray-600 mb-4">Get started by creating your first category.</p>
-      <button
-        v-if="isAdmin"
-        @click="openCreateModal"
-        class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+    <div v-else-if="categories.length === 0" class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <EmptyState
+        icon="📁"
+        title="No categories yet"
+        description="Organize your services by creating categories. This helps customers find what they're looking for."
       >
-        + New Category
-      </button>
-      <p v-else class="mt-2 text-sm text-gray-500">
-        Contact your administrator to add categories.
-      </p>
+        <template #action>
+          <button
+            v-if="isAdmin"
+            @click="openCreateModal"
+            class="px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            + Add First Category
+          </button>
+          <p v-else class="text-sm text-gray-500">
+            Contact your administrator to add categories.
+          </p>
+        </template>
+      </EmptyState>
     </div>
 
     <!-- Categories Table -->
     <div v-else class="bg-white rounded-lg shadow overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
+        <table id="categories-table" class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="w-12 px-3 py-3"></th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="w-12 px-3 py-3"><span class="sr-only">Reorder</span></th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Category
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Description
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Services
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -101,13 +107,14 @@
             <tr
               v-for="category in categories"
               :key="category.id"
+              :data-category-id="category.id"
               class="hover:bg-gray-50 transition-colors"
               :class="{ 'opacity-50': !category.is_active }"
             >
               <!-- Drag Handle -->
               <td class="px-3 py-4">
                 <span
-                  class="cursor-move text-gray-400 hover:text-gray-600 select-none"
+                  class="drag-handle cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 select-none touch-none"
                   title="Drag to reorder"
                 >&#x2807;&#x2807;</span>
               </td>
@@ -174,12 +181,14 @@
     </div>
 
     <!-- Category Form Modal -->
-    <CategoryFormModal
-      v-if="showFormModal"
-      :category="editingCategory"
-      @close="closeFormModal"
-      @saved="handleCategorySaved"
-    />
+    <Transition name="fade">
+      <CategoryFormModal
+        v-if="showFormModal"
+        :category="editingCategory"
+        @close="closeFormModal"
+        @saved="handleCategorySaved"
+      />
+    </Transition>
 
     <!-- Delete Confirmation Modal -->
     <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -228,11 +237,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import Sortable from 'sortablejs'
 import { useApi } from '../composables/useApi'
+import { useToast } from '../composables/useToast'
 import CategoryFormModal from '../components/CategoryFormModal.vue'
+import LoadingSpinner from '../components/LoadingSpinner.vue'
+import EmptyState from '../components/EmptyState.vue'
 
 const api = useApi()
+const { success: toastSuccess } = useToast()
 
 // State
 const loading = ref(true)
@@ -254,6 +268,47 @@ const deleteError = ref('')
 
 // Debounce timer
 let searchTimeout = null
+
+// Drag & drop reorder
+let sortableInstance = null
+
+const initCategoriesSortable = async () => {
+  await nextTick()
+  const tbody = document.querySelector('#categories-table tbody')
+  if (!tbody || sortableInstance) return
+
+  sortableInstance = Sortable.create(tbody, {
+    animation: 150,
+    handle: '.drag-handle',
+    ghostClass: 'opacity-40',
+    dragClass: 'opacity-0',
+    onEnd: async (evt) => {
+      const { oldIndex, newIndex } = evt
+      if (oldIndex === newIndex) return
+
+      const item = categories.value.splice(oldIndex, 1)[0]
+      categories.value.splice(newIndex, 0, item)
+
+      const data = categories.value.map((c, i) => ({ id: c.id, display_order: i }))
+      try {
+        await api.post('categories/reorder', { categories: data })
+      } catch (err) {
+        console.error('Failed to save categories order:', err)
+        loadCategories()
+      }
+    }
+  })
+}
+
+watch(loading, async (isLoading) => {
+  if (!isLoading) {
+    if (sortableInstance) {
+      sortableInstance.destroy()
+      sortableInstance = null
+    }
+    await initCategoriesSortable()
+  }
+})
 
 // Computed
 const isAdmin = computed(() => {
@@ -309,6 +364,7 @@ const closeFormModal = () => {
 
 const handleCategorySaved = () => {
   closeFormModal()
+  toastSuccess('Category saved successfully')
   loadCategories()
 }
 
@@ -330,6 +386,7 @@ const deleteCategory = async () => {
     if (response.data.success) {
       showDeleteModal.value = false
       deletingCategory.value = null
+      toastSuccess('Category deleted successfully')
       loadCategories()
     } else {
       deleteError.value = response.data.message || 'Failed to delete category'

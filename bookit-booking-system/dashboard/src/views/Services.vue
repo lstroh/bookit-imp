@@ -20,10 +20,11 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Search -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label for="service-filter-search" class="block text-sm font-medium text-gray-700 mb-1">
             Search
           </label>
           <input
+            id="service-filter-search"
             v-model="filters.search"
             type="text"
             placeholder="Search services..."
@@ -34,10 +35,11 @@
 
         <!-- Category Filter -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label for="service-filter-category" class="block text-sm font-medium text-gray-700 mb-1">
             Category
           </label>
           <select
+            id="service-filter-category"
             v-model="filters.category_id"
             @change="loadServices(1)"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -55,10 +57,11 @@
 
         <!-- Status Filter -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label for="service-filter-status" class="block text-sm font-medium text-gray-700 mb-1">
             Status
           </label>
           <select
+            id="service-filter-status"
             v-model="filters.status"
             @change="loadServices(1)"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -72,57 +75,61 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading" class="text-center py-12 bg-white rounded-lg shadow">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-      <p class="mt-2 text-sm text-gray-600">Loading services...</p>
+    <div v-if="loading" class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <LoadingSpinner size="lg" message="Loading services..." full-height />
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="services.length === 0" class="bg-white rounded-lg shadow p-12 text-center">
-      <div class="text-6xl mb-4">&#x2702;&#xFE0F;</div>
-      <h3 class="text-lg font-medium text-gray-900 mb-2">No services found</h3>
-      <p class="text-sm text-gray-600 mb-4">Get started by creating a new service.</p>
-      <button
-        v-if="isAdmin"
-        @click="openCreateModal"
-        class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+    <div v-else-if="services.length === 0" class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <EmptyState
+        icon="💼"
+        title="No services yet"
+        description="Create your first service to start accepting bookings. Services define what you offer to customers."
       >
-        + New Service
-      </button>
-      <p v-else class="mt-2 text-sm text-gray-500">
-        Contact your administrator to add services.
-      </p>
+        <template #action>
+          <button
+            v-if="isAdmin"
+            @click="openCreateModal"
+            class="px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            + Add First Service
+          </button>
+          <p v-else class="text-sm text-gray-500">
+            Contact your administrator to add services.
+          </p>
+        </template>
+      </EmptyState>
     </div>
 
     <!-- Services Table -->
     <div v-else class="bg-white rounded-lg shadow overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
+        <table id="services-table" class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="w-12 px-3 py-3"></th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="w-12 px-3 py-3"><span class="sr-only">Reorder</span></th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Service
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Categories
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Duration
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Price
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Deposit
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Buffer
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -131,13 +138,14 @@
             <tr
               v-for="service in services"
               :key="service.id"
+              :data-service-id="service.id"
               class="hover:bg-gray-50 transition-colors"
               :class="{ 'opacity-50': !service.is_active }"
             >
               <!-- Drag Handle -->
               <td class="px-3 py-4">
                 <span
-                  class="cursor-move text-gray-400 hover:text-gray-600 select-none"
+                  class="drag-handle cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 select-none touch-none"
                   title="Drag to reorder"
                 >&#x2807;&#x2807;</span>
               </td>
@@ -285,13 +293,15 @@
     </div>
 
     <!-- Service Form Modal -->
-    <ServiceFormModal
-      v-if="showFormModal"
-      :service="editingService"
-      :categories="categories"
-      @close="closeFormModal"
-      @saved="handleServiceSaved"
-    />
+    <Transition name="fade">
+      <ServiceFormModal
+        v-if="showFormModal"
+        :service="editingService"
+        :categories="categories"
+        @close="closeFormModal"
+        @saved="handleServiceSaved"
+      />
+    </Transition>
 
     <!-- Delete Confirmation Modal -->
     <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -334,11 +344,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import Sortable from 'sortablejs'
 import { useApi } from '../composables/useApi'
+import { useToast } from '../composables/useToast'
 import ServiceFormModal from '../components/ServiceFormModal.vue'
+import LoadingSpinner from '../components/LoadingSpinner.vue'
+import EmptyState from '../components/EmptyState.vue'
 
 const api = useApi()
+const { success: toastSuccess } = useToast()
 
 // State
 const loading = ref(true)
@@ -368,6 +383,47 @@ const deleteError = ref('')
 
 // Debounce timer
 let searchTimeout = null
+
+// Drag & drop reorder
+let sortableInstance = null
+
+const initServicesSortable = async () => {
+  await nextTick()
+  const tbody = document.querySelector('#services-table tbody')
+  if (!tbody || sortableInstance) return
+
+  sortableInstance = Sortable.create(tbody, {
+    animation: 150,
+    handle: '.drag-handle',
+    ghostClass: 'opacity-40',
+    dragClass: 'opacity-0',
+    onEnd: async (evt) => {
+      const { oldIndex, newIndex } = evt
+      if (oldIndex === newIndex) return
+
+      const item = services.value.splice(oldIndex, 1)[0]
+      services.value.splice(newIndex, 0, item)
+
+      const data = services.value.map((s, i) => ({ id: s.id, display_order: i }))
+      try {
+        await api.post('services/reorder', { services: data })
+      } catch (err) {
+        console.error('Failed to save services order:', err)
+        loadServices(pagination.value.current_page)
+      }
+    }
+  })
+}
+
+watch(loading, async (isLoading) => {
+  if (!isLoading) {
+    if (sortableInstance) {
+      sortableInstance.destroy()
+      sortableInstance = null
+    }
+    await initServicesSortable()
+  }
+})
 
 // Computed
 const resultsStart = computed(() => {
@@ -481,6 +537,7 @@ const closeFormModal = () => {
 
 const handleServiceSaved = () => {
   closeFormModal()
+  toastSuccess('Service saved successfully')
   loadServices(pagination.value.current_page)
 }
 
@@ -502,6 +559,7 @@ const deleteService = async () => {
     if (response.data.success) {
       showDeleteModal.value = false
       deletingService.value = null
+      toastSuccess('Service deleted successfully')
       loadServices(pagination.value.current_page)
     } else {
       deleteError.value = response.data.message || 'Failed to delete service'

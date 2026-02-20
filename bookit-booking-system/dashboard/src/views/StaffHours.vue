@@ -1,14 +1,18 @@
 <template>
-  <div class="p-6">
+  <div class="p-4 sm:p-6">
     <!-- Header -->
-    <div class="flex items-center mb-6">
+    <div class="mb-4 lg:mb-6">
       <button
         @click="goBack"
-        class="mr-4 text-gray-500 hover:text-gray-700 flex items-center text-sm"
+        class="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-3"
       >
-        &larr; Back to Staff
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Staff
       </button>
-      <div class="flex-1">
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div class="flex items-center gap-3">
           <!-- Staff Avatar -->
           <div class="flex-shrink-0">
@@ -26,11 +30,11 @@
               {{ getInitials(staff.full_name) }}
             </div>
           </div>
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900">
+          <div class="min-w-0">
+            <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
               Working Hours
             </h1>
-            <p class="text-sm text-gray-600">
+            <p class="text-sm text-gray-600 truncate">
               {{ staff?.full_name || 'Loading...' }}
               <span v-if="staff?.title" class="text-gray-400">
                 &middot; {{ staff.title }}
@@ -38,20 +42,20 @@
             </p>
           </div>
         </div>
-      </div>
-      <div class="flex items-center gap-2">
-        <span
-          class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-xs cursor-help font-bold"
-          @mouseenter="showTooltip($event, 'Saves the weekly recurring schedule. Date exceptions are saved immediately when added and do not require clicking this button.')"
-          @mouseleave="hideTooltip"
-        >?</span>
-        <button
-          @click="saveSchedule"
-          :disabled="saving"
-          class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
-        >
-          {{ saving ? 'Saving...' : 'Save Schedule' }}
-        </button>
+        <div class="flex items-center gap-2">
+          <span
+            class="hidden sm:inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-xs cursor-help font-bold"
+            @mouseenter="showTooltip($event, 'Saves the weekly recurring schedule. Date exceptions are saved immediately when added and do not require clicking this button.')"
+            @mouseleave="hideTooltip"
+          >?</span>
+          <button
+            @click="saveSchedule"
+            :disabled="saving"
+            class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+          >
+            {{ saving ? 'Saving...' : 'Save Schedule' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -72,9 +76,9 @@
 
       <!-- Weekly Schedule -->
       <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Weekly Schedule</h2>
-          <p class="text-sm text-gray-500 mt-1">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <h2 class="text-base sm:text-lg font-semibold text-gray-900">Weekly Schedule</h2>
+          <p class="text-xs sm:text-sm text-gray-500 mt-1">
             Set regular working hours for each day of the week.
             These repeat every week unless a seasonal date range is set.
           </p>
@@ -85,177 +89,165 @@
           <template v-for="day in days" :key="day.number">
             <div
               v-if="schedule[day.number]"
-              class="px-6 py-4"
+              class="px-4 sm:px-6 py-4"
               :class="{ 'bg-gray-50': !schedule[day.number]?.is_working }"
             >
-              <div class="flex items-start gap-4">
-                <!-- Day Toggle -->
-                <div class="flex items-center w-32 pt-1">
-                  <label class="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      v-model="schedule[day.number].is_working"
-                      @change="onDayToggle(day.number)"
-                      class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                    />
-                    <span
-                      class="ml-2 text-sm font-medium"
-                      :class="schedule[day.number]?.is_working ? 'text-gray-900' : 'text-gray-400'"
-                    >
-                      {{ day.name }}
-                    </span>
-                  </label>
-                </div>
+              <!-- Day Header -->
+              <div class="flex items-center justify-between">
+                <label class="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    v-model="schedule[day.number].is_working"
+                    @change="onDayToggle(day.number)"
+                    class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                  />
+                  <span
+                    class="ml-2 text-sm font-medium"
+                    :class="schedule[day.number]?.is_working ? 'text-gray-900' : 'text-gray-400'"
+                  >
+                    {{ day.name }}
+                  </span>
+                </label>
+                <span
+                  v-if="!schedule[day.number]?.is_working"
+                  class="text-xs font-medium text-gray-500 bg-gray-200 px-2 py-0.5 rounded"
+                >
+                  Day Off
+                </span>
+              </div>
 
-                <!-- Day Off Label -->
-                <div v-if="!schedule[day.number]?.is_working" class="flex-1 pt-1">
-                  <span class="text-sm text-gray-400">Day off</span>
-                </div>
-
-                <!-- Working Hours Config -->
-                <div v-else class="flex-1">
-                  <div class="flex flex-wrap items-center gap-3">
-                    <!-- Start Time -->
-                    <div class="flex items-center gap-2">
-                      <label
-                        class="text-xs text-gray-500 w-8 cursor-help flex items-center gap-0.5"
-                        @mouseenter="showTooltip($event, 'The time this staff member starts accepting bookings.')"
-                        @mouseleave="hideTooltip"
-                      >
-                        From
-                      </label>
+              <!-- Working Hours Details -->
+              <div v-if="schedule[day.number]?.is_working" class="mt-4 space-y-4">
+                <!-- Working Hours -->
+                <div>
+                  <label
+                    class="block text-xs font-medium text-gray-600 mb-2 cursor-help"
+                    @mouseenter="showTooltip($event, 'The time range this staff member accepts bookings.')"
+                    @mouseleave="hideTooltip"
+                  >Working Hours</label>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">From</label>
                       <input
                         type="time"
                         v-model="schedule[day.number].start_time"
-                        class="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       />
                     </div>
-
-                    <!-- End Time -->
-                    <div class="flex items-center gap-2">
-                      <label
-                        class="text-xs text-gray-500 w-6 cursor-help"
-                        @mouseenter="showTooltip($event, 'The time this staff member stops accepting bookings. The last available slot will end at or before this time.')"
-                        @mouseleave="hideTooltip"
-                      >
-                        To
-                      </label>
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">To</label>
                       <input
                         type="time"
                         v-model="schedule[day.number].end_time"
-                        class="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       />
                     </div>
-
-                    <!-- Break Divider -->
-                    <div class="w-px h-6 bg-gray-300"></div>
-
-                    <!-- Break Toggle -->
-                    <label class="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        v-model="schedule[day.number].has_break"
-                        class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                      />
-                      <span class="ml-1.5 text-xs text-gray-600 flex items-center gap-1">
-                        Break
-                        <span
-                          class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-300 text-gray-600 text-xs cursor-help font-bold leading-none"
-                          @mouseenter="showTooltip($event, 'A break is a non-bookable period during the working day. For example, a lunch break from 12:00\u201313:00. No bookings can start during this time.')"
-                          @mouseleave="hideTooltip"
-                        >?</span>
-                      </span>
-                    </label>
-
-                    <!-- Break Times -->
-                    <template v-if="schedule[day.number]?.has_break">
-                      <div class="flex items-center gap-2">
-                        <input
-                          type="time"
-                          v-model="schedule[day.number].break_start"
-                          class="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        />
-                        <span class="text-xs text-gray-500">to</span>
-                        <input
-                          type="time"
-                          v-model="schedule[day.number].break_end"
-                          class="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        />
-                      </div>
-                    </template>
-
-                    <!-- Seasonal Schedule Toggle -->
-                    <div class="w-px h-6 bg-gray-300"></div>
-
-                    <label class="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        v-model="schedule[day.number].has_seasonal"
-                        class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                      />
-                      <span class="ml-1.5 text-xs text-gray-600 flex items-center gap-1">
-                        Seasonal
-                        <span
-                          class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-300 text-gray-600 text-xs cursor-help font-bold leading-none"
-                          @mouseenter="showTooltip($event, 'Seasonal schedules are only active between two dates. Useful for summer hours, holiday periods, or temporary schedule changes. Outside these dates, this day follows no schedule (treated as day off).')"
-                          @mouseleave="hideTooltip"
-                        >?</span>
-                      </span>
-                    </label>
-
-                    <!-- Seasonal Date Range -->
-                    <template v-if="schedule[day.number]?.has_seasonal">
-                      <div class="flex items-center gap-2 mt-2 w-full ml-28">
-                        <label
-                          class="text-xs text-gray-500 cursor-help"
-                          @mouseenter="showTooltip($event, 'The first date this schedule is active. Before this date, this day is treated as a day off.')"
-                          @mouseleave="hideTooltip"
-                        >
-                          Valid from
-                        </label>
-                        <input
-                          type="date"
-                          v-model="schedule[day.number].valid_from"
-                          class="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
-                        />
-                        <label
-                          class="text-xs text-gray-500 cursor-help"
-                          @mouseenter="showTooltip($event, 'The last date this schedule is active. After this date, this day is treated as a day off.')"
-                          @mouseleave="hideTooltip"
-                        >
-                          until
-                        </label>
-                        <input
-                          type="date"
-                          v-model="schedule[day.number].valid_until"
-                          class="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
-                        />
-                      </div>
-                    </template>
                   </div>
-
-                  <!-- Validation Error -->
-                  <p
-                    v-if="validationErrors[day.number]"
-                    class="text-xs text-red-600 mt-1"
-                  >
-                    {{ validationErrors[day.number] }}
-                  </p>
                 </div>
+
+                <!-- Break -->
+                <div>
+                  <label class="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      v-model="schedule[day.number].has_break"
+                      class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span class="ml-1.5 text-xs text-gray-600 flex items-center gap-1">
+                      Break
+                      <span
+                        class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-300 text-gray-600 text-xs cursor-help font-bold leading-none"
+                        @mouseenter="showTooltip($event, 'A break is a non-bookable period during the working day. For example, a lunch break from 12:00\u201313:00. No bookings can start during this time.')"
+                        @mouseleave="hideTooltip"
+                      >?</span>
+                    </span>
+                  </label>
+                  <div v-if="schedule[day.number]?.has_break" class="mt-2 grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">Break Start</label>
+                      <input
+                        type="time"
+                        v-model="schedule[day.number].break_start"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">Break End</label>
+                      <input
+                        type="time"
+                        v-model="schedule[day.number].break_end"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Seasonal -->
+                <div>
+                  <label class="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      v-model="schedule[day.number].has_seasonal"
+                      class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span class="ml-1.5 text-xs text-gray-600 flex items-center gap-1">
+                      Seasonal
+                      <span
+                        class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-300 text-gray-600 text-xs cursor-help font-bold leading-none"
+                        @mouseenter="showTooltip($event, 'Seasonal schedules are only active between two dates. Useful for summer hours, holiday periods, or temporary schedule changes. Outside these dates, this day follows no schedule (treated as day off).')"
+                        @mouseleave="hideTooltip"
+                      >?</span>
+                    </span>
+                  </label>
+                  <div v-if="schedule[day.number]?.has_seasonal" class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label
+                        class="block text-xs text-gray-500 mb-1 cursor-help"
+                        @mouseenter="showTooltip($event, 'The first date this schedule is active. Before this date, this day is treated as a day off.')"
+                        @mouseleave="hideTooltip"
+                      >Valid from</label>
+                      <input
+                        type="date"
+                        v-model="schedule[day.number].valid_from"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        class="block text-xs text-gray-500 mb-1 cursor-help"
+                        @mouseenter="showTooltip($event, 'The last date this schedule is active. After this date, this day is treated as a day off.')"
+                        @mouseleave="hideTooltip"
+                      >Valid until</label>
+                      <input
+                        type="date"
+                        v-model="schedule[day.number].valid_until"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Validation Error -->
+                <p
+                  v-if="validationErrors[day.number]"
+                  class="text-xs text-red-600"
+                >
+                  {{ validationErrors[day.number] }}
+                </p>
               </div>
             </div>
           </template>
         </div>
 
         <!-- Save Button (bottom) -->
-        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
+        <div class="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
           <p class="text-xs text-gray-500">
             Changes are saved immediately when you click "Save Schedule"
           </p>
           <button
             @click="saveSchedule"
             :disabled="saving"
-            class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+            class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
           >
             {{ saving ? 'Saving...' : 'Save Schedule' }}
           </button>
@@ -264,24 +256,24 @@
 
       <!-- Date Exceptions -->
       <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <div class="flex items-center justify-between">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div class="flex items-center gap-2">
-                <h2 class="text-lg font-semibold text-gray-900">Date Exceptions</h2>
+                <h2 class="text-base sm:text-lg font-semibold text-gray-900">Date Exceptions</h2>
                 <span
-                  class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-300 text-gray-600 text-xs cursor-help font-bold"
+                  class="hidden sm:inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-300 text-gray-600 text-xs cursor-help font-bold"
                   @mouseenter="showTooltip($event, 'Date exceptions override the weekly schedule for a specific date. Use them for bank holidays, staff holidays, training days, or any day with different hours. Exceptions always take priority over the weekly schedule.')"
                   @mouseleave="hideTooltip"
                 >?</span>
               </div>
-              <p class="text-sm text-gray-500 mt-1">
+              <p class="text-xs sm:text-sm text-gray-500 mt-1">
                 Override working hours for specific dates. Exceptions always take priority over the weekly schedule.
               </p>
             </div>
             <button
               @click="showAddException = true"
-              class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700"
+              class="w-full sm:w-auto px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 flex-shrink-0"
             >
               + Add Exception
             </button>
@@ -289,72 +281,76 @@
         </div>
 
         <!-- Add Exception Form -->
-        <div v-if="showAddException" class="px-6 py-4 bg-blue-50 border-b border-blue-200">
+        <div v-if="showAddException" class="px-4 sm:px-6 py-4 bg-blue-50 border-b border-blue-200">
           <h3 class="text-sm font-medium text-gray-900 mb-3">Add Date Exception</h3>
-          <div class="flex flex-wrap items-end gap-3">
-            <!-- Date -->
-            <div>
-              <label class="block text-xs text-gray-600 mb-1">Date *</label>
-              <input
-                type="date"
-                v-model="newException.specific_date"
-                :min="today"
-                class="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
-
-            <!-- Type -->
-            <div>
-              <label class="flex items-center gap-1 text-xs text-gray-600 mb-1">
-                Type *
-                <span
-                  class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-300 text-gray-600 text-xs cursor-help font-bold leading-none"
-                  @mouseenter="showTooltip($event, 'Day Off: Staff member is completely unavailable. No bookings possible.\n\nSpecial Hours: Staff works different hours than usual \u2014 set a custom start and end time.')"
-                  @mouseleave="hideTooltip"
-                >?</span>
-              </label>
-              <select
-                v-model="newException.is_working"
-                class="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              >
-                <option :value="false">Day Off</option>
-                <option :value="true">Special Hours</option>
-              </select>
+          <div class="space-y-3">
+            <!-- Date & Type -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-gray-600 mb-1">Date *</label>
+                <input
+                  type="date"
+                  v-model="newException.specific_date"
+                  :min="today"
+                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label class="flex items-center gap-1 text-xs text-gray-600 mb-1">
+                  Type *
+                  <span
+                    class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-300 text-gray-600 text-xs cursor-help font-bold leading-none"
+                    @mouseenter="showTooltip($event, 'Day Off: Staff member is completely unavailable. No bookings possible.\n\nSpecial Hours: Staff works different hours than usual \u2014 set a custom start and end time.')"
+                    @mouseleave="hideTooltip"
+                  >?</span>
+                </label>
+                <select
+                  v-model="newException.is_working"
+                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+                  <option :value="false">Day Off</option>
+                  <option :value="true">Special Hours</option>
+                </select>
+              </div>
             </div>
 
             <!-- Times (if working) -->
             <template v-if="newException.is_working">
-              <div>
-                <label class="block text-xs text-gray-600 mb-1">Start *</label>
-                <input
-                  type="time"
-                  v-model="newException.start_time"
-                  class="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Start *</label>
+                  <input
+                    type="time"
+                    v-model="newException.start_time"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">End *</label>
+                  <input
+                    type="time"
+                    v-model="newException.end_time"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
               </div>
-              <div>
-                <label class="block text-xs text-gray-600 mb-1">End *</label>
-                <input
-                  type="time"
-                  v-model="newException.end_time"
-                  class="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-              <div>
-                <label class="block text-xs text-gray-600 mb-1">Break Start</label>
-                <input
-                  type="time"
-                  v-model="newException.break_start"
-                  class="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-              <div>
-                <label class="block text-xs text-gray-600 mb-1">Break End</label>
-                <input
-                  type="time"
-                  v-model="newException.break_end"
-                  class="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Break Start</label>
+                  <input
+                    type="time"
+                    v-model="newException.break_start"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Break End</label>
+                  <input
+                    type="time"
+                    v-model="newException.break_end"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
               </div>
             </template>
 
@@ -372,7 +368,7 @@
                 type="text"
                 v-model="newException.notes"
                 placeholder="e.g., Holiday, Training day"
-                class="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
               />
             </div>
           </div>
@@ -383,25 +379,25 @@
           </p>
 
           <!-- Buttons -->
-          <div class="flex gap-2 mt-3">
+          <div class="flex flex-col-reverse sm:flex-row gap-2 mt-3">
+            <button
+              @click="cancelAddException"
+              class="w-full sm:w-auto px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
             <button
               @click="addException"
               :disabled="addingException"
-              class="px-3 py-1.5 text-sm font-medium text-white bg-primary-600 rounded hover:bg-primary-700 disabled:opacity-50"
+              class="w-full sm:w-auto px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
             >
               {{ addingException ? 'Adding...' : 'Add Exception' }}
-            </button>
-            <button
-              @click="cancelAddException"
-              class="px-3 py-1.5 text-sm font-medium text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
-            >
-              Cancel
             </button>
           </div>
         </div>
 
         <!-- Exceptions List -->
-        <div v-if="exceptions.length === 0 && !showAddException" class="px-6 py-8 text-center">
+        <div v-if="exceptions.length === 0 && !showAddException" class="px-4 sm:px-6 py-8 text-center">
           <p class="text-sm text-gray-500">No date exceptions configured.</p>
           <p class="text-xs text-gray-400 mt-1">
             Add exceptions for holidays, time off, or special hours.
@@ -412,50 +408,46 @@
           <div
             v-for="exception in exceptions"
             :key="exception.id"
-            class="px-6 py-3 flex items-center justify-between hover:bg-gray-50"
+            class="px-4 sm:px-6 py-3 hover:bg-gray-50"
           >
-            <div class="flex items-center gap-4">
-              <!-- Date -->
-              <div class="w-28">
-                <p class="text-sm font-medium text-gray-900">
-                  {{ formatDate(exception.specific_date) }}
-                </p>
-                <p class="text-xs text-gray-500">
-                  {{ getDayName(exception.specific_date) }}
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <div class="flex flex-wrap items-center gap-2 mb-1">
+                  <p class="text-sm font-medium text-gray-900">
+                    {{ formatDate(exception.specific_date) }}
+                  </p>
+                  <span class="text-xs text-gray-500">
+                    {{ getDayName(exception.specific_date) }}
+                  </span>
+                  <span
+                    class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full"
+                    :class="exception.is_working
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-red-100 text-red-800'"
+                  >
+                    {{ exception.is_working ? 'Special Hours' : 'Day Off' }}
+                  </span>
+                </div>
+
+                <div v-if="exception.is_working" class="text-sm text-gray-600">
+                  {{ formatTime(exception.start_time) }} &ndash; {{ formatTime(exception.end_time) }}
+                  <span v-if="exception.break_start" class="text-gray-400 text-xs ml-1">
+                    (break {{ formatTime(exception.break_start) }}&ndash;{{ formatTime(exception.break_end) }})
+                  </span>
+                </div>
+
+                <p v-if="exception.notes" class="text-xs text-gray-500 italic mt-1 truncate">
+                  "{{ exception.notes }}"
                 </p>
               </div>
 
-              <!-- Type Badge -->
-              <span
-                class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full"
-                :class="exception.is_working
-                  ? 'bg-blue-100 text-blue-800'
-                  : 'bg-red-100 text-red-800'"
+              <button
+                @click="deleteException(exception)"
+                class="text-red-600 hover:text-red-800 text-sm flex-shrink-0"
               >
-                {{ exception.is_working ? 'Special Hours' : 'Day Off' }}
-              </span>
-
-              <!-- Hours (if working) -->
-              <div v-if="exception.is_working" class="text-sm text-gray-600">
-                {{ formatTime(exception.start_time) }} &ndash; {{ formatTime(exception.end_time) }}
-                <span v-if="exception.break_start" class="text-gray-400 text-xs ml-1">
-                  (break {{ formatTime(exception.break_start) }}&ndash;{{ formatTime(exception.break_end) }})
-                </span>
-              </div>
-
-              <!-- Notes -->
-              <div v-if="exception.notes" class="text-sm text-gray-500 italic">
-                "{{ exception.notes }}"
-              </div>
+                Remove
+              </button>
             </div>
-
-            <!-- Delete Button -->
-            <button
-              @click="deleteException(exception)"
-              class="text-red-600 hover:text-red-800 text-sm"
-            >
-              Remove
-            </button>
           </div>
         </div>
       </div>

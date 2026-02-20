@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Header with Actions -->
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
       <div>
         <h2 class="text-lg font-semibold text-gray-900">All Bookings</h2>
         <p class="text-sm text-gray-600 mt-1">
@@ -9,7 +9,7 @@
         </p>
       </div>
       <button
-        class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+        class="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-center"
         @click="createBooking"
       >
         + New Booking
@@ -17,178 +17,242 @@
     </div>
 
     <!-- Filters Section -->
-    <div class="bg-white rounded-lg shadow p-4 mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4"
-           :class="isAdmin ? 'lg:grid-cols-5' : 'lg:grid-cols-4'">
-        <!-- Date From -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            From Date
-          </label>
-          <input
-            v-model="filters.date_from"
-            type="date"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            @change="applyFilters"
-          />
-        </div>
-
-        <!-- Date To -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            To Date
-          </label>
-          <input
-            v-model="filters.date_to"
-            type="date"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            @change="applyFilters"
-          />
-        </div>
-
-        <!-- Staff Filter (Admin Only) -->
-        <div v-if="isAdmin">
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Staff Member
-          </label>
-          <select
-            v-model="filters.staff_id"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            @change="applyFilters"
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+      <!-- Filter Header (always visible) -->
+      <div class="px-4 lg:px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <h3 class="text-base font-semibold text-gray-900">Filters</h3>
+          <span
+            v-if="activeFilterCount > 0"
+            class="inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-primary-600 rounded-full"
           >
-            <option value="">All Staff</option>
-            <option v-for="staff in staffList" :key="staff.id" :value="staff.id">
-              {{ staff.name }}
-            </option>
-          </select>
+            {{ activeFilterCount }}
+          </span>
         </div>
 
-        <!-- Service Filter -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Service
-          </label>
-          <select
-            v-model="filters.service_id"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            @change="applyFilters"
-          >
-            <option value="">All Services</option>
-            <option v-for="service in servicesList" :key="service.id" :value="service.id">
-              {{ service.name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Status Filter -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Status
-          </label>
-          <select
-            v-model="filters.status"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            @change="applyFilters"
-          >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="pending_payment">Pending Payment</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="no_show">No Show</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Search Bar -->
-      <div class="mt-4">
-        <div class="relative">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search by customer name or email..."
-            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            @input="onSearchInput"
-          />
-          <span class="absolute left-3 top-2.5 text-gray-400">&#x1F50D;</span>
+        <div class="flex items-center gap-2">
           <button
-            v-if="searchQuery || hasActiveFilters"
+            v-if="hasActiveFilters"
             @click="clearFilters"
-            class="absolute right-3 top-2 text-sm text-gray-500 hover:text-gray-700"
+            class="px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
           >
             Clear All
           </button>
-        </div>
-      </div>
-    </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="text-center py-12 bg-white rounded-lg shadow">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-      <p class="mt-2 text-sm text-gray-600">Loading bookings...</p>
-    </div>
-
-    <!-- Error State -->
-    <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
-      <div class="flex items-start">
-        <span class="text-2xl mr-3">&#x26A0;&#xFE0F;</span>
-        <div>
-          <h3 class="text-sm font-medium text-red-800">Error Loading Bookings</h3>
-          <p class="text-sm text-red-700 mt-1">{{ error }}</p>
           <button
-            @click="loadBookings"
-            class="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+            @click="showFilters = !showFilters"
+            class="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            aria-label="Toggle filters"
+            :aria-expanded="showFilters"
           >
-            Try Again
+            <svg
+              aria-hidden="true"
+              class="w-5 h-5 transition-transform"
+              :class="{ 'rotate-180': showFilters }"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
         </div>
       </div>
-    </div>
 
-    <!-- Empty State -->
-    <div v-else-if="bookings.length === 0" class="bg-white rounded-lg shadow p-12 text-center">
-      <div class="text-6xl mb-4">&#x1F4CB;</div>
-      <h3 class="text-lg font-medium text-gray-900 mb-2">
-        No bookings found
-      </h3>
-      <p class="text-sm text-gray-600 mb-4">
-        {{ hasActiveFilters ? 'Try adjusting your filters' : 'No bookings have been created yet' }}
-      </p>
-      <button
-        v-if="hasActiveFilters"
-        @click="clearFilters"
-        class="text-sm text-primary-600 hover:text-primary-700 underline"
+      <!-- Filter Inputs (collapsible on mobile, always visible on desktop) -->
+      <div
+        class="px-4 lg:px-6 pb-4 border-t border-gray-200"
+        :class="{ 'hidden lg:block': !showFilters }"
       >
-        Clear filters
-      </button>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4"
+             :class="isAdmin ? 'lg:grid-cols-5' : 'lg:grid-cols-4'">
+          <!-- Date From -->
+          <div>
+            <label for="filter-date-from" class="block text-sm font-medium text-gray-700 mb-1">
+              From Date
+            </label>
+            <input
+              id="filter-date-from"
+              v-model="filters.date_from"
+              type="date"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              @change="applyFilters"
+            />
+          </div>
+
+          <!-- Date To -->
+          <div>
+            <label for="filter-date-to" class="block text-sm font-medium text-gray-700 mb-1">
+              To Date
+            </label>
+            <input
+              id="filter-date-to"
+              v-model="filters.date_to"
+              type="date"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              @change="applyFilters"
+            />
+          </div>
+
+          <!-- Staff Filter (Admin Only) -->
+          <div v-if="isAdmin">
+            <label for="filter-staff" class="block text-sm font-medium text-gray-700 mb-1">
+              Staff Member
+            </label>
+            <select
+              id="filter-staff"
+              v-model="filters.staff_id"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              @change="applyFilters"
+            >
+              <option value="">All Staff</option>
+              <option v-for="staff in staffList" :key="staff.id" :value="staff.id">
+                {{ staff.name }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Service Filter -->
+          <div>
+            <label for="filter-service" class="block text-sm font-medium text-gray-700 mb-1">
+              Service
+            </label>
+            <select
+              id="filter-service"
+              v-model="filters.service_id"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              @change="applyFilters"
+            >
+              <option value="">All Services</option>
+              <option v-for="service in servicesList" :key="service.id" :value="service.id">
+                {{ service.name }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Status Filter -->
+          <div>
+            <label for="filter-status" class="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
+            <select
+              id="filter-status"
+              v-model="filters.status"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              @change="applyFilters"
+            >
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="pending_payment">Pending Payment</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="no_show">No Show</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mt-4">
+          <label for="filter-search" class="block text-sm font-medium text-gray-700 mb-1">
+            Search
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg aria-hidden="true" class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              id="filter-search"
+              v-model="searchQuery"
+              type="text"
+              placeholder="Search by customer name or email..."
+              class="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              @input="onSearchInput"
+            />
+            <button
+              v-if="searchQuery"
+              @click="searchQuery = ''; applyFilters()"
+              class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              aria-label="Clear search"
+            >
+              <svg aria-hidden="true" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Bookings Table -->
-    <div v-else class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="overflow-x-auto">
+    <!-- Main Content Area -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <!-- Loading State -->
+      <div v-if="loading">
+        <div class="hidden md:block">
+          <TableSkeleton :rows="8" :columns="6" />
+        </div>
+        <div class="md:hidden p-4 space-y-3">
+          <CardSkeleton v-for="i in 5" :key="i" />
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <ErrorState
+        v-else-if="error"
+        :title="errorTitle"
+        :message="errorMessage"
+        :details="errorDetails"
+        @retry="loadBookings"
+      />
+
+      <!-- Empty State (No Bookings) -->
+      <EmptyState
+        v-else-if="bookings.length === 0 && !hasActiveFilters"
+        icon="📅"
+        title="No bookings yet"
+        description="Bookings will appear here once customers start making appointments. Create your first booking to get started."
+        action-text="+ Create First Booking"
+        @action="createBooking"
+      />
+
+      <!-- Empty State (No Results from Filters) -->
+      <EmptyState
+        v-else-if="bookings.length === 0 && hasActiveFilters"
+        icon="🔍"
+        title="No bookings found"
+        description="No bookings match your current filters. Try adjusting your search criteria or clearing filters."
+        action-text="Clear Filters"
+        @action="clearFilters"
+      />
+
+      <!-- Actual Content -->
+      <div v-else>
+      <!-- Desktop Table View -->
+      <div class="hidden md:block overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Date &amp; Time
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Customer
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Service
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Staff
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Amount
               </th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -260,6 +324,7 @@
                 <button
                   @click.stop="viewBooking(booking)"
                   class="text-primary-600 hover:text-primary-900"
+                  :aria-label="'View booking for ' + booking.customer_name"
                 >
                   View
                 </button>
@@ -269,9 +334,48 @@
         </table>
       </div>
 
+      <!-- Mobile Card View -->
+      <div class="md:hidden divide-y divide-gray-200">
+        <div
+          v-for="booking in bookings"
+          :key="'mobile-' + booking.id"
+          class="p-4 hover:bg-gray-50 cursor-pointer"
+          @click="viewBooking(booking)"
+        >
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-900">{{ booking.customer_name }}</p>
+              <p class="text-xs text-gray-500 truncate">{{ booking.customer_email }}</p>
+            </div>
+            <span
+              class="px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ml-2"
+              :class="getStatusClass(booking.status)"
+            >
+              {{ formatStatus(booking.status) }}
+            </span>
+          </div>
+
+          <p class="text-sm text-gray-900 mb-2">
+            {{ booking.service_name }}
+            <span class="text-gray-500">({{ booking.duration }} min)</span>
+          </p>
+
+          <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+            <span>&#x1F4C5; {{ formatDate(booking.booking_date) }}</span>
+            <span>&#x23F0; {{ booking.start_time }} - {{ booking.end_time }}</span>
+            <span>&#x1F464; {{ booking.staff_name }}</span>
+          </div>
+
+          <div class="mt-2 text-sm font-medium text-gray-900">
+            &pound;{{ booking.total_price.toFixed(2) }}
+            <span class="text-xs font-normal text-gray-500 ml-1">{{ getPaymentLabel(booking) }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Pagination -->
-      <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
-        <div class="flex items-center justify-between">
+      <nav class="bg-gray-50 px-4 sm:px-6 py-4 border-t border-gray-200" aria-label="Bookings pagination">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
           <!-- Results Info -->
           <div class="text-sm text-gray-700">
             Showing
@@ -284,11 +388,11 @@
           </div>
 
           <!-- Pagination Controls -->
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1 sm:gap-2">
             <button
               @click="goToPage(1)"
               :disabled="!pagination.has_prev"
-              class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="hidden sm:block px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               &laquo; First
             </button>
@@ -301,7 +405,7 @@
             </button>
 
             <!-- Page Numbers -->
-            <div class="flex items-center gap-1">
+            <div class="hidden sm:flex items-center gap-1">
               <button
                 v-for="page in visiblePages"
                 :key="page"
@@ -315,6 +419,11 @@
               </button>
             </div>
 
+            <!-- Mobile Page Indicator -->
+            <span class="sm:hidden text-sm text-gray-700 px-2">
+              {{ pagination.current_page }} / {{ pagination.total_pages }}
+            </span>
+
             <button
               @click="goToPage(pagination.current_page + 1)"
               :disabled="!pagination.has_next"
@@ -325,40 +434,51 @@
             <button
               @click="goToPage(pagination.total_pages)"
               :disabled="!pagination.has_next"
-              class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="hidden sm:block px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Last &raquo;
             </button>
           </div>
         </div>
+      </nav>
       </div>
     </div>
 
     <!-- Booking Creation Modal -->
-    <BookingModal
-      v-if="showBookingModal"
-      @close="closeBookingModal"
-      @created="handleBookingCreated"
-    />
+    <Transition name="fade">
+      <BookingModal
+        v-if="showBookingModal"
+        @close="closeBookingModal"
+        @created="handleBookingCreated"
+      />
+    </Transition>
 
     <!-- Booking View/Edit Modal -->
-    <BookingViewModal
-      v-if="showViewModal && selectedBookingId"
-      :booking-id="selectedBookingId"
-      @close="closeViewModal"
-      @updated="handleBookingUpdated"
-      @cancelled="handleBookingCancelled"
-    />
+    <Transition name="fade">
+      <BookingViewModal
+        v-if="showViewModal && selectedBookingId"
+        :booking-id="selectedBookingId"
+        @close="closeViewModal"
+        @updated="handleBookingUpdated"
+        @cancelled="handleBookingCancelled"
+      />
+    </Transition>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useApi } from '../composables/useApi'
+import { useToast } from '../composables/useToast'
 import BookingModal from '../components/BookingModal.vue'
 import BookingViewModal from '../components/BookingViewModal.vue'
+import ErrorState from '../components/ErrorState.vue'
+import TableSkeleton from '../components/TableSkeleton.vue'
+import CardSkeleton from '../components/CardSkeleton.vue'
+import EmptyState from '../components/EmptyState.vue'
 
 const api = useApi()
+const { success: toastSuccess } = useToast()
 
 // Get current user role
 const currentUser = window.BOOKIT_DASHBOARD.staff
@@ -367,10 +487,14 @@ const isAdmin = computed(() => currentUser.role === 'admin')
 // State
 const loading = ref(true)
 const error = ref(null)
+const errorTitle = ref('')
+const errorMessage = ref('')
+const errorDetails = ref('')
 const bookings = ref([])
 const staffList = ref([])
 const servicesList = ref([])
 const searchQuery = ref('')
+const showFilters = ref(false)
 let searchTimeout = null
 
 // Filters
@@ -393,14 +517,18 @@ const pagination = ref({
 })
 
 // Computed
-const hasActiveFilters = computed(() => {
-  return filters.value.date_from ||
-         filters.value.date_to ||
-         filters.value.staff_id ||
-         filters.value.service_id ||
-         filters.value.status ||
-         searchQuery.value
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (filters.value.date_from) count++
+  if (filters.value.date_to) count++
+  if (filters.value.staff_id) count++
+  if (filters.value.service_id) count++
+  if (filters.value.status) count++
+  if (searchQuery.value) count++
+  return count
 })
+
+const hasActiveFilters = computed(() => activeFilterCount.value > 0)
 
 const resultsStart = computed(() => {
   if (bookings.value.length === 0) return 0
@@ -460,7 +588,23 @@ const loadBookings = async (page = 1) => {
     }
   } catch (err) {
     console.error('Error loading bookings:', err)
-    error.value = err.message || 'Failed to load bookings. Please try again.'
+    error.value = true
+
+    if (err.response?.status === 403) {
+      errorTitle.value = 'Access denied'
+      errorMessage.value = 'You don\'t have permission to view bookings. Please contact your administrator.'
+    } else if (err.response?.status >= 500) {
+      errorTitle.value = 'Server error'
+      errorMessage.value = 'Our servers are experiencing issues. Please try again in a few moments.'
+    } else if (!navigator.onLine) {
+      errorTitle.value = 'No internet connection'
+      errorMessage.value = 'Please check your internet connection and try again.'
+    } else {
+      errorTitle.value = 'Failed to load bookings'
+      errorMessage.value = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+    }
+
+    errorDetails.value = `Error: ${err.message}\nStatus: ${err.response?.status || 'N/A'}\nURL: ${err.config?.url || 'N/A'}`
   } finally {
     loading.value = false
   }
@@ -553,10 +697,9 @@ const closeBookingModal = () => {
 }
 
 const handleBookingCreated = (booking) => {
-  // Refresh bookings list
   loadBookings(pagination.value.current_page)
   showBookingModal.value = false
-  alert(`\u2713 Booking created successfully!\n\nID: ${booking.id}\nCustomer: ${booking.customer_name}`)
+  toastSuccess(`Booking created for ${booking.customer_name}`)
 }
 
 const formatDate = (dateString) => {

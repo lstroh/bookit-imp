@@ -11,38 +11,27 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading" class="text-center py-12">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-      <p class="mt-2 text-sm text-gray-600">Loading bookings...</p>
+    <div v-if="loading" class="space-y-3">
+      <CardSkeleton v-for="i in 4" :key="i" />
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
-      <div class="flex items-start">
-        <span class="text-2xl mr-3">&#x26A0;&#xFE0F;</span>
-        <div>
-          <h3 class="text-sm font-medium text-red-800">Error Loading Bookings</h3>
-          <p class="text-sm text-red-700 mt-1">{{ error }}</p>
-          <button
-            @click="loadBookings"
-            class="mt-2 text-sm text-red-600 hover:text-red-800 underline"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    </div>
+    <ErrorState
+      v-else-if="error"
+      :title="errorTitle"
+      :message="errorMessage"
+      :details="errorDetails"
+      :show-home="false"
+      @retry="loadBookings"
+    />
 
     <!-- Empty State -->
-    <div v-else-if="bookings.length === 0" class="bg-white rounded-lg shadow p-12 text-center">
-      <div class="text-6xl mb-4">&#x1F4C5;</div>
-      <h3 class="text-lg font-medium text-gray-900 mb-2">
-        No bookings today
-      </h3>
-      <p class="text-sm text-gray-600">
-        You have a clear schedule for today.
-      </p>
-    </div>
+    <EmptyState
+      v-else-if="bookings.length === 0"
+      icon="🗓️"
+      title="No bookings today"
+      description="You have no appointments scheduled for today. Enjoy your free time or create a new booking."
+    />
 
     <!-- Bookings List -->
     <div v-else class="space-y-4">
@@ -52,12 +41,12 @@
         class="bg-white rounded-lg shadow hover:shadow-md transition-shadow"
         :class="{ 'ring-2 ring-orange-400': booking.is_starting_soon }"
       >
-        <div class="p-6">
+        <div class="p-4 md:p-6">
           <!-- Header Row -->
-          <div class="flex items-start justify-between mb-4">
+          <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div class="flex-1">
               <!-- Time and Status -->
-              <div class="flex items-center gap-3 mb-2">
+              <div class="flex flex-wrap items-center gap-2 md:gap-3 mb-2">
                 <span class="text-xl font-semibold text-gray-900">
                   {{ booking.start_time }}
                 </span>
@@ -87,7 +76,7 @@
               </h3>
 
               <!-- Details Grid -->
-              <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                 <div>
                   <span class="text-gray-500">Customer:</span>
                   <span class="ml-2 text-gray-900 font-medium">{{ booking.customer_name }}</span>
@@ -114,16 +103,16 @@
             </div>
 
             <!-- Actions -->
-            <div class="flex flex-col gap-2 ml-4">
+            <div class="flex flex-row md:flex-col gap-2 w-full md:w-auto">
               <button
-                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
+                class="flex-1 md:flex-none px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
                 @click="viewDetails(booking)"
               >
                 View Details
               </button>
               <button
                 v-if="booking.status !== 'completed' && booking.status !== 'cancelled'"
-                class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors whitespace-nowrap"
+                class="flex-1 md:flex-none px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors whitespace-nowrap"
                 :disabled="markingComplete === booking.id"
                 @click="markComplete(booking)"
               >
@@ -131,7 +120,7 @@
               </button>
               <span
                 v-else-if="booking.status === 'completed'"
-                class="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 rounded-lg text-center"
+                class="flex-1 md:flex-none px-4 py-2 text-sm font-medium text-green-700 bg-green-50 rounded-lg text-center"
               >
                 Completed
               </span>
@@ -143,24 +132,34 @@
   </div>
 
   <!-- Booking View/Edit Modal -->
-  <BookingViewModal
-    v-if="showViewModal && selectedBookingId"
-    :booking-id="selectedBookingId"
-    @close="closeViewModal"
-    @updated="handleBookingUpdated"
-    @cancelled="handleBookingCancelled"
-  />
+  <Transition name="fade">
+    <BookingViewModal
+      v-if="showViewModal && selectedBookingId"
+      :booking-id="selectedBookingId"
+      @close="closeViewModal"
+      @updated="handleBookingUpdated"
+      @cancelled="handleBookingCancelled"
+    />
+  </Transition>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useApi } from '../composables/useApi'
+import { useToast } from '../composables/useToast'
 import BookingViewModal from '../components/BookingViewModal.vue'
+import ErrorState from '../components/ErrorState.vue'
+import CardSkeleton from '../components/CardSkeleton.vue'
+import EmptyState from '../components/EmptyState.vue'
 
 const api = useApi()
+const { success: toastSuccess, error: toastError } = useToast()
 
 const loading = ref(true)
 const error = ref(null)
+const errorTitle = ref('')
+const errorMessage = ref('')
+const errorDetails = ref('')
 const bookings = ref([])
 const markingComplete = ref(null)
 const showViewModal = ref(false)
@@ -235,7 +234,20 @@ const loadBookings = async () => {
     }
   } catch (err) {
     console.error('Error loading bookings:', err)
-    error.value = err.message || 'Failed to load bookings. Please try again.'
+    error.value = true
+
+    if (err.response?.status >= 500) {
+      errorTitle.value = 'Server error'
+      errorMessage.value = 'Our servers are experiencing issues. Please try again in a few moments.'
+    } else if (!navigator.onLine) {
+      errorTitle.value = 'No internet connection'
+      errorMessage.value = 'Please check your internet connection and try again.'
+    } else {
+      errorTitle.value = 'Failed to load today\'s schedule'
+      errorMessage.value = err.response?.data?.message || err.message || 'An unexpected error occurred.'
+    }
+
+    errorDetails.value = `Error: ${err.message}\nStatus: ${err.response?.status || 'N/A'}`
   } finally {
     loading.value = false
   }
@@ -285,19 +297,18 @@ const markComplete = async (booking) => {
     const response = await api.post(`/bookings/${booking.id}/complete`)
 
     if (response.data.success) {
-      // Update local state.
       const index = bookings.value.findIndex(b => b.id === booking.id)
       if (index !== -1) {
         bookings.value[index].status = 'completed'
       }
 
-      alert('Booking marked as complete!')
+      toastSuccess('Booking marked as complete!')
     } else {
       throw new Error(response.data.message || 'Failed to mark complete')
     }
   } catch (err) {
     console.error('Error marking complete:', err)
-    alert(`Error: ${err.message || 'Failed to mark booking as complete'}`)
+    toastError(err.message || 'Failed to mark booking as complete')
   } finally {
     markingComplete.value = null
   }
