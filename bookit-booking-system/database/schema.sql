@@ -4,8 +4,8 @@
  * This file documents the complete database schema for reference.
  * DO NOT run this file directly - tables are created via Bookit_Database class.
  * 
- * Last Updated: 2026-01-28
- * Migration: Added staff photo_url, bio, title, and custom_price fields
+ * Total Tables: 13
+ * Last Updated: 2026-02-20
  */
 
 -- ============================================
@@ -141,7 +141,7 @@ CREATE TABLE wp_bookings (
 	start_time TIME NOT NULL,
 	end_time TIME NOT NULL,
 	duration INT UNSIGNED NOT NULL COMMENT 'Duration in minutes (cached from service)',
-	status ENUM('pending','confirmed','cancelled','completed','no_show') DEFAULT 'pending',
+	status ENUM('pending','pending_payment','confirmed','completed','cancelled','no_show') NOT NULL DEFAULT 'pending_payment',
 	total_price DECIMAL(10,2) NOT NULL,
 	deposit_amount DECIMAL(10,2) NULL DEFAULT NULL COMMENT 'Service deposit config amount',
 	deposit_paid DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Actual amount paid as deposit',
@@ -226,6 +226,7 @@ CREATE TABLE wp_bookings_settings (
 	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	setting_key VARCHAR(100) NOT NULL,
 	setting_value LONGTEXT NULL,
+	setting_type ENUM('string','integer','boolean','json') DEFAULT 'string',
 	autoload TINYINT(1) DEFAULT 1 COMMENT 'Load on plugin init like wp_options',
 	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -235,9 +236,76 @@ CREATE TABLE wp_bookings_settings (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
+-- TABLE 11: wp_bookings_staff_working_hours
+-- ============================================
+-- Extended working hours with breaks, exceptions, and date-specific overrides.
+-- Created via migration: database/migrations/migration-add-staff-working-hours.php
+CREATE TABLE wp_bookings_staff_working_hours (
+	id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+	staff_id INT UNSIGNED NOT NULL,
+	day_of_week TINYINT(1) NULL COMMENT '1=Monday, 7=Sunday',
+	specific_date DATE NULL COMMENT 'Exception date (vacation, etc.)',
+	start_time TIME NOT NULL,
+	end_time TIME NOT NULL,
+	is_working TINYINT(1) DEFAULT 1 COMMENT '0=blocked/vacation',
+	break_start TIME NULL,
+	break_end TIME NULL,
+	repeat_weekly TINYINT(1) DEFAULT 1,
+	valid_from DATE NULL,
+	valid_until DATE NULL,
+	notes TEXT NULL,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (id),
+	KEY idx_staff_day (staff_id, day_of_week),
+	KEY idx_staff_date (staff_id, specific_date),
+	KEY idx_specific_date (specific_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- TABLE 12: wp_bookings_idempotency
+-- ============================================
+-- Tracks idempotency keys to prevent duplicate operations
+-- (Stripe checkouts, emails, webhooks). Sprint 2, Task 6.
+CREATE TABLE wp_bookings_idempotency (
+	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	idempotency_key VARCHAR(255) NOT NULL,
+	operation_type VARCHAR(50) NOT NULL,
+	request_hash VARCHAR(64) NOT NULL,
+	response_data TEXT NULL,
+	status VARCHAR(20) NOT NULL DEFAULT 'processing',
+	created_at DATETIME NOT NULL,
+	completed_at DATETIME NULL,
+	expires_at DATETIME NOT NULL,
+	PRIMARY KEY (id),
+	UNIQUE KEY unique_key (idempotency_key),
+	KEY idx_expires (expires_at),
+	KEY idx_status (status),
+	KEY idx_operation_type (operation_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- TABLE 13: wp_bookings_email_templates
+-- ============================================
+-- Email templates for booking notifications.
+-- Created via class-bookit-activator.php on activation.
+CREATE TABLE wp_bookings_email_templates (
+	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	template_key VARCHAR(50) NOT NULL,
+	subject VARCHAR(255) NOT NULL,
+	body TEXT NOT NULL,
+	enabled TINYINT(1) DEFAULT 1,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (id),
+	UNIQUE KEY unique_template_key (template_key),
+	KEY idx_template_key (template_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- MIGRATION NOTES
 -- ============================================
--- Migration: Add Staff Photo, Bio, Title, and Custom Pricing
+-- Migration 1: Add Staff Photo, Bio, Title, and Custom Pricing
 -- Date: 2026-01-28
 -- Sprint: Sprint 1, Task 3
 -- 
@@ -248,3 +316,23 @@ CREATE TABLE wp_bookings_settings (
 -- 4. wp_bookings_staff_services.custom_price (DECIMAL(10,2) NULL) - Staff-specific price override
 --
 -- Migration file: database/migrations/migration-add-staff-fields.php
+--
+-- Migration 2: Add Staff Working Hours Table
+-- Date: 2026-01-29
+-- Sprint: Sprint 1, Task 5
+--
+-- Added table: wp_bookings_staff_working_hours
+-- Migration file: database/migrations/migration-add-staff-working-hours.php
+--
+-- Migration 3: Add setting_type to Settings & Email Templates Table
+-- Sprint: Sprint 2
+--
+-- Added column: wp_bookings_settings.setting_type ENUM('string','integer','boolean','json')
+-- Added table: wp_bookings_email_templates
+-- Source: includes/class-bookit-activator.php
+--
+-- Migration 4: Add Idempotency Table
+-- Sprint: Sprint 2, Task 6
+--
+-- Added table: wp_bookings_idempotency
+-- Source: includes/class-bookit-database.php
