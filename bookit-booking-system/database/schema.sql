@@ -336,3 +336,11 @@ CREATE TABLE wp_bookings_email_templates (
 --
 -- Added table: wp_bookings_idempotency
 -- Source: includes/class-bookit-database.php
+--
+-- Migration 5: Add Booking Status Log Table
+-- Date: 2026-02-23
+-- Sprint: Sprint 4A, Task 1
+--
+-- Added table: wp_bookings_status_log
+-- Columns: id, booking_id, old_status, new_status, changed_by_staff_id, changed_at, notes
+-- Migration file: database/migrations/migration-add-status-log.php

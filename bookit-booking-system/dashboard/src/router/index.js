@@ -48,6 +48,12 @@ export default [
     meta: { title: 'My Profile' }
   },
   {
+    path: '/my-schedule',
+    name: 'MySchedule',
+    component: () => import('../views/MySchedule.vue'),
+    meta: { title: 'My Schedule' }
+  },
+  {
     path: '/settings/email',
     name: 'EmailSettings',
     component: () => import('../views/EmailSettings.vue'),

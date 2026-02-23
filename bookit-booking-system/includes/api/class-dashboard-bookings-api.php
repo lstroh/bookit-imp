@@ -66,6 +66,50 @@ class Bookit_Dashboard_Bookings_API {
 			)
 		);
 
+		// Mark booking as no-show.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/bookings/(?P<id>\d+)/no-show',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'mark_booking_no_show' ),
+				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+				'args'                => array(
+					'id' => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param );
+						},
+					),
+				),
+			)
+		);
+
+		// Staff personal schedule (week view).
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/my-schedule',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'get_my_schedule' ),
+				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+				'args'                => array(
+					'week_start'       => array(
+						'required'          => false,
+						'validate_callback' => function ( $param ) {
+							return empty( $param ) || preg_match( '/^\d{4}-\d{2}-\d{2}$/', $param );
+						},
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'include_upcoming' => array(
+						'required' => false,
+						'default'  => true,
+						'type'     => 'boolean',
+					),
+				),
+			)
+		);
+
 		// All bookings with filtering.
 		register_rest_route(
 			self::NAMESPACE,
@@ -2654,12 +2698,312 @@ class Bookit_Dashboard_Bookings_API {
 			);
 		}
 
+		// Log status change.
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_status_log',
+			array(
+				'booking_id'          => $booking_id,
+				'old_status'          => $booking['status'],
+				'new_status'          => 'completed',
+				'changed_by_staff_id' => $current_staff['id'],
+				'changed_at'          => current_time( 'mysql' ),
+				'notes'               => null,
+			),
+			array( '%d', '%s', '%s', '%d', '%s', '%s' )
+		);
+
 		return rest_ensure_response(
 			array(
 				'success'    => true,
 				'message'    => __( 'Booking marked as complete.', 'bookit-booking-system' ),
 				'booking_id' => $booking_id,
 			)
+		);
+	}
+
+	/**
+	 * Mark booking as no-show.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function mark_booking_no_show( $request ) {
+		global $wpdb;
+
+		$booking_id    = (int) $request['id'];
+		$current_staff = Bookit_Auth::get_current_staff();
+
+		$booking = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, staff_id, status FROM {$wpdb->prefix}bookings WHERE id = %d AND deleted_at IS NULL",
+				$booking_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $booking ) {
+			return new WP_Error(
+				'booking_not_found',
+				__( 'Booking not found.', 'bookit-booking-system' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		if ( 'staff' === $current_staff['role'] && (int) $booking['staff_id'] !== (int) $current_staff['id'] ) {
+			return new WP_Error(
+				'forbidden',
+				__( 'You do not have permission to update this booking.', 'bookit-booking-system' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		if ( 'no_show' === $booking['status'] ) {
+			return new WP_Error(
+				'already_no_show',
+				__( 'This booking is already marked as no-show.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$result = $wpdb->update(
+			$wpdb->prefix . 'bookings',
+			array(
+				'status'     => 'no_show',
+				'updated_at' => current_time( 'mysql' ),
+			),
+			array( 'id' => $booking_id ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'database_error',
+				__( 'Failed to update booking status.', 'bookit-booking-system' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		// Log status change.
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_status_log',
+			array(
+				'booking_id'          => $booking_id,
+				'old_status'          => $booking['status'],
+				'new_status'          => 'no_show',
+				'changed_by_staff_id' => $current_staff['id'],
+				'changed_at'          => current_time( 'mysql' ),
+				'notes'               => null,
+			),
+			array( '%d', '%s', '%s', '%d', '%s', '%s' )
+		);
+
+		return rest_ensure_response(
+			array(
+				'success'    => true,
+				'message'    => __( 'Booking marked as no-show.', 'bookit-booking-system' ),
+				'booking_id' => $booking_id,
+			)
+		);
+	}
+
+	/**
+	 * Get staff personal schedule (week view with upcoming).
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_my_schedule( $request ) {
+		global $wpdb;
+
+		$current_staff = Bookit_Auth::get_current_staff();
+		if ( ! $current_staff ) {
+			return new WP_Error(
+				'unauthorized',
+				__( 'Could not retrieve staff information.', 'bookit-booking-system' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		$tz  = new \DateTimeZone( 'Europe/London' );
+		$now = new \DateTimeImmutable( 'now', $tz );
+
+		// Determine week start (Monday).
+		$week_start_param = $request->get_param( 'week_start' );
+		if ( $week_start_param ) {
+			$week_start = new \DateTimeImmutable( $week_start_param, $tz );
+			// Normalise to Monday if the supplied date isn't one.
+			$dow = (int) $week_start->format( 'N' ); // 1=Mon … 7=Sun.
+			if ( 1 !== $dow ) {
+				$week_start = $week_start->modify( 'monday this week' );
+			}
+		} else {
+			$week_start = $now->modify( 'monday this week' );
+		}
+
+		$week_end        = $week_start->modify( '+6 days' ); // Sunday.
+		$today           = $now->format( 'Y-m-d' );
+		$week_start_str  = $week_start->format( 'Y-m-d' );
+		$week_end_str    = $week_end->format( 'Y-m-d' );
+		$staff_id        = (int) $current_staff['id'];
+
+		// Query bookings for the week.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$week_results = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					b.id,
+					b.booking_date,
+					b.start_time,
+					b.end_time,
+					b.status,
+					b.duration,
+					b.total_price,
+					b.deposit_paid,
+					b.staff_notes,
+					b.special_requests,
+					s.name AS service_name,
+					s.duration AS service_duration,
+					c.first_name AS customer_first_name,
+					c.last_name AS customer_last_name
+				FROM {$wpdb->prefix}bookings b
+				INNER JOIN {$wpdb->prefix}bookings_services s ON b.service_id = s.id
+				INNER JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
+				WHERE b.staff_id = %d
+				AND b.booking_date BETWEEN %s AND %s
+				AND b.deleted_at IS NULL
+				ORDER BY b.booking_date ASC, b.start_time ASC",
+				$staff_id,
+				$week_start_str,
+				$week_end_str
+			),
+			ARRAY_A
+		);
+
+		if ( null === $week_results ) {
+			return new WP_Error(
+				'database_error',
+				__( 'Failed to retrieve schedule.', 'bookit-booking-system' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		// Upcoming bookings (next 7 days after the displayed week).
+		$upcoming_bookings = array();
+		$include_upcoming  = rest_sanitize_boolean( $request->get_param( 'include_upcoming' ) );
+
+		if ( $include_upcoming ) {
+			$upcoming_start     = $week_end->modify( '+1 day' );
+			$upcoming_end       = $week_end->modify( '+7 days' );
+			$upcoming_start_str = $upcoming_start->format( 'Y-m-d' );
+			$upcoming_end_str   = $upcoming_end->format( 'Y-m-d' );
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$upcoming_results = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT
+						b.id,
+						b.booking_date,
+						b.start_time,
+						b.end_time,
+						b.status,
+						b.duration,
+						b.total_price,
+						b.deposit_paid,
+						b.staff_notes,
+						b.special_requests,
+						s.name AS service_name,
+						s.duration AS service_duration,
+						c.first_name AS customer_first_name,
+						c.last_name AS customer_last_name
+					FROM {$wpdb->prefix}bookings b
+					INNER JOIN {$wpdb->prefix}bookings_services s ON b.service_id = s.id
+					INNER JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
+					WHERE b.staff_id = %d
+					AND b.booking_date BETWEEN %s AND %s
+					AND b.deleted_at IS NULL
+					ORDER BY b.booking_date ASC, b.start_time ASC",
+					$staff_id,
+					$upcoming_start_str,
+					$upcoming_end_str
+				),
+				ARRAY_A
+			);
+
+			if ( $upcoming_results ) {
+				$upcoming_bookings = array_map(
+					function ( $row ) use ( $today ) {
+						return $this->format_schedule_booking( $row, $today );
+					},
+					$upcoming_results
+				);
+			}
+		}
+
+		// Group week bookings by date (include all 7 days even if empty).
+		$week_bookings = array();
+		$today_total   = 0;
+		$week_total    = 0;
+		$current_day   = $week_start;
+
+		for ( $i = 0; $i < 7; $i++ ) {
+			$date_key                    = $current_day->format( 'Y-m-d' );
+			$week_bookings[ $date_key ]  = array();
+			$current_day                 = $current_day->modify( '+1 day' );
+		}
+
+		foreach ( $week_results as $row ) {
+			$formatted = $this->format_schedule_booking( $row, $today );
+			$date_key  = $row['booking_date'];
+
+			if ( isset( $week_bookings[ $date_key ] ) ) {
+				$week_bookings[ $date_key ][] = $formatted;
+			}
+
+			++$week_total;
+
+			if ( $date_key === $today ) {
+				++$today_total;
+			}
+		}
+
+		return rest_ensure_response(
+			array(
+				'success'            => true,
+				'week_start'         => $week_start_str,
+				'week_end'           => $week_end_str,
+				'today'              => $today,
+				'staff_name'         => $current_staff['name'],
+				'week_bookings'      => $week_bookings,
+				'upcoming_bookings'  => $upcoming_bookings,
+				'week_total'         => $week_total,
+				'today_total'        => $today_total,
+			)
+		);
+	}
+
+	/**
+	 * Format a single booking row for the schedule response.
+	 *
+	 * @param array  $row   Raw DB row.
+	 * @param string $today Today's date in YYYY-MM-DD format.
+	 * @return array Formatted booking.
+	 */
+	private function format_schedule_booking( $row, $today ) {
+		return array(
+			'id'               => (int) $row['id'],
+			'booking_date'     => $row['booking_date'],
+			'start_time'       => substr( $row['start_time'], 0, 5 ),
+			'end_time'         => substr( $row['end_time'], 0, 5 ),
+			'status'           => $row['status'],
+			'service_name'     => $row['service_name'],
+			'duration'         => (int) $row['duration'],
+			'customer_name'    => $row['customer_first_name'] . ' ' . $row['customer_last_name'],
+			'total_price'      => (float) $row['total_price'],
+			'deposit_paid'     => (float) $row['deposit_paid'],
+			'staff_notes'      => $row['staff_notes'],
+			'special_requests' => $row['special_requests'],
+			'is_today'         => $row['booking_date'] === $today,
 		);
 	}
 
@@ -2776,6 +3120,8 @@ class Bookit_Dashboard_Bookings_API {
 				array( 'status' => 404 )
 			);
 		}
+
+		$old_status = $existing['status'];
 
 		// Permission check: staff can only edit their own bookings.
 		if ( 'staff' === $current_staff['role'] && (int) $existing['staff_id'] !== (int) $current_staff['id'] ) {
@@ -2948,6 +3294,22 @@ class Bookit_Dashboard_Bookings_API {
 			),
 			ARRAY_A
 		);
+
+		// Log status change to audit trail (Sprint 4A).
+		if ( $old_status !== $new_status ) {
+			$wpdb->insert(
+				$wpdb->prefix . 'bookings_status_log',
+				array(
+					'booking_id'          => $booking_id,
+					'old_status'          => $old_status,
+					'new_status'          => $new_status,
+					'changed_by_staff_id' => $current_staff['id'],
+					'changed_at'          => current_time( 'mysql' ),
+					'notes'               => null,
+				),
+				array( '%d', '%s', '%s', '%d', '%s', '%s' )
+			);
+		}
 
 		return rest_ensure_response(
 			array(

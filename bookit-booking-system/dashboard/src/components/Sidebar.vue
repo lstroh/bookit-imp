@@ -69,6 +69,7 @@ const emit = defineEmits(['close'])
 
 const mainNavigation = [
   { name: 'dashboard', path: '/', icon: '📅', label: 'Today' },
+  { name: 'mySchedule', path: '/my-schedule', icon: '🗓️', label: 'My Schedule' },
   { name: 'bookings', path: '/bookings', icon: '📋', label: 'Bookings' },
   { name: 'services', path: '/services', icon: '✂️', label: 'Services' },
   { name: 'categories', path: '/categories', icon: '🏷️', label: 'Categories' },
