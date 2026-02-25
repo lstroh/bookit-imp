@@ -110,6 +110,17 @@ class Bookit_Dashboard_Bookings_API {
 			)
 		);
 
+		// Staff personal booking stats.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/my-stats',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'get_my_stats' ),
+				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+			)
+		);
+
 		// Staff self-service availability blocking.
 		register_rest_route(
 			self::NAMESPACE,
@@ -3075,6 +3086,129 @@ class Bookit_Dashboard_Bookings_API {
 				'upcoming_bookings'  => $upcoming_bookings,
 				'week_total'         => $week_total,
 				'today_total'        => $today_total,
+			)
+		);
+	}
+
+	/**
+	 * Get current staff member booking stats.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_my_stats( $request ) {
+		global $wpdb;
+
+		$current_staff = Bookit_Auth::get_current_staff();
+		if ( ! $current_staff ) {
+			return new WP_Error(
+				'unauthorized',
+				__( 'Could not retrieve staff information.', 'bookit-booking-system' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		$show_earnings = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT setting_value FROM {$wpdb->prefix}bookings_settings
+				WHERE setting_key = %s",
+				'show_staff_earnings'
+			)
+		);
+
+		if ( ! $show_earnings || '0' === $show_earnings || 'false' === $show_earnings ) {
+			return new WP_Error(
+				'earnings_hidden',
+				__( 'Earnings display is disabled.', 'bookit-booking-system' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		$now_london = new DateTimeImmutable( 'now', new DateTimeZone( 'Europe/London' ) );
+
+		$week_start = $now_london->modify( 'monday this week' )->setTime( 0, 0, 0 );
+		$week_end   = $week_start->modify( '+6 days' )->setTime( 23, 59, 59 );
+
+		$month_start = $now_london->modify( 'first day of this month' )->setTime( 0, 0, 0 );
+		$month_end   = $now_london->modify( 'last day of this month' )->setTime( 23, 59, 59 );
+
+		$week_result = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT
+					COUNT(DISTINCT b.id) AS booking_count,
+					COALESCE(SUM(p.amount), 0) AS revenue
+				FROM {$wpdb->prefix}bookings b
+				LEFT JOIN {$wpdb->prefix}bookings_payments p
+					ON p.booking_id = b.id
+					AND p.payment_status = 'completed'
+				WHERE b.staff_id = %d
+				AND b.status = 'completed'
+				AND b.deleted_at IS NULL
+				AND b.booking_date BETWEEN %s AND %s",
+				$current_staff['id'],
+				$week_start->format( 'Y-m-d' ),
+				$week_end->format( 'Y-m-d' )
+			),
+			ARRAY_A
+		);
+
+		$month_result = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT
+					COUNT(DISTINCT b.id) AS booking_count,
+					COALESCE(SUM(p.amount), 0) AS revenue
+				FROM {$wpdb->prefix}bookings b
+				LEFT JOIN {$wpdb->prefix}bookings_payments p
+					ON p.booking_id = b.id
+					AND p.payment_status = 'completed'
+				WHERE b.staff_id = %d
+				AND b.status = 'completed'
+				AND b.deleted_at IS NULL
+				AND b.booking_date BETWEEN %s AND %s",
+				$current_staff['id'],
+				$month_start->format( 'Y-m-d' ),
+				$month_end->format( 'Y-m-d' )
+			),
+			ARRAY_A
+		);
+
+		$all_time_result = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT
+					COUNT(DISTINCT b.id) AS booking_count,
+					COALESCE(SUM(p.amount), 0) AS revenue
+				FROM {$wpdb->prefix}bookings b
+				LEFT JOIN {$wpdb->prefix}bookings_payments p
+					ON p.booking_id = b.id
+					AND p.payment_status = 'completed'
+				WHERE b.staff_id = %d
+				AND b.status = 'completed'
+				AND b.deleted_at IS NULL",
+				$current_staff['id']
+			),
+			ARRAY_A
+		);
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'stats'   => array(
+					'this_week'  => array(
+						'booking_count' => (int) ( $week_result['booking_count'] ?? 0 ),
+						'revenue'       => (float) ( $week_result['revenue'] ?? 0 ),
+						'period_label'  => 'This Week',
+					),
+					'this_month' => array(
+						'booking_count' => (int) ( $month_result['booking_count'] ?? 0 ),
+						'revenue'       => (float) ( $month_result['revenue'] ?? 0 ),
+						'period_label'  => 'This Month',
+					),
+					'all_time'   => array(
+						'booking_count' => (int) ( $all_time_result['booking_count'] ?? 0 ),
+						'revenue'       => (float) ( $all_time_result['revenue'] ?? 0 ),
+						'period_label'  => 'All Time',
+					),
+				),
 			)
 		);
 	}

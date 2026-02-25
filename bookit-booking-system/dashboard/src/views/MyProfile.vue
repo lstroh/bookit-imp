@@ -291,6 +291,42 @@
           </div>
         </form>
       </div>
+
+      <!-- My Stats Section -->
+      <div v-if="showStats" class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <h2 class="text-base sm:text-lg font-semibold text-gray-900">My Stats</h2>
+          <p class="text-sm text-gray-500 mt-1">Your booking performance</p>
+        </div>
+        <div class="px-4 sm:px-6 py-6">
+          <!-- Loading state -->
+          <div v-if="statsLoading" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="h-24 bg-gray-100 animate-pulse rounded-lg"></div>
+            <div class="h-24 bg-gray-100 animate-pulse rounded-lg"></div>
+            <div class="h-24 bg-gray-100 animate-pulse rounded-lg"></div>
+          </div>
+
+          <!-- Stats tiles -->
+          <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div
+              v-for="(stat, key) in stats"
+              :key="key"
+              class="bg-gray-50 rounded-lg p-4 border border-gray-200"
+            >
+              <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {{ stat.period_label }}
+              </p>
+              <p class="text-2xl font-bold text-gray-900 mt-1">
+                {{ stat.booking_count }}
+                <span class="text-sm font-normal text-gray-500">bookings</span>
+              </p>
+              <p class="text-lg font-semibold text-primary-600 mt-1">
+                £{{ formatCurrency(stat.revenue) }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -311,6 +347,9 @@ const passwordError = ref('')
 const originalEmail = ref('')
 const emailChanged = ref(false)
 const emailPasswordConfirm = ref('')
+const showStats = ref(false)
+const statsLoading = ref(false)
+const stats = ref(null)
 
 const profile = ref({
   first_name: '',
@@ -448,6 +487,55 @@ const changePassword = async () => {
   }
 }
 
+const formatCurrency = (value) => {
+  return Number(value).toLocaleString('en-GB', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })
+}
+
+const loadStats = async () => {
+  // Determine the current user's role from the staff prop already available
+  // in this component. Use the exact same prop/variable name already used
+  // elsewhere in MyProfile.vue to access the staff role.
+  const isAdmin = profile.value?.role === 'admin'
+
+  if (isAdmin) {
+    // Admin: check the setting before calling my-stats to avoid a 403.
+    try {
+      const settingResponse = await api.get('settings?keys=show_staff_earnings')
+      const enabled = settingResponse.data?.settings?.show_staff_earnings
+      if (!enabled) {
+        showStats.value = false
+        return
+      }
+    } catch (err) {
+      showStats.value = false
+      return
+    }
+  }
+
+  // For staff (and admin when setting is enabled): call my-stats directly.
+  // The backend returns 403 if earnings are hidden — handle that silently.
+  statsLoading.value = true
+  try {
+    const response = await api.get('my-stats')
+    if (response.data.success) {
+      stats.value = response.data.stats
+      showStats.value = true
+    }
+  } catch (err) {
+    // err.status (not err.response?.status) — useApi.js interceptor maps
+    // HTTP status onto err.status directly.
+    if (err.status !== 403) {
+      console.error('Failed to load stats:', err)
+    }
+    showStats.value = false
+  } finally {
+    statsLoading.value = false
+  }
+}
+
 const openMediaLibrary = () => {
   if (typeof wp !== 'undefined' && wp.media) {
     const mediaFrame = wp.media({
@@ -495,5 +583,6 @@ const getColorForInitials = (name) => {
 
 onMounted(() => {
   loadProfile()
+  loadStats()
 })
 </script>
