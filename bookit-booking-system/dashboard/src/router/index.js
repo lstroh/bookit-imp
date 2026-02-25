@@ -59,6 +59,44 @@ export default [
     component: () => import('../views/MyAvailability.vue'),
     meta: { title: 'My Availability' }
   },
+  // Reports (admin only)
+  {
+    path: '/reports',
+    name: 'Reports',
+    component: () => import('../views/Reports.vue'),
+    meta: { title: 'Reports Overview', requiresAdmin: true }
+  },
+  {
+    path: '/reports/revenue',
+    name: 'RevenueReport',
+    component: () => import('../views/RevenueReport.vue'),
+    meta: { title: 'Revenue Report', requiresAdmin: true }
+  },
+  {
+    path: '/reports/bookings',
+    name: 'BookingAnalytics',
+    component: () => import('../views/BookingAnalytics.vue'),
+    meta: { title: 'Booking Analytics', requiresAdmin: true }
+  },
+  {
+    path: '/reports/staff',
+    name: 'StaffPerformance',
+    component: () => import('../views/StaffPerformance.vue'),
+    meta: { title: 'Staff Performance', requiresAdmin: true }
+  },
+  // Customers (admin only)
+  {
+    path: '/customers',
+    name: 'Customers',
+    component: () => import('../views/Customers.vue'),
+    meta: { title: 'Customers', requiresAdmin: true }
+  },
+  {
+    path: '/customers/:id',
+    name: 'CustomerProfile',
+    component: () => import('../views/CustomerProfile.vue'),
+    meta: { title: 'Customer Profile', requiresAdmin: true }
+  },
   {
     path: '/settings/email',
     name: 'EmailSettings',

@@ -34,11 +34,30 @@
       </router-link>
     </nav>
 
-    <!-- Settings Section (Admin Only) -->
+    <!-- Admin Sections -->
     <div
       v-if="props.staff.role === 'admin'"
-      class="px-4 pb-4 border-t border-gray-200"
+      class="pb-4"
     >
+      <!-- Reports Section (Admin Only) -->
+      <div class="px-4 pb-2 border-t border-gray-200">
+        <p class="px-4 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          Reports
+        </p>
+        <router-link
+          v-for="item in reportsNavigation"
+          :key="item.name"
+          :to="item.path"
+          class="nav-item"
+          :class="{ 'active': $route.path === item.path || $route.path.startsWith(item.path + '/') }"
+        >
+          <span class="text-xl mr-3">{{ item.icon }}</span>
+          <span>{{ item.label }}</span>
+        </router-link>
+      </div>
+
+      <!-- Settings Section (Admin Only) -->
+      <div class="px-4 pb-4 border-t border-gray-200">
       <p class="px-4 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
         Settings
       </p>
@@ -53,6 +72,7 @@
         <span class="text-xl mr-3">{{ item.icon }}</span>
         <span>{{ item.label }}</span>
       </router-link>
+      </div>
     </div>
   </div>
 </template>
@@ -82,6 +102,14 @@ const settingsNavigation = [
   { name: 'emailSettings', path: '/settings/email', icon: '📧', label: 'Email Configuration' },
   { name: 'emailTemplates', path: '/settings/templates', icon: '📝', label: 'Email Templates' },
   { name: 'bulkHours', path: '/settings/bulk-hours', icon: '👥', label: 'Bulk Working Hours' }
+]
+
+const reportsNavigation = [
+  { name: 'reportsOverview', path: '/reports', icon: '📊', label: 'Overview' },
+  { name: 'revenueReport', path: '/reports/revenue', icon: '💷', label: 'Revenue' },
+  { name: 'bookingAnalytics', path: '/reports/bookings', icon: '📈', label: 'Bookings' },
+  { name: 'staffPerformance', path: '/reports/staff', icon: '👥', label: 'Staff Performance' },
+  { name: 'customers', path: '/customers', icon: '👤', label: 'Customers' }
 ]
 </script>
 
