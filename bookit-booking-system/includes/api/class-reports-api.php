@@ -911,12 +911,26 @@ class Bookit_Reports_API {
 		$csv_string = stream_get_contents( $stream );
 		fclose( $stream );
 
-		// Return as downloadable CSV response.
+		// Output CSV directly, bypassing WP REST JSON encoding.
 		$filename = 'revenue-report-' . $date_from . '-to-' . $date_to . '.csv';
-		$response = new WP_REST_Response( $csv_string );
-		$response->header( 'Content-Type', 'text/csv; charset=utf-8' );
-		$response->header( 'Content-Disposition', 'attachment; filename="' . $filename . '"' );
-		return $response;
+
+		// Add a WordPress action to send headers and output before REST API responds.
+		add_filter(
+			'rest_pre_serve_request',
+			function( $served ) use ( $csv_string, $filename ) {
+				if ( ! $served ) {
+					header( 'Content-Type: text/csv; charset=utf-8' );
+					header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+					header( 'Cache-Control: no-cache, no-store, must-revalidate' );
+					header( 'Content-Length: ' . strlen( $csv_string ) );
+					echo $csv_string; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				}
+				return true; // Returning true tells WP REST not to send its own response.
+			}
+		);
+
+		// Return a minimal WP_REST_Response - it won't be sent because rest_pre_serve_request returns true.
+		return new WP_REST_Response( null, 200 );
 	}
 
 	/**
