@@ -35,11 +35,13 @@
       </div>
       <button
         @click="applyCustomRange"
+        :disabled="!!dateError || !localFrom || !localTo"
         class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700"
       >
         Apply
       </button>
     </div>
+    <p v-if="dateError" class="text-xs text-red-600 mt-1">{{ dateError }}</p>
   </div>
 </template>
 
@@ -56,6 +58,7 @@ const props = defineProps({
 const localFrom = ref(props.modelFrom)
 const localTo = ref(props.modelTo)
 const activeQuickFilter = ref('this_month')
+const dateError = ref('')
 
 function toLocalDateString(date) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(date)
@@ -118,11 +121,22 @@ function applyQuickFilter(key) {
 
 function applyCustomRange() {
   if (!localFrom.value || !localTo.value) return
+
+  if (localFrom.value > localTo.value) {
+    alert('The start date must be before the end date.')
+    return
+  }
+
   activeQuickFilter.value = 'custom'
   emit('change', { from: localFrom.value, to: localTo.value })
 }
 
 function onDateChange() {
   activeQuickFilter.value = 'custom'
+  if (localFrom.value && localTo.value && localFrom.value > localTo.value) {
+    dateError.value = 'Start date must be before end date.'
+  } else {
+    dateError.value = ''
+  }
 }
 </script>

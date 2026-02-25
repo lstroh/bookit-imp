@@ -81,26 +81,12 @@ class Bookit_Reports_API {
 				'args'                => array(
 					'date_from' => array(
 						'required'          => false,
-						'validate_callback' => function ( $param ) {
-							if ( empty( $param ) ) {
-								return true;
-							}
-							$timezone = new DateTimeZone( 'Europe/London' );
-							$date     = DateTimeImmutable::createFromFormat( '!Y-m-d', (string) $param, $timezone );
-							return $date && $date->format( 'Y-m-d' ) === $param;
-						},
+						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
 					'date_to'   => array(
 						'required'          => false,
-						'validate_callback' => function ( $param ) {
-							if ( empty( $param ) ) {
-								return true;
-							}
-							$timezone = new DateTimeZone( 'Europe/London' );
-							$date     = DateTimeImmutable::createFromFormat( '!Y-m-d', (string) $param, $timezone );
-							return $date && $date->format( 'Y-m-d' ) === $param;
-						},
+						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
 				),

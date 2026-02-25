@@ -91,7 +91,7 @@
           description="Try another date range to view trend data."
         />
         <div v-else style="height: 260px; position: relative;">
-          <Line :data="trendChartData" :options="chartOptions" />
+          <Bar :data="trendChartData" :options="chartOptions" />
         </div>
       </div>
 
@@ -201,7 +201,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { Line } from 'vue-chartjs'
+import { Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -209,9 +209,7 @@ import {
   BarElement,
   Title,
   Tooltip,
-  Legend,
-  LineElement,
-  PointElement
+  Legend
 } from 'chart.js'
 import { useApi } from '../composables/useApi'
 import CardSkeleton from '../components/CardSkeleton.vue'
@@ -219,7 +217,7 @@ import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
 import DateRangeSelector from '../components/DateRangeSelector.vue'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, LineElement, PointElement)
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const api = useApi()
 
@@ -259,7 +257,6 @@ const trendChartData = computed(() => {
         data: trend.map((item) => Number(item.revenue || 0)),
         borderColor: '#3B82F6',
         backgroundColor: '#3B82F6',
-        tension: 0.3,
         pointRadius: 3,
         pointHoverRadius: 5
       }
@@ -388,7 +385,9 @@ function handleDateRangeChange({ from, to }) {
 }
 
 function exportCsv() {
-  window.location.href = `${window.BOOKIT_DASHBOARD.apiBase}reports/revenue/export?date_from=${dateFrom.value}&date_to=${dateTo.value}&_wpnonce=${window.BOOKIT_DASHBOARD.nonce}`
+  const base = window.BOOKIT_DASHBOARD.apiBase
+  const url = `${base}dashboard/reports/revenue/export?date_from=${dateFrom.value}&date_to=${dateTo.value}`
+  window.open(url, '_blank')
 }
 
 onMounted(() => {
