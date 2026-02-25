@@ -53,6 +53,7 @@ wp_enqueue_media();
 		window.BOOKIT_DASHBOARD = {
 			staff: <?php echo wp_json_encode( $current_staff ); ?>,
 			apiBase: '<?php echo esc_js( rest_url( 'bookit/v1/dashboard' ) ); ?>',
+			restBase: '<?php echo esc_js( rest_url( 'bookit/v1/' ) ); ?>',
 			nonce: '<?php echo esc_js( $rest_nonce ); ?>',
 			pluginUrl: '<?php echo esc_url( BOOKIT_PLUGIN_URL ); ?>',
 			logoutUrl: '<?php echo esc_url( home_url( '/bookit-dashboard/logout/' ) ); ?>'

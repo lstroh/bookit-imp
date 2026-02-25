@@ -385,8 +385,11 @@ function handleDateRangeChange({ from, to }) {
 }
 
 function exportCsv() {
-  const base = window.BOOKIT_DASHBOARD.apiBase
-  const url = `${base}dashboard/reports/revenue/export?date_from=${dateFrom.value}&date_to=${dateTo.value}`
+  // Build the export URL using the WordPress REST API base directly,
+  // not the dashboard apiBase which may include extra path segments.
+  const restBase = window.BOOKIT_DASHBOARD.restBase ||
+    window.location.origin + '/wp-json/bookit/v1/'
+  const url = `${restBase}dashboard/reports/revenue/export?date_from=${dateFrom.value}&date_to=${dateTo.value}`
   window.open(url, '_blank')
 }
 
