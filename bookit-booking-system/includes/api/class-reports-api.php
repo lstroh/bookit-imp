@@ -32,6 +32,80 @@ class Bookit_Reports_API {
 				'permission_callback' => array( $this, 'check_admin_permission' ),
 			)
 		);
+
+		// Revenue report.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/reports/revenue',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'get_revenue_report' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'date_from' => array(
+						'required'          => false,
+						'validate_callback' => function ( $param ) {
+							if ( empty( $param ) ) {
+								return true;
+							}
+							$timezone = new DateTimeZone( 'Europe/London' );
+							$date     = DateTimeImmutable::createFromFormat( '!Y-m-d', (string) $param, $timezone );
+							return $date && $date->format( 'Y-m-d' ) === $param;
+						},
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'date_to'   => array(
+						'required'          => false,
+						'validate_callback' => function ( $param ) {
+							if ( empty( $param ) ) {
+								return true;
+							}
+							$timezone = new DateTimeZone( 'Europe/London' );
+							$date     = DateTimeImmutable::createFromFormat( '!Y-m-d', (string) $param, $timezone );
+							return $date && $date->format( 'Y-m-d' ) === $param;
+						},
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
+
+		// Revenue CSV export.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/reports/revenue/export',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'export_revenue_csv' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'date_from' => array(
+						'required'          => false,
+						'validate_callback' => function ( $param ) {
+							if ( empty( $param ) ) {
+								return true;
+							}
+							$timezone = new DateTimeZone( 'Europe/London' );
+							$date     = DateTimeImmutable::createFromFormat( '!Y-m-d', (string) $param, $timezone );
+							return $date && $date->format( 'Y-m-d' ) === $param;
+						},
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'date_to'   => array(
+						'required'          => false,
+						'validate_callback' => function ( $param ) {
+							if ( empty( $param ) ) {
+								return true;
+							}
+							$timezone = new DateTimeZone( 'Europe/London' );
+							$date     = DateTimeImmutable::createFromFormat( '!Y-m-d', (string) $param, $timezone );
+							return $date && $date->format( 'Y-m-d' ) === $param;
+						},
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -117,6 +191,297 @@ class Bookit_Reports_API {
 				'data'    => $result,
 			)
 		);
+	}
+
+	/**
+	 * GET /dashboard/reports/revenue
+	 *
+	 * Returns revenue report data for selected date range.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response
+	 */
+	public function get_revenue_report( $request ) {
+		global $wpdb;
+
+		$tz  = new DateTimeZone( 'Europe/London' );
+		$now = new DateTimeImmutable( 'now', $tz );
+
+		$date_from_param = $request->get_param( 'date_from' );
+		$date_to_param   = $request->get_param( 'date_to' );
+
+		$date_from = ! empty( $date_from_param ) ? sanitize_text_field( $date_from_param ) : $now->format( 'Y-m-01' );
+		$date_to   = ! empty( $date_to_param ) ? sanitize_text_field( $date_to_param ) : $now->format( 'Y-m-d' );
+
+		$total_revenue = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COALESCE(SUM(p.amount), 0)
+				FROM {$wpdb->prefix}bookings_payments p
+				INNER JOIN {$wpdb->prefix}bookings b ON b.id = p.booking_id
+				WHERE p.payment_status = 'completed'
+					AND p.payment_type != 'refund'
+					AND b.booking_date BETWEEN %s AND %s
+					AND b.deleted_at IS NULL",
+				$date_from,
+				$date_to
+			)
+		);
+
+		$deposits = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COALESCE(SUM(p.amount), 0)
+				FROM {$wpdb->prefix}bookings_payments p
+				INNER JOIN {$wpdb->prefix}bookings b ON b.id = p.booking_id
+				WHERE p.payment_status = 'completed'
+					AND p.payment_type = 'deposit'
+					AND b.booking_date BETWEEN %s AND %s
+					AND b.deleted_at IS NULL",
+				$date_from,
+				$date_to
+			)
+		);
+
+		$balance_payments = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COALESCE(SUM(p.amount), 0)
+				FROM {$wpdb->prefix}bookings_payments p
+				INNER JOIN {$wpdb->prefix}bookings b ON b.id = p.booking_id
+				WHERE p.payment_status = 'completed'
+					AND p.payment_type = 'full_payment'
+					AND b.booking_date BETWEEN %s AND %s
+					AND b.deleted_at IS NULL",
+				$date_from,
+				$date_to
+			)
+		);
+
+		$refunds = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COALESCE(SUM(p.refund_amount), 0)
+				FROM {$wpdb->prefix}bookings_payments p
+				INNER JOIN {$wpdb->prefix}bookings b ON b.id = p.booking_id
+				WHERE p.payment_status IN ('refunded', 'partially_refunded')
+					AND b.booking_date BETWEEN %s AND %s
+					AND b.deleted_at IS NULL",
+				$date_from,
+				$date_to
+			)
+		);
+
+		$net_revenue = (float) $total_revenue - (float) $refunds;
+
+		$by_service = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					s.name AS service_name,
+					COUNT(DISTINCT b.id) AS booking_count,
+					COALESCE(SUM(p.amount), 0) AS total_revenue,
+					CASE WHEN COUNT(DISTINCT b.id) > 0
+						THEN COALESCE(SUM(p.amount), 0) / COUNT(DISTINCT b.id)
+						ELSE 0 END AS avg_price
+				FROM {$wpdb->prefix}bookings b
+				INNER JOIN {$wpdb->prefix}bookings_services s ON s.id = b.service_id
+				LEFT JOIN {$wpdb->prefix}bookings_payments p
+					ON p.booking_id = b.id AND p.payment_status = 'completed' AND p.payment_type != 'refund'
+				WHERE b.booking_date BETWEEN %s AND %s
+					AND b.deleted_at IS NULL
+					AND b.status != 'cancelled'
+				GROUP BY b.service_id, s.name
+				ORDER BY total_revenue DESC",
+				$date_from,
+				$date_to
+			),
+			ARRAY_A
+		);
+
+		$by_staff = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					CONCAT(st.first_name, ' ', st.last_name) AS staff_name,
+					COUNT(DISTINCT b.id) AS booking_count,
+					COALESCE(SUM(p.amount), 0) AS total_revenue,
+					CASE WHEN COUNT(DISTINCT b.id) > 0
+						THEN COALESCE(SUM(p.amount), 0) / COUNT(DISTINCT b.id)
+						ELSE 0 END AS avg_per_booking
+				FROM {$wpdb->prefix}bookings b
+				INNER JOIN {$wpdb->prefix}bookings_staff st ON st.id = b.staff_id
+				LEFT JOIN {$wpdb->prefix}bookings_payments p
+					ON p.booking_id = b.id AND p.payment_status = 'completed' AND p.payment_type != 'refund'
+				WHERE b.booking_date BETWEEN %s AND %s
+					AND b.deleted_at IS NULL
+					AND b.status != 'cancelled'
+				GROUP BY b.staff_id, st.first_name, st.last_name
+				ORDER BY total_revenue DESC",
+				$date_from,
+				$date_to
+			),
+			ARRAY_A
+		);
+
+		$by_method = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					p.payment_method,
+					COUNT(DISTINCT b.id) AS booking_count,
+					COALESCE(SUM(p.amount), 0) AS total_revenue
+				FROM {$wpdb->prefix}bookings_payments p
+				INNER JOIN {$wpdb->prefix}bookings b ON b.id = p.booking_id
+				WHERE p.payment_status = 'completed'
+					AND p.payment_type != 'refund'
+					AND b.booking_date BETWEEN %s AND %s
+					AND b.deleted_at IS NULL
+				GROUP BY p.payment_method
+				ORDER BY total_revenue DESC",
+				$date_from,
+				$date_to
+			),
+			ARRAY_A
+		);
+
+		$formatted_by_service = array_map(
+			function ( $row ) {
+				return array(
+					'service_name'   => isset( $row['service_name'] ) ? (string) $row['service_name'] : '',
+					'booking_count'  => (int) $row['booking_count'],
+					'total_revenue'  => (float) $row['total_revenue'],
+					'avg_price'      => (float) $row['avg_price'],
+				);
+			},
+			$by_service
+		);
+
+		$formatted_by_staff = array_map(
+			function ( $row ) {
+				return array(
+					'staff_name'       => isset( $row['staff_name'] ) ? (string) $row['staff_name'] : '',
+					'booking_count'    => (int) $row['booking_count'],
+					'total_revenue'    => (float) $row['total_revenue'],
+					'avg_per_booking'  => (float) $row['avg_per_booking'],
+				);
+			},
+			$by_staff
+		);
+
+		$formatted_by_method = array_map(
+			function ( $row ) {
+				return array(
+					'payment_method' => isset( $row['payment_method'] ) ? (string) $row['payment_method'] : '',
+					'booking_count'  => (int) $row['booking_count'],
+					'total_revenue'  => (float) $row['total_revenue'],
+				);
+			},
+			$by_method
+		);
+
+		$revenue_trend = $this->get_daily_revenue( $date_from, $date_to );
+		$today         = $now->format( 'Y-m-d' );
+
+		return rest_ensure_response(
+			array(
+				'success'           => true,
+				'date_from'         => $date_from,
+				'date_to'           => $date_to,
+				'is_today_in_range' => ( $today >= $date_from && $today <= $date_to ),
+				'summary'           => array(
+					'total_revenue'    => (float) $total_revenue,
+					'deposits'         => (float) $deposits,
+					'balance_payments' => (float) $balance_payments,
+					'refunds'          => (float) $refunds,
+					'net_revenue'      => (float) $net_revenue,
+				),
+				'by_service'        => $formatted_by_service,
+				'by_staff'          => $formatted_by_staff,
+				'by_payment_method' => $formatted_by_method,
+				'revenue_trend'     => $revenue_trend,
+			)
+		);
+	}
+
+	/**
+	 * GET /dashboard/reports/revenue/export
+	 *
+	 * Export revenue report as CSV.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function export_revenue_csv( $request ) {
+		$tz  = new DateTimeZone( 'Europe/London' );
+		$now = new DateTimeImmutable( 'now', $tz );
+
+		$date_from_param = $request->get_param( 'date_from' );
+		$date_to_param   = $request->get_param( 'date_to' );
+
+		$date_from = ! empty( $date_from_param ) ? sanitize_text_field( $date_from_param ) : $now->format( 'Y-m-01' );
+		$date_to   = ! empty( $date_to_param ) ? sanitize_text_field( $date_to_param ) : $now->format( 'Y-m-d' );
+
+		$report_response = $this->get_revenue_report( $request );
+		if ( is_wp_error( $report_response ) ) {
+			return $report_response;
+		}
+		$report_data = rest_ensure_response( $report_response )->get_data();
+
+		$handle = fopen( 'php://temp', 'r+' );
+
+		fputcsv(
+			$handle,
+			array(
+				__( 'Date From', 'bookit-booking-system' ),
+				__( 'Date To', 'bookit-booking-system' ),
+				__( 'Total Revenue', 'bookit-booking-system' ),
+				__( 'Deposits', 'bookit-booking-system' ),
+				__( 'Balance Payments', 'bookit-booking-system' ),
+				__( 'Refunds', 'bookit-booking-system' ),
+				__( 'Net Revenue', 'bookit-booking-system' ),
+			)
+		);
+
+		fputcsv(
+			$handle,
+			array(
+				$date_from,
+				$date_to,
+				(float) $report_data['summary']['total_revenue'],
+				(float) $report_data['summary']['deposits'],
+				(float) $report_data['summary']['balance_payments'],
+				(float) $report_data['summary']['refunds'],
+				(float) $report_data['summary']['net_revenue'],
+			)
+		);
+
+		fputcsv( $handle, array() );
+		fputcsv(
+			$handle,
+			array(
+				__( 'Service Name', 'bookit-booking-system' ),
+				__( 'Bookings', 'bookit-booking-system' ),
+				__( 'Total Revenue', 'bookit-booking-system' ),
+				__( 'Avg Price', 'bookit-booking-system' ),
+			)
+		);
+
+		foreach ( $report_data['by_service'] as $service_row ) {
+			fputcsv(
+				$handle,
+				array(
+					$service_row['service_name'],
+					(int) $service_row['booking_count'],
+					(float) $service_row['total_revenue'],
+					(float) $service_row['avg_price'],
+				)
+			);
+		}
+
+		rewind( $handle );
+		$csv_string = stream_get_contents( $handle );
+		fclose( $handle );
+
+		$filename = 'revenue-report-' . $date_from . '-to-' . $date_to . '.csv';
+		$response = new WP_REST_Response( $csv_string );
+		$response->header( 'Content-Type', 'text/csv; charset=utf-8' );
+		$response->header( 'Content-Disposition', 'attachment; filename="' . $filename . '"' );
+
+		return $response;
 	}
 
 	/**
