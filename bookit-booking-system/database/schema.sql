@@ -344,3 +344,24 @@ CREATE TABLE wp_bookings_email_templates (
 -- Added table: wp_bookings_status_log
 -- Columns: id, booking_id, old_status, new_status, changed_by_staff_id, changed_at, notes
 -- Migration file: database/migrations/migration-add-status-log.php
+
+
+--
+-- Migration 5: Add Booking Status Log Table
+-- Date: 2026-02-25
+-- Sprint: Sprint 4A, Task 1
+--
+-- Added table: wp_bookings_status_log
+-- Tracks all booking status changes with who made them and when.
+-- Populated by: mark_booking_complete(), mark_booking_no_show(), update_booking()
+--   in class-dashboard-bookings-api.php
+-- Migration file: database/migrations/migration-add-status-log.php
+--
+-- Columns:
+--   id                  BIGINT UNSIGNED AUTO_INCREMENT
+--   booking_id          BIGINT UNSIGNED NOT NULL
+--   old_status          VARCHAR(50) NOT NULL
+--   new_status          VARCHAR(50) NOT NULL
+--   changed_by_staff_id BIGINT UNSIGNED NOT NULL
+--   changed_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+--   notes               TEXT NULL
