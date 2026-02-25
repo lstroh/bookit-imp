@@ -54,6 +54,12 @@ export default [
     meta: { title: 'My Schedule' }
   },
   {
+    path: '/my-availability',
+    name: 'MyAvailability',
+    component: () => import('../views/MyAvailability.vue'),
+    meta: { title: 'My Availability' }
+  },
+  {
     path: '/settings/email',
     name: 'EmailSettings',
     component: () => import('../views/EmailSettings.vue'),

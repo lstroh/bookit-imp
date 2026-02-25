@@ -110,6 +110,103 @@ class Bookit_Dashboard_Bookings_API {
 			)
 		);
 
+		// Staff self-service availability blocking.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/my-availability',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( $this, 'get_my_availability' ),
+					'permission_callback' => array( $this, 'check_dashboard_permission' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'create_my_availability_block' ),
+					'permission_callback' => array( $this, 'check_dashboard_permission' ),
+					'args'                => array(
+						'date_from'  => array(
+							'required'          => true,
+							'type'              => 'string',
+							'validate_callback' => function ( $param ) {
+								return is_string( $param ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $param );
+							},
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'date_to'    => array(
+							'required'          => true,
+							'type'              => 'string',
+							'validate_callback' => function ( $param ) {
+								return is_string( $param ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $param );
+							},
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'all_day'    => array(
+							'required' => true,
+							'type'     => 'boolean',
+						),
+						'start_time' => array(
+							'required'          => false,
+							'type'              => 'string',
+							'validate_callback' => function ( $param, $request ) {
+								$all_day = rest_sanitize_boolean( $request->get_param( 'all_day' ) );
+								if ( $all_day ) {
+									return true;
+								}
+								return is_string( $param ) && preg_match( '/^\d{2}:\d{2}(:\d{2})?$/', $param );
+							},
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'end_time'   => array(
+							'required'          => false,
+							'type'              => 'string',
+							'validate_callback' => function ( $param, $request ) {
+								$all_day = rest_sanitize_boolean( $request->get_param( 'all_day' ) );
+								if ( $all_day ) {
+									return true;
+								}
+								return is_string( $param ) && preg_match( '/^\d{2}:\d{2}(:\d{2})?$/', $param );
+							},
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'reason'     => array(
+							'required' => true,
+							'type'     => 'string',
+							'enum'     => array( 'vacation', 'sick_leave', 'lunch_break', 'personal', 'other' ),
+						),
+						'notes'      => array(
+							'required'          => false,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_textarea_field',
+						),
+						'repeat'     => array(
+							'required' => true,
+							'type'     => 'string',
+							'enum'     => array( 'none', 'daily', 'weekly' ),
+						),
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/my-availability/(?P<id>\d+)',
+			array(
+				'methods'             => 'DELETE',
+				'callback'            => array( $this, 'delete_my_availability_block' ),
+				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+				'args'                => array(
+					'id' => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param );
+						},
+					),
+				),
+			)
+		);
+
 		// All bookings with filtering.
 		register_rest_route(
 			self::NAMESPACE,
@@ -2979,6 +3076,392 @@ class Bookit_Dashboard_Bookings_API {
 				'week_total'         => $week_total,
 				'today_total'        => $today_total,
 			)
+		);
+	}
+
+	/**
+	 * Get current staff member's blocked availability records.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_my_availability( $request ) {
+		global $wpdb;
+
+		$current_staff = Bookit_Auth::get_current_staff();
+		if ( ! $current_staff ) {
+			return new WP_Error(
+				'unauthorized',
+				__( 'Could not retrieve staff information.', 'bookit-booking-system' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		$blocks = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					id,
+					specific_date,
+					start_time,
+					end_time,
+					is_working,
+					notes,
+					created_at
+				FROM {$wpdb->prefix}bookings_staff_working_hours
+				WHERE staff_id = %d
+				AND specific_date IS NOT NULL
+				AND is_working = 0
+				ORDER BY specific_date ASC",
+				(int) $current_staff['id']
+			),
+			ARRAY_A
+		);
+
+		$formatted_blocks = array_map(
+			function ( $row ) {
+				$parsed_notes = $this->parse_my_availability_notes( $row['notes'] );
+				$is_all_day   = ( '00:00:00' === $row['start_time'] && '23:59:00' === $row['end_time'] );
+
+				return array(
+					'id'            => (int) $row['id'],
+					'specific_date' => $row['specific_date'],
+					'start_time'    => $is_all_day ? null : $row['start_time'],
+					'end_time'      => $is_all_day ? null : $row['end_time'],
+					'is_working'    => (bool) $row['is_working'],
+					'is_all_day'    => $is_all_day,
+					'reason'        => $parsed_notes['reason'],
+					'notes'         => $parsed_notes['notes'],
+					'created_at'    => $row['created_at'],
+				);
+			},
+			$blocks
+		);
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'blocks'  => $formatted_blocks,
+			)
+		);
+	}
+
+	/**
+	 * Create one or more self-service availability blocks for current staff.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function create_my_availability_block( $request ) {
+		global $wpdb;
+
+		$current_staff = Bookit_Auth::get_current_staff();
+		if ( ! $current_staff ) {
+			return new WP_Error(
+				'unauthorized',
+				__( 'Could not retrieve staff information.', 'bookit-booking-system' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		$date_from = sanitize_text_field( $request->get_param( 'date_from' ) );
+		$date_to   = sanitize_text_field( $request->get_param( 'date_to' ) );
+		$all_day   = rest_sanitize_boolean( $request->get_param( 'all_day' ) );
+		$reason    = sanitize_text_field( $request->get_param( 'reason' ) );
+		$notes     = sanitize_textarea_field( (string) $request->get_param( 'notes' ) );
+		$repeat    = sanitize_text_field( $request->get_param( 'repeat' ) );
+
+		$tz         = new DateTimeZone( 'Europe/London' );
+		$today      = new DateTimeImmutable( 'now', $tz );
+		$today_date = $today->format( 'Y-m-d' );
+
+		if ( $date_from > $date_to ) {
+			return new WP_Error(
+				'invalid_date_range',
+				__( 'Start date must be before or equal to end date.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( $date_from < $today_date ) {
+			return new WP_Error(
+				'invalid_start_date',
+				__( 'You cannot block time off in the past.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( ! in_array( $repeat, array( 'none', 'daily', 'weekly' ), true ) ) {
+			return new WP_Error(
+				'invalid_repeat',
+				__( 'Invalid repeat setting.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$start_time = '00:00:00';
+		$end_time   = '23:59:00';
+
+		if ( ! $all_day ) {
+			$start_time = $this->normalize_time_with_seconds( $request->get_param( 'start_time' ) );
+			$end_time   = $this->normalize_time_with_seconds( $request->get_param( 'end_time' ) );
+
+			if ( empty( $start_time ) || empty( $end_time ) || strtotime( $start_time ) >= strtotime( $end_time ) ) {
+				return new WP_Error(
+					'invalid_time_range',
+					__( 'Start time must be before end time.', 'bookit-booking-system' ),
+					array( 'status' => 400 )
+				);
+			}
+		}
+
+		// Check booking conflicts before inserting rows.
+		if ( $all_day ) {
+			$conflict_count = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM {$wpdb->prefix}bookings
+					WHERE staff_id = %d
+					AND booking_date BETWEEN %s AND %s
+					AND status = 'confirmed'
+					AND deleted_at IS NULL",
+					(int) $current_staff['id'],
+					$date_from,
+					$date_to
+				)
+			);
+		} else {
+			$conflict_count = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM {$wpdb->prefix}bookings
+					WHERE staff_id = %d
+					AND booking_date BETWEEN %s AND %s
+					AND start_time < %s
+					AND end_time > %s
+					AND status = 'confirmed'
+					AND deleted_at IS NULL",
+					(int) $current_staff['id'],
+					$date_from,
+					$date_to,
+					$end_time,
+					$start_time
+				)
+			);
+		}
+
+		if ( $conflict_count > 0 ) {
+			return new WP_Error(
+				'booking_conflict',
+				sprintf(
+					_n(
+						'You have %d confirmed booking during this time. Please reschedule it before blocking this time off.',
+						'You have %d confirmed bookings during this time. Please reschedule them before blocking this time off.',
+						$conflict_count,
+						'bookit-booking-system'
+					),
+					$conflict_count
+				),
+				array( 'status' => 409 )
+			);
+		}
+
+		$from_date = new DateTimeImmutable( $date_from, $tz );
+		$to_date   = new DateTimeImmutable( $date_to, $tz );
+		$dates     = array();
+
+		if ( 'weekly' === $repeat ) {
+			for ( $week = 0; $week < 8; $week++ ) {
+				$dates[] = $from_date->modify( '+' . $week . ' weeks' )->format( 'Y-m-d' );
+			}
+		} else {
+			$current = $from_date;
+			while ( $current <= $to_date ) {
+				$dates[] = $current->format( 'Y-m-d' );
+				$current = $current->add( new DateInterval( 'P1D' ) );
+			}
+		}
+
+		$notes_value    = $this->build_my_availability_notes( $reason, $notes );
+		$repeat_weekly  = ( 'weekly' === $repeat ) ? 1 : 0;
+		$created_count  = 0;
+		$skipped_count  = 0;
+		$skipped_dates  = array();
+
+		foreach ( $dates as $date_string ) {
+			$existing = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT id FROM {$wpdb->prefix}bookings_staff_working_hours
+					WHERE staff_id = %d
+					AND specific_date = %s",
+					(int) $current_staff['id'],
+					$date_string
+				)
+			);
+
+			if ( $existing ) {
+				++$skipped_count;
+				$skipped_dates[] = $date_string;
+				continue;
+			}
+
+			$result = $wpdb->insert(
+				$wpdb->prefix . 'bookings_staff_working_hours',
+				array(
+					'staff_id'      => (int) $current_staff['id'],
+					'specific_date' => $date_string,
+					'day_of_week'   => null,
+					'start_time'    => $start_time,
+					'end_time'      => $end_time,
+					'is_working'    => 0,
+					'repeat_weekly' => $repeat_weekly,
+					'notes'         => $notes_value,
+				),
+				array( '%d', '%s', '%s', '%s', '%s', '%d', '%d', '%s' )
+			);
+
+			if ( false !== $result ) {
+				++$created_count;
+			}
+		}
+
+		return rest_ensure_response(
+			array(
+				'success'       => true,
+				'message'       => __( 'Time off blocked successfully.', 'bookit-booking-system' ),
+				'created'       => $created_count,
+				'skipped'       => $skipped_count,
+				'skipped_dates' => $skipped_dates,
+			)
+		);
+	}
+
+	/**
+	 * Delete a self-service availability block owned by current staff.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function delete_my_availability_block( $request ) {
+		global $wpdb;
+
+		$current_staff = Bookit_Auth::get_current_staff();
+		if ( ! $current_staff ) {
+			return new WP_Error(
+				'unauthorized',
+				__( 'Could not retrieve staff information.', 'bookit-booking-system' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		$id  = (int) $request['id'];
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, staff_id FROM {$wpdb->prefix}bookings_staff_working_hours
+				WHERE id = %d AND is_working = 0 AND specific_date IS NOT NULL",
+				$id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $row ) {
+			return new WP_Error(
+				'not_found',
+				__( 'Time-off block not found.', 'bookit-booking-system' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		if ( (int) $row['staff_id'] !== (int) $current_staff['id'] ) {
+			return new WP_Error(
+				'forbidden',
+				__( 'You cannot delete another staff member\'s time-off block.', 'bookit-booking-system' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		$deleted = $wpdb->delete(
+			$wpdb->prefix . 'bookings_staff_working_hours',
+			array( 'id' => $id ),
+			array( '%d' )
+		);
+
+		if ( false === $deleted ) {
+			return new WP_Error(
+				'delete_failed',
+				__( 'Failed to remove time-off block.', 'bookit-booking-system' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => __( 'Time-off block removed.', 'bookit-booking-system' ),
+			)
+		);
+	}
+
+	/**
+	 * Normalize a time value to H:i:s.
+	 *
+	 * @param string|null $time Time string.
+	 * @return string|null
+	 */
+	private function normalize_time_with_seconds( $time ) {
+		$time = sanitize_text_field( (string) $time );
+		if ( empty( $time ) || ! preg_match( '/^\d{2}:\d{2}(:\d{2})?$/', $time ) ) {
+			return null;
+		}
+
+		if ( strlen( $time ) === 5 ) {
+			return $time . ':00';
+		}
+
+		return $time;
+	}
+
+	/**
+	 * Build serialized notes string for staff time-off blocks.
+	 *
+	 * @param string $reason Reason enum value.
+	 * @param string $notes  Free-text notes.
+	 * @return string
+	 */
+	private function build_my_availability_notes( $reason, $notes ) {
+		$reason = sanitize_text_field( $reason );
+		$notes  = sanitize_textarea_field( $notes );
+		$notes  = str_replace( '|', ' ', $notes );
+
+		return 'reason:' . $reason . '|notes:' . $notes;
+	}
+
+	/**
+	 * Parse serialized notes string for staff time-off blocks.
+	 *
+	 * @param string|null $raw_notes Serialized notes payload.
+	 * @return array
+	 */
+	private function parse_my_availability_notes( $raw_notes ) {
+		$raw_notes = (string) $raw_notes;
+		$reason    = 'other';
+		$notes     = '';
+
+		if ( 0 === strpos( $raw_notes, 'reason:' ) && false !== strpos( $raw_notes, '|notes:' ) ) {
+			$parts = explode( '|notes:', $raw_notes, 2 );
+			if ( 2 === count( $parts ) ) {
+				$reason = str_replace( 'reason:', '', $parts[0] );
+				$notes  = $parts[1];
+			}
+		} else {
+			$notes = $raw_notes;
+		}
+
+		$allowed_reasons = array( 'vacation', 'sick_leave', 'lunch_break', 'personal', 'other' );
+		if ( ! in_array( $reason, $allowed_reasons, true ) ) {
+			$reason = 'other';
+		}
+
+		return array(
+			'reason' => sanitize_text_field( $reason ),
+			'notes'  => sanitize_textarea_field( $notes ),
 		);
 	}
 
