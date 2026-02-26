@@ -1593,7 +1593,7 @@ class Bookit_Dashboard_Bookings_API {
 				st.first_name AS staff_first_name,
 				st.last_name AS staff_last_name
 			FROM {$wpdb->prefix}bookings b
-			INNER JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
+			LEFT JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
 			INNER JOIN {$wpdb->prefix}bookings_services s ON b.service_id = s.id
 			INNER JOIN {$wpdb->prefix}bookings_staff st ON b.staff_id = st.id
 			WHERE b.booking_date = %s
@@ -1692,7 +1692,7 @@ class Bookit_Dashboard_Bookings_API {
 				st.last_name AS staff_last_name,
 				st.id AS staff_id
 			FROM {$wpdb->prefix}bookings b
-			INNER JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
+			LEFT JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
 			INNER JOIN {$wpdb->prefix}bookings_services s ON b.service_id = s.id
 			INNER JOIN {$wpdb->prefix}bookings_staff st ON b.staff_id = st.id
 			WHERE b.deleted_at IS NULL
@@ -2701,6 +2701,13 @@ class Bookit_Dashboard_Bookings_API {
 		// Calculate if booking is starting soon (within 15 minutes).
 		$current_time = current_time( 'H:i:s' );
 		$start_time   = $booking['start_time'];
+		$customer_first = $booking['customer_first_name'] ?? '';
+		$customer_last  = $booking['customer_last_name'] ?? '';
+		$customer_name  = trim( $customer_first . ' ' . $customer_last );
+
+		if ( empty( $customer_name ) ) {
+			$customer_name = __( 'Deleted Customer', 'bookit-booking-system' );
+		}
 
 		$current_timestamp = strtotime( current_time( 'Y-m-d' ) . ' ' . $current_time );
 		$start_timestamp   = strtotime( current_time( 'Y-m-d' ) . ' ' . $start_time );
@@ -2727,9 +2734,9 @@ class Bookit_Dashboard_Bookings_API {
 			'payment_method'   => $booking['payment_method'],
 			'special_requests' => $booking['special_requests'],
 			'staff_notes'      => $booking['staff_notes'],
-			'customer_name'    => $booking['customer_first_name'] . ' ' . $booking['customer_last_name'],
-			'customer_email'   => $booking['customer_email'],
-			'customer_phone'   => $booking['customer_phone'] ?? null,
+			'customer_name'    => $customer_name,
+			'customer_email'   => $booking['customer_email'] ?? '',
+			'customer_phone'   => $booking['customer_phone'] ?? '',
 			'service_name'     => $booking['service_name'],
 			'staff_name'       => $booking['staff_first_name'] . ' ' . $booking['staff_last_name'],
 			'is_starting_soon' => $is_starting_soon,

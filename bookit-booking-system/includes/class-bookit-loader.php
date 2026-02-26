@@ -122,6 +122,10 @@ class Bookit_Loader {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-reports-api.php';
 		new Bookit_Reports_API();
 
+		// Customers API.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-customers-api.php';
+		new Bookit_Customers_API();
+
 		// Dashboard Timeslots API (manual booking wizard).
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-dashboard-timeslots-api.php';
 

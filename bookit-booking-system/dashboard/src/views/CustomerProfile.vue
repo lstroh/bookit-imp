@@ -1,12 +1,501 @@
 <template>
   <div>
-    <div class="mb-6">
-      <h2 class="text-lg font-semibold text-gray-900">Customer Profile</h2>
-      <p class="text-sm text-gray-500 mt-1">Coming soon — this report is being built.</p>
+    <button
+      class="mb-4 text-sm text-primary-600 hover:text-primary-700 font-medium"
+      @click="router.push('/customers')"
+    >
+      ← Back to Customers
+    </button>
+
+    <div v-if="loading">
+      <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="h-6 w-48 bg-gray-200 rounded animate-pulse mb-4"></div>
+        <div class="h-4 w-72 bg-gray-100 rounded animate-pulse"></div>
+      </div>
+    </div>
+
+    <ErrorState
+      v-else-if="error"
+      title="Failed to load customer"
+      :message="errorMessage"
+      :details="errorDetails"
+      :show-home="false"
+      @retry="loadCustomer"
+    />
+
+    <div v-else-if="customer" class="space-y-6">
+      <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div class="flex items-center gap-4 min-w-0">
+            <div
+              class="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-semibold"
+              :class="getAvatarColour(customer.id)"
+            >
+              {{ getInitials(customer.first_name, customer.last_name) }}
+            </div>
+            <div class="min-w-0">
+              <h2 class="text-xl font-semibold text-gray-900 truncate">{{ customer.full_name }}</h2>
+              <p class="text-sm text-gray-600 truncate">{{ customer.email }}</p>
+              <p class="text-sm text-gray-500 mt-1">Member since {{ formatDate(customer.member_since) }}</p>
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <button
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              @click="toggleEdit"
+            >
+              {{ editMode ? 'Close' : 'Edit' }}
+            </button>
+            <button
+              class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+              @click="showDeleteModal = true"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="editMode" class="bg-white rounded-lg border border-gray-200 p-6">
+        <p class="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          Email address cannot be changed here.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+            <input
+              v-model="editForm.first_name"
+              type="text"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+            <input
+              v-model="editForm.last_name"
+              type="text"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <input
+              v-model="editForm.phone"
+              type="text"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
+          <div class="flex items-center">
+            <label class="inline-flex items-center gap-2 text-sm text-gray-700 mt-6">
+              <input v-model="editForm.marketing_consent" type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+              Marketing Consent
+            </label>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <textarea
+              v-model="editForm.notes"
+              rows="4"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="mt-4 flex gap-2">
+          <button
+            class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+            :disabled="saving"
+            @click="saveCustomer"
+          >
+            {{ saving ? 'Saving...' : 'Save' }}
+          </button>
+          <button
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            :disabled="saving"
+            @click="cancelEdit"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+
+      <div v-if="deleteError" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        {{ deleteError }}
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
+        <div class="bg-white rounded-lg border border-gray-200 p-3">
+          <p class="text-xs text-gray-500">Total Bookings</p>
+          <p class="text-lg font-semibold text-gray-900">{{ customer.total_bookings || 0 }}</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-3">
+          <p class="text-xs text-gray-500">Total Spent</p>
+          <p class="text-lg font-semibold text-gray-900">{{ formatMoney(customer.total_spent) }}</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-3">
+          <p class="text-xs text-gray-500">Avg Booking Value</p>
+          <p class="text-lg font-semibold text-gray-900">{{ formatMoney(avgBookingValue) }}</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-3">
+          <p class="text-xs text-gray-500">Last Visit</p>
+          <p class="text-lg font-semibold text-gray-900">{{ formatDate(customer.last_visit) }}</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-3">
+          <p class="text-xs text-gray-500">Upcoming</p>
+          <p class="text-lg font-semibold text-gray-900">{{ customer.upcoming_count || 0 }}</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-3">
+          <p class="text-xs text-gray-500">Cancellation Rate</p>
+          <p class="text-lg font-semibold text-gray-900">{{ cancellationRate }}%</p>
+        </div>
+      </div>
+
+      <div>
+        <span
+          class="inline-flex items-center px-3 py-1 text-sm font-medium rounded-full"
+          :class="customer.marketing_consent ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'"
+        >
+          {{ customer.marketing_consent ? '✅ Marketing opted in' : '❌ Marketing opted out' }}
+        </span>
+      </div>
+
+      <div class="bg-white rounded-lg border border-gray-200">
+        <div class="border-b border-gray-200 px-4 sm:px-6 py-3 flex gap-3">
+          <button
+            class="px-3 py-1.5 text-sm font-medium rounded-lg"
+            :class="activeTab === 'bookings' ? 'bg-primary-600 text-white' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'"
+            @click="activeTab = 'bookings'"
+          >
+            Booking History
+          </button>
+          <button
+            class="px-3 py-1.5 text-sm font-medium rounded-lg"
+            :class="activeTab === 'payments' ? 'bg-primary-600 text-white' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'"
+            @click="activeTab = 'payments'"
+          >
+            Payment History
+          </button>
+        </div>
+
+        <div v-if="activeTab === 'bookings'" class="p-4 sm:p-6">
+          <div v-if="!customer.bookings?.length" class="text-sm text-gray-600">No booking history yet.</div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="booking in customer.bookings"
+              :key="booking.id"
+              class="rounded-lg border border-gray-200 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+            >
+              <div class="text-sm text-gray-700">
+                <div class="font-medium text-gray-900">{{ formatDate(booking.booking_date) }} | {{ formatTimeRange(booking.start_time, booking.end_time) }}</div>
+                <div>{{ booking.service_name }} · {{ booking.staff_name }}</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-1 text-xs font-medium rounded-full" :class="getBookingStatusClass(booking.status)">
+                  {{ formatBookingStatus(booking.status) }}
+                </span>
+                <span class="text-sm font-semibold text-gray-900">{{ formatMoney(booking.total_price) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="p-4 sm:p-6">
+          <div v-if="!customer.payments?.length" class="text-sm text-gray-600">No payment records.</div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="payment in customer.payments"
+              :key="payment.id"
+              class="rounded-lg border border-gray-200 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+            >
+              <div class="text-sm text-gray-700">
+                <div class="font-medium text-gray-900">{{ formatDateTime(payment.transaction_date) }}</div>
+                <div>{{ paymentMethodLabel(payment.payment_method) }} · {{ paymentTypeLabel(payment.payment_type) }}</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-gray-900">{{ formatMoney(payment.amount) }}</span>
+                <span class="px-2 py-1 text-xs font-medium rounded-full" :class="getPaymentStatusClass(payment.payment_status)">
+                  {{ formatPaymentStatus(payment.payment_status) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="showDeleteModal"
+      class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4"
+      @click.self="showDeleteModal = false"
+    >
+      <div class="w-full max-w-lg bg-white rounded-lg shadow-lg border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-3">Delete Customer Data</h3>
+        <p class="text-sm text-gray-700 mb-5">
+          This will permanently anonymise this customer's personal data in compliance with GDPR Article 17. Their booking records will be retained for 7 years as required by UK tax law. This cannot be undone.
+        </p>
+        <div class="flex justify-end gap-2">
+          <button
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            :disabled="deleting"
+            @click="showDeleteModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+            :disabled="deleting"
+            @click="deleteCustomer"
+          >
+            {{ deleting ? 'Deleting...' : 'Delete Customer Data' }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-// Stub — full implementation in Sprint 4A Task 8
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useApi } from '../composables/useApi'
+import { useToast } from '../composables/useToast'
+import ErrorState from '../components/ErrorState.vue'
+
+const route = useRoute()
+const router = useRouter()
+const api = useApi()
+const { success: toastSuccess, error: toastError } = useToast()
+
+const loading = ref(true)
+const error = ref(false)
+const errorMessage = ref('')
+const errorDetails = ref('')
+const customer = ref(null)
+
+const editMode = ref(false)
+const saving = ref(false)
+const deleting = ref(false)
+const showDeleteModal = ref(false)
+const deleteError = ref('')
+const activeTab = ref('bookings')
+
+const editForm = ref({
+  first_name: '',
+  last_name: '',
+  phone: '',
+  marketing_consent: false,
+  notes: ''
+})
+
+const avatarColours = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-amber-500', 'bg-rose-500', 'bg-teal-500']
+
+const avgBookingValue = computed(() => {
+  const bookings = Number(customer.value?.total_bookings || 0)
+  if (!bookings) return 0
+  return Number(customer.value?.total_spent || 0) / bookings
+})
+
+const cancellationRate = computed(() => {
+  const rows = customer.value?.bookings || []
+  if (!rows.length) return 0
+  const cancelled = rows.filter((row) => row.status === 'cancelled').length
+  return ((cancelled / rows.length) * 100).toFixed(1)
+})
+
+function getInitials(firstName, lastName) {
+  return ((firstName?.[0] || '') + (lastName?.[0] || '')).toUpperCase()
+}
+
+function getAvatarColour(id) {
+  return avatarColours[id % avatarColours.length]
+}
+
+function formatMoney(value) {
+  return `£${Number(value || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function formatDate(dateValue) {
+  if (!dateValue) return 'Never'
+  const date = new Date(`${dateValue}T00:00:00`)
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+function formatDateTime(dateValue) {
+  if (!dateValue) return 'Unknown'
+  const date = new Date(dateValue.replace(' ', 'T'))
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+function formatTimeRange(startTime, endTime) {
+  return `${String(startTime || '').slice(0, 5)} - ${String(endTime || '').slice(0, 5)}`
+}
+
+function formatBookingStatus(status) {
+  const labels = {
+    pending: 'Pending',
+    pending_payment: 'Pending',
+    confirmed: 'Confirmed',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+    no_show: 'No Show'
+  }
+  return labels[status] || status
+}
+
+function getBookingStatusClass(status) {
+  const map = {
+    confirmed: 'bg-blue-100 text-blue-800',
+    completed: 'bg-green-100 text-green-800',
+    cancelled: 'bg-gray-100 text-gray-700',
+    no_show: 'bg-amber-100 text-amber-800',
+    pending: 'bg-yellow-100 text-yellow-800',
+    pending_payment: 'bg-yellow-100 text-yellow-800'
+  }
+  return map[status] || 'bg-gray-100 text-gray-700'
+}
+
+function paymentMethodLabel(method) {
+  const labels = {
+    stripe: 'Stripe',
+    paypal: 'PayPal',
+    cash: 'Cash',
+    card: 'Card Machine',
+    pay_on_arrival: 'Pay on Arrival'
+  }
+  return labels[method] || method || 'Unknown'
+}
+
+function paymentTypeLabel(type) {
+  const labels = {
+    deposit: 'Deposit',
+    full_payment: 'Full Payment'
+  }
+  return labels[type] || type
+}
+
+function formatPaymentStatus(status) {
+  const labels = {
+    pending: 'Pending',
+    completed: 'Completed',
+    failed: 'Failed',
+    refunded: 'Refunded',
+    partially_refunded: 'Partially Refunded'
+  }
+  return labels[status] || status
+}
+
+function getPaymentStatusClass(status) {
+  const map = {
+    pending: 'bg-yellow-100 text-yellow-800',
+    completed: 'bg-green-100 text-green-800',
+    failed: 'bg-red-100 text-red-700',
+    refunded: 'bg-gray-100 text-gray-700',
+    partially_refunded: 'bg-gray-100 text-gray-700'
+  }
+  return map[status] || 'bg-gray-100 text-gray-700'
+}
+
+function fillEditForm() {
+  if (!customer.value) return
+  editForm.value = {
+    first_name: customer.value.first_name || '',
+    last_name: customer.value.last_name || '',
+    phone: customer.value.phone || '',
+    marketing_consent: Boolean(customer.value.marketing_consent),
+    notes: customer.value.notes || ''
+  }
+}
+
+function toggleEdit() {
+  editMode.value = !editMode.value
+  if (editMode.value) fillEditForm()
+}
+
+function cancelEdit() {
+  fillEditForm()
+  editMode.value = false
+}
+
+async function loadCustomer() {
+  loading.value = true
+  error.value = false
+  deleteError.value = ''
+
+  try {
+    const response = await api.get(`/customers/${route.params.id}`)
+    if (!response.data?.success || !response.data?.customer) {
+      throw new Error(response.data?.message || 'Failed to load customer')
+    }
+    customer.value = response.data.customer
+    fillEditForm()
+  } catch (err) {
+    error.value = true
+    errorMessage.value = err.message || 'An unexpected error occurred.'
+    errorDetails.value = `Status: ${err.status || 'N/A'}`
+  } finally {
+    loading.value = false
+  }
+}
+
+async function saveCustomer() {
+  if (!customer.value) return
+  saving.value = true
+  deleteError.value = ''
+
+  try {
+    const payload = {
+      first_name: editForm.value.first_name,
+      last_name: editForm.value.last_name,
+      phone: editForm.value.phone,
+      marketing_consent: Boolean(editForm.value.marketing_consent),
+      notes: editForm.value.notes
+    }
+
+    const response = await api.put(`/customers/${customer.value.id}`, payload)
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || 'Failed to update customer')
+    }
+
+    toastSuccess(response.data.message || 'Customer updated successfully.')
+    editMode.value = false
+    await loadCustomer()
+  } catch (err) {
+    toastError(err.message || 'Failed to update customer')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function deleteCustomer() {
+  if (!customer.value) return
+  deleting.value = true
+  deleteError.value = ''
+
+  try {
+    const response = await api.delete(`/customers/${customer.value.id}`)
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || 'Failed to delete customer data')
+    }
+
+    toastSuccess(response.data.message || 'Customer data deleted.')
+    showDeleteModal.value = false
+    router.push('/customers')
+  } catch (err) {
+    const message = err.message || 'Failed to delete customer data'
+    deleteError.value = message
+    if (Number(err.status) === 409) {
+      toastError(message)
+    } else {
+      toastError(message)
+    }
+  } finally {
+    deleting.value = false
+  }
+}
+
+onMounted(() => {
+  loadCustomer()
+})
 </script>
