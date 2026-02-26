@@ -1243,6 +1243,11 @@ class Bookit_Reports_API {
 			'rest_pre_serve_request',
 			function( $served ) use ( $csv_string, $filename ) {
 				if ( ! $served ) {
+					// Skip headers and output during PHPUnit test runs to prevent
+					// "Cannot modify header information" warnings and stdout pollution.
+					if ( defined( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH' ) || defined( 'WP_TESTS_DIR' ) ) {
+						return true;
+					}
 					header( 'Content-Type: text/csv; charset=utf-8' );
 					header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
 					header( 'Cache-Control: no-cache, no-store, must-revalidate' );

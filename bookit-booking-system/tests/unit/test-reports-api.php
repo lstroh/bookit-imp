@@ -167,7 +167,8 @@ class Test_Reports_API extends TestCase {
 	 * @covers Bookit_Reports_API::get_overview
 	 */
 	public function test_overview_excludes_cancelled_bookings_from_total() {
-		$cancelled_id         = $this->create_test_booking(
+		// Create one cancelled and one completed booking for today.
+		$cancelled_id        = $this->create_test_booking(
 			array(
 				'staff_id'     => $this->admin_id,
 				'service_id'   => $this->service_one_id,
@@ -176,12 +177,7 @@ class Test_Reports_API extends TestCase {
 				'status'       => 'cancelled',
 			)
 		);
-		$this->booking_ids[]  = $cancelled_id;
-
-		$this->login_as( $this->admin_id, 'admin' );
-		$request       = new WP_REST_Request( 'GET', '/' . self::NAMESPACE . '/dashboard/reports/overview' );
-		$first         = rest_get_server()->dispatch( $request )->get_data();
-		$initial_total = (int) $first['data']['this_week']['total_bookings'];
+		$this->booking_ids[] = $cancelled_id;
 
 		$completed_id        = $this->create_test_booking(
 			array(
@@ -194,10 +190,31 @@ class Test_Reports_API extends TestCase {
 		);
 		$this->booking_ids[] = $completed_id;
 
-		$second      = rest_get_server()->dispatch( $request )->get_data();
-		$after_total = (int) $second['data']['this_week']['total_bookings'];
+		$this->login_as( $this->admin_id, 'admin' );
+		$request  = new WP_REST_Request( 'GET', '/' . self::NAMESPACE . '/dashboard/reports/overview' );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
 
-		$this->assertEquals( $initial_total + 1, $after_total );
+		$this->assertEquals( 200, $response->get_status() );
+
+		// Count directly from DB: non-cancelled bookings for today only.
+		global $wpdb;
+		$today    = current_time( 'Y-m-d' );
+		$expected = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}bookings
+				WHERE booking_date = %s
+				AND status != 'cancelled'
+				AND deleted_at IS NULL",
+				$today
+			)
+		);
+
+		// The API total for this_week must match the DB count exactly.
+		$this->assertEquals( $expected, (int) $data['data']['this_week']['total_bookings'] );
+
+		// Sanity check: expected must be at least 1 (our completed booking).
+		$this->assertGreaterThanOrEqual( 1, $expected );
 	}
 
 	/**
