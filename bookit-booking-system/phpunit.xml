@@ -40,6 +40,10 @@
             <file>./tests/unit/test-reorder-api.php</file>
             <file>./tests/integration/test-wizard-flow.php</file>
             <file>./tests/test-pay-on-arrival.php</file>
+            <file>./tests/unit/test-reports-api.php</file>
+            <file>./tests/unit/test-customers-api.php</file>
+            <file>./tests/unit/test-status-log.php</file>
+            <file>./tests/unit/test-time-off-api.php</file>
         </testsuite>
     </testsuites>
 
