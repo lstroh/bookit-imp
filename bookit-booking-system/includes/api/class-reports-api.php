@@ -107,6 +107,92 @@ class Bookit_Reports_API {
 			)
 		);
 
+		// Staff performance report.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/reports/staff',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'get_staff_performance' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'date_from' => array(
+						'required'          => false,
+						'type'              => 'string',
+						'validate_callback' => function ( $param ) {
+							if ( empty( $param ) ) {
+								return true;
+							}
+							$timezone = new DateTimeZone( 'Europe/London' );
+							$date     = DateTimeImmutable::createFromFormat( '!Y-m-d', (string) $param, $timezone );
+							return $date && $date->format( 'Y-m-d' ) === $param;
+						},
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'date_to'   => array(
+						'required'          => false,
+						'type'              => 'string',
+						'validate_callback' => function ( $param ) {
+							if ( empty( $param ) ) {
+								return true;
+							}
+							$timezone = new DateTimeZone( 'Europe/London' );
+							$date     = DateTimeImmutable::createFromFormat( '!Y-m-d', (string) $param, $timezone );
+							return $date && $date->format( 'Y-m-d' ) === $param;
+						},
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
+
+		// Staff detail report.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/reports/staff/(?P<staff_id>\d+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'get_staff_detail' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'staff_id'  => array(
+						'required'          => true,
+						'type'              => 'integer',
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param ) && (int) $param > 0;
+						},
+						'sanitize_callback' => 'absint',
+					),
+					'date_from' => array(
+						'required'          => false,
+						'type'              => 'string',
+						'validate_callback' => function ( $param ) {
+							if ( empty( $param ) ) {
+								return true;
+							}
+							$timezone = new DateTimeZone( 'Europe/London' );
+							$date     = DateTimeImmutable::createFromFormat( '!Y-m-d', (string) $param, $timezone );
+							return $date && $date->format( 'Y-m-d' ) === $param;
+						},
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'date_to'   => array(
+						'required'          => false,
+						'type'              => 'string',
+						'validate_callback' => function ( $param ) {
+							if ( empty( $param ) ) {
+								return true;
+							}
+							$timezone = new DateTimeZone( 'Europe/London' );
+							$date     = DateTimeImmutable::createFromFormat( '!Y-m-d', (string) $param, $timezone );
+							return $date && $date->format( 'Y-m-d' ) === $param;
+						},
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
+
 		// Revenue CSV export.
 		register_rest_route(
 			self::NAMESPACE,
@@ -127,6 +213,244 @@ class Bookit_Reports_API {
 						'sanitize_callback' => 'sanitize_text_field',
 					),
 				),
+			)
+		);
+	}
+
+	/**
+	 * GET /dashboard/reports/staff
+	 *
+	 * Returns staff performance metrics for selected date range.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_staff_performance( $request ) {
+		global $wpdb;
+
+		$date_range = $this->parse_report_date_range( $request );
+		if ( is_wp_error( $date_range ) ) {
+			return $date_range;
+		}
+
+		$date_from = $date_range['date_from'];
+		$date_to   = $date_range['date_to'];
+
+		$staff_list = $wpdb->get_results(
+			"SELECT id, first_name, last_name, title, photo_url, created_at
+			FROM {$wpdb->prefix}bookings_staff
+			WHERE deleted_at IS NULL AND is_active = 1
+			ORDER BY first_name ASC",
+			ARRAY_A
+		);
+
+		$staff_rows = array();
+
+		foreach ( $staff_list as $staff ) {
+			$staff_id = (int) $staff['id'];
+
+			$period_metrics  = $this->get_staff_period_metrics( $staff_id, $date_from, $date_to );
+			$all_time_totals = $this->get_staff_all_time_totals( $staff_id );
+
+			$staff_rows[] = array(
+				'id'                     => $staff_id,
+				'name'                   => trim( $staff['first_name'] . ' ' . $staff['last_name'] ),
+				'title'                  => isset( $staff['title'] ) ? (string) $staff['title'] : '',
+				'photo_url'              => isset( $staff['photo_url'] ) ? (string) $staff['photo_url'] : '',
+				'member_since'           => isset( $staff['created_at'] ) ? substr( (string) $staff['created_at'], 0, 10 ) : '',
+				'bookings'               => $period_metrics['bookings'],
+				'completed'              => $period_metrics['completed'],
+				'no_shows'               => $period_metrics['no_shows'],
+				'no_show_rate'           => $period_metrics['no_show_rate'],
+				'revenue'                => $period_metrics['revenue'],
+				'avg_booking_value'      => $period_metrics['avg_booking_value'],
+				'total_bookings_alltime' => $all_time_totals['total_bookings_alltime'],
+				'total_revenue_alltime'  => $all_time_totals['total_revenue_alltime'],
+			);
+		}
+
+		return rest_ensure_response(
+			array(
+				'success'   => true,
+				'date_from' => $date_from,
+				'date_to'   => $date_to,
+				'staff'     => $staff_rows,
+			)
+		);
+	}
+
+	/**
+	 * GET /dashboard/reports/staff/{id}
+	 *
+	 * Returns detailed staff metrics for selected date range.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_staff_detail( $request ) {
+		global $wpdb;
+
+		$staff_id = absint( $request->get_param( 'staff_id' ) );
+		if ( $staff_id <= 0 ) {
+			return new WP_Error(
+				'invalid_staff_id',
+				__( 'A valid staff ID is required.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$date_range = $this->parse_report_date_range( $request );
+		if ( is_wp_error( $date_range ) ) {
+			return $date_range;
+		}
+
+		$date_from = $date_range['date_from'];
+		$date_to   = $date_range['date_to'];
+
+		$staff = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, first_name, last_name, title, bio, photo_url, created_at
+				FROM {$wpdb->prefix}bookings_staff
+				WHERE id = %d AND deleted_at IS NULL",
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $staff ) {
+			return new WP_Error(
+				'staff_not_found',
+				__( 'Staff member not found.', 'bookit-booking-system' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$period_metrics  = $this->get_staff_period_metrics( $staff_id, $date_from, $date_to );
+		$all_time_totals = $this->get_staff_all_time_totals( $staff_id );
+
+		$by_service = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					MAX(s.name) AS service_name,
+					COUNT(DISTINCT b.id) AS booking_count,
+					COALESCE(SUM(p.amount), 0) AS revenue
+				FROM {$wpdb->prefix}bookings b
+				INNER JOIN {$wpdb->prefix}bookings_services s ON s.id = b.service_id
+				LEFT JOIN {$wpdb->prefix}bookings_payments p
+					ON p.booking_id = b.id AND p.payment_status = 'completed' AND p.payment_type != 'refund'
+				WHERE b.staff_id = %d
+					AND b.booking_date BETWEEN %s AND %s
+					AND b.deleted_at IS NULL
+					AND b.status != 'cancelled'
+				GROUP BY b.service_id
+				ORDER BY booking_count DESC",
+				$staff_id,
+				$date_from,
+				$date_to
+			),
+			ARRAY_A
+		);
+
+		$weekly_trend_rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					YEAR(booking_date) AS yr,
+					WEEK(booking_date, 1) AS wk,
+					MIN(booking_date) AS week_start,
+					COUNT(*) AS booking_count
+				FROM {$wpdb->prefix}bookings
+				WHERE staff_id = %d
+					AND booking_date BETWEEN %s AND %s
+					AND deleted_at IS NULL
+					AND status != 'cancelled'
+				GROUP BY YEAR(booking_date), WEEK(booking_date, 1)
+				ORDER BY yr ASC, wk ASC",
+				$staff_id,
+				$date_from,
+				$date_to
+			),
+			ARRAY_A
+		);
+
+		$tz           = new DateTimeZone( 'Europe/London' );
+		$weekly_trend = array();
+		foreach ( $weekly_trend_rows as $row ) {
+			$week_start = DateTimeImmutable::createFromFormat( '!Y-m-d', (string) $row['week_start'], $tz );
+			$week_label = $week_start ? sprintf( __( 'Week of %s', 'bookit-booking-system' ), $week_start->format( 'd/m' ) ) : sprintf( __( 'Week of %s', 'bookit-booking-system' ), (string) $row['week_start'] );
+
+			$weekly_trend[] = array(
+				'week_label'    => $week_label,
+				'booking_count' => (int) $row['booking_count'],
+			);
+		}
+
+		$today = ( new DateTimeImmutable( 'now', $tz ) )->format( 'Y-m-d' );
+		$time_off_rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id, specific_date, start_time, end_time, is_working, notes
+				FROM {$wpdb->prefix}bookings_staff_working_hours
+				WHERE staff_id = %d
+					AND specific_date IS NOT NULL
+					AND specific_date >= %s
+					AND is_working = 0
+				ORDER BY specific_date ASC
+				LIMIT 20",
+				$staff_id,
+				$today
+			),
+			ARRAY_A
+		);
+
+		$formatted_by_service = array_map(
+			function ( $row ) {
+				return array(
+					'service_name'  => isset( $row['service_name'] ) ? (string) $row['service_name'] : '',
+					'booking_count' => (int) $row['booking_count'],
+					'revenue'       => (float) $row['revenue'],
+				);
+			},
+			$by_service
+		);
+
+		$formatted_time_off = array_map(
+			function ( $row ) {
+				return array(
+					'id'            => (int) $row['id'],
+					'specific_date' => isset( $row['specific_date'] ) ? (string) $row['specific_date'] : '',
+					'start_time'    => isset( $row['start_time'] ) ? (string) $row['start_time'] : '',
+					'end_time'      => isset( $row['end_time'] ) ? (string) $row['end_time'] : '',
+					'notes'         => isset( $row['notes'] ) ? (string) $row['notes'] : '',
+				);
+			},
+			$time_off_rows
+		);
+
+		$staff_payload = array(
+			'id'                     => (int) $staff['id'],
+			'name'                   => trim( $staff['first_name'] . ' ' . $staff['last_name'] ),
+			'title'                  => isset( $staff['title'] ) ? (string) $staff['title'] : '',
+			'bio'                    => isset( $staff['bio'] ) ? (string) $staff['bio'] : '',
+			'photo_url'              => isset( $staff['photo_url'] ) ? (string) $staff['photo_url'] : '',
+			'member_since'           => isset( $staff['created_at'] ) ? substr( (string) $staff['created_at'], 0, 10 ) : '',
+			'bookings'               => $period_metrics['bookings'],
+			'completed'              => $period_metrics['completed'],
+			'no_shows'               => $period_metrics['no_shows'],
+			'no_show_rate'           => $period_metrics['no_show_rate'],
+			'revenue'                => $period_metrics['revenue'],
+			'avg_booking_value'      => $period_metrics['avg_booking_value'],
+			'total_bookings_alltime' => $all_time_totals['total_bookings_alltime'],
+			'total_revenue_alltime'  => $all_time_totals['total_revenue_alltime'],
+			'by_service'             => $formatted_by_service,
+			'weekly_trend'           => $weekly_trend,
+			'time_off'               => $formatted_time_off,
+		);
+
+		return rest_ensure_response(
+			array(
+				'success'   => true,
+				'date_from' => $date_from,
+				'date_to'   => $date_to,
+				'staff'     => $staff_payload,
 			)
 		);
 	}
@@ -931,6 +1255,169 @@ class Bookit_Reports_API {
 
 		// Return a minimal WP_REST_Response - it won't be sent because rest_pre_serve_request returns true.
 		return new WP_REST_Response( null, 200 );
+	}
+
+	/**
+	 * Parse and validate date range for reports.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return array|WP_Error
+	 */
+	private function parse_report_date_range( $request ) {
+		$tz  = new DateTimeZone( 'Europe/London' );
+		$now = new DateTimeImmutable( 'now', $tz );
+
+		$date_from_param = $request->get_param( 'date_from' );
+		$date_to_param   = $request->get_param( 'date_to' );
+
+		$date_from = ! empty( $date_from_param ) ? sanitize_text_field( $date_from_param ) : $now->format( 'Y-m-01' );
+		$date_to   = ! empty( $date_to_param ) ? sanitize_text_field( $date_to_param ) : $now->format( 'Y-m-d' );
+
+		if ( ! $this->is_valid_ymd_date( $date_from, $tz ) || ! $this->is_valid_ymd_date( $date_to, $tz ) ) {
+			return new WP_Error(
+				'invalid_date_format',
+				__( 'Dates must use the YYYY-MM-DD format.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( $date_from > $date_to ) {
+			return new WP_Error(
+				'invalid_date_range',
+				__( 'Start date must be on or before end date.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		return array(
+			'date_from' => $date_from,
+			'date_to'   => $date_to,
+		);
+	}
+
+	/**
+	 * Validate YYYY-MM-DD date value.
+	 *
+	 * @param string       $date Date string.
+	 * @param DateTimeZone $tz Timezone.
+	 * @return bool
+	 */
+	private function is_valid_ymd_date( $date, $tz ) {
+		if ( empty( $date ) ) {
+			return false;
+		}
+
+		$parsed = DateTimeImmutable::createFromFormat( '!Y-m-d', (string) $date, $tz );
+		return $parsed && $parsed->format( 'Y-m-d' ) === $date;
+	}
+
+	/**
+	 * Get period metrics for a single staff member.
+	 *
+	 * @param int    $staff_id Staff ID.
+	 * @param string $date_from Start date.
+	 * @param string $date_to End date.
+	 * @return array
+	 */
+	private function get_staff_period_metrics( $staff_id, $date_from, $date_to ) {
+		global $wpdb;
+
+		$bookings = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}bookings
+				WHERE staff_id = %d AND status != 'cancelled'
+					AND booking_date BETWEEN %s AND %s AND deleted_at IS NULL",
+				$staff_id,
+				$date_from,
+				$date_to
+			)
+		);
+
+		$completed = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}bookings
+				WHERE staff_id = %d AND status = 'completed'
+					AND booking_date BETWEEN %s AND %s AND deleted_at IS NULL",
+				$staff_id,
+				$date_from,
+				$date_to
+			)
+		);
+
+		$no_shows = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}bookings
+				WHERE staff_id = %d AND status = 'no_show'
+					AND booking_date BETWEEN %s AND %s AND deleted_at IS NULL",
+				$staff_id,
+				$date_from,
+				$date_to
+			)
+		);
+
+		$revenue = (float) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COALESCE(SUM(p.amount), 0)
+				FROM {$wpdb->prefix}bookings_payments p
+				INNER JOIN {$wpdb->prefix}bookings b ON b.id = p.booking_id
+				WHERE b.staff_id = %d
+					AND p.payment_status = 'completed'
+					AND p.payment_type != 'refund'
+					AND b.booking_date BETWEEN %s AND %s
+					AND b.deleted_at IS NULL",
+				$staff_id,
+				$date_from,
+				$date_to
+			)
+		);
+
+		$no_show_rate      = $bookings > 0 ? round( ( $no_shows / $bookings ) * 100, 1 ) : 0.0;
+		$avg_booking_value = $completed > 0 ? round( (float) $revenue / $completed, 2 ) : 0.0;
+
+		return array(
+			'bookings'          => $bookings,
+			'completed'         => $completed,
+			'no_shows'          => $no_shows,
+			'no_show_rate'      => (float) $no_show_rate,
+			'revenue'           => (float) $revenue,
+			'avg_booking_value' => (float) $avg_booking_value,
+		);
+	}
+
+	/**
+	 * Get all-time totals for a single staff member.
+	 *
+	 * @param int $staff_id Staff ID.
+	 * @return array
+	 */
+	private function get_staff_all_time_totals( $staff_id ) {
+		global $wpdb;
+
+		$total_bookings_alltime = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}bookings
+				WHERE staff_id = %d AND deleted_at IS NULL AND status != 'cancelled'",
+				$staff_id
+			)
+		);
+
+		$total_revenue_alltime = (float) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COALESCE(SUM(p.amount), 0)
+				FROM {$wpdb->prefix}bookings_payments p
+				INNER JOIN {$wpdb->prefix}bookings b ON b.id = p.booking_id
+				WHERE b.staff_id = %d
+					AND p.payment_status = 'completed'
+					AND p.payment_type != 'refund'
+					AND b.deleted_at IS NULL",
+				$staff_id
+			)
+		);
+
+		return array(
+			'total_bookings_alltime' => $total_bookings_alltime,
+			'total_revenue_alltime'  => $total_revenue_alltime,
+		);
 	}
 
 	/**

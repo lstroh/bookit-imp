@@ -84,6 +84,12 @@ export default [
     component: () => import('../views/StaffPerformance.vue'),
     meta: { title: 'Staff Performance', requiresAdmin: true }
   },
+  {
+    path: '/reports/staff/:id',
+    name: 'StaffDetail',
+    component: () => import('../views/StaffDetail.vue'),
+    meta: { title: 'Staff Detail', requiresAdmin: true }
+  },
   // Customers (admin only)
   {
     path: '/customers',
