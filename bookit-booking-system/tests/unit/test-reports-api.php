@@ -174,6 +174,8 @@ class Test_Reports_API extends TestCase {
 				'service_id'   => $this->service_one_id,
 				'customer_id'  => $this->customer_id,
 				'booking_date' => current_time( 'Y-m-d' ),
+				'start_time'   => '10:00:00',
+				'end_time'     => '11:00:00',
 				'status'       => 'cancelled',
 			)
 		);
@@ -185,6 +187,8 @@ class Test_Reports_API extends TestCase {
 				'service_id'   => $this->service_one_id,
 				'customer_id'  => $this->customer_id,
 				'booking_date' => current_time( 'Y-m-d' ),
+				'start_time'   => '11:00:00',
+				'end_time'     => '12:00:00',
 				'status'       => 'completed',
 			)
 		);
