@@ -9,6 +9,8 @@
       <DateRangeSelector
         :model-from="dateFrom"
         :model-to="dateTo"
+        :active-filter="activeFilter"
+        @update:active-filter="activeFilter = $event"
         @change="handleDateRangeChange"
       />
     </div>
@@ -152,6 +154,7 @@ const errorDetails = ref('')
 
 const dateFrom = ref('')
 const dateTo = ref('')
+const activeFilter = ref('this_month')
 const staffList = ref([])
 
 const sortBy = ref('revenue')

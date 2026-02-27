@@ -691,6 +691,7 @@ class Bookit_Reports_API {
 		$formatted_by_service = array_map(
 			function ( $row ) {
 				return array(
+					'service_id'     => (int) $row['service_id'],
 					'service_name'   => isset( $row['service_name'] ) ? (string) $row['service_name'] : '',
 					'booking_count'  => (int) $row['booking_count'],
 					'total_revenue'  => (float) $row['total_revenue'],

@@ -46,19 +46,22 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
-const emit = defineEmits(['change'])
+const emit = defineEmits(['change', 'update:activeFilter'])
 
 const props = defineProps({
   modelFrom: { type: String, default: '' },
   modelTo: { type: String, default: '' },
-  initialFilter: { type: String, default: 'this_month' }
+  activeFilter: { type: String, default: 'this_month' }
 })
 
 const localFrom = ref(props.modelFrom)
 const localTo = ref(props.modelTo)
-const activeQuickFilter = ref(props.initialFilter)
+const activeQuickFilter = computed({
+  get: () => props.activeFilter,
+  set: (val) => emit('update:activeFilter', val)
+})
 const dateError = ref('')
 
 function toLocalDateString(date) {

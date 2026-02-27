@@ -18,6 +18,8 @@
       <DateRangeSelector
         :model-from="dateFrom"
         :model-to="dateTo"
+        :active-filter="activeFilter"
+        @update:active-filter="activeFilter = $event"
         @change="handleDateRangeChange"
       />
     </div>
@@ -123,7 +125,7 @@
           <tbody>
             <tr
               v-for="row in sortedByService"
-              :key="row.service_name"
+              :key="row.service_id"
               class="border-b border-gray-100 last:border-0"
             >
               <td class="py-3 pr-4 text-gray-900">{{ row.service_name }}</td>
@@ -234,6 +236,7 @@ const staffSortDir = ref('desc')
 
 const dateFrom = ref('')
 const dateTo = ref('')
+const activeFilter = ref('this_month')
 
 function toLocalDateString(date) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(date)
