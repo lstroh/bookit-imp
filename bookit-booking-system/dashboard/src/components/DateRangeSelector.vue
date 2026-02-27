@@ -52,12 +52,13 @@ const emit = defineEmits(['change'])
 
 const props = defineProps({
   modelFrom: { type: String, default: '' },
-  modelTo: { type: String, default: '' }
+  modelTo: { type: String, default: '' },
+  initialFilter: { type: String, default: 'this_month' }
 })
 
 const localFrom = ref(props.modelFrom)
 const localTo = ref(props.modelTo)
-const activeQuickFilter = ref('this_month')
+const activeQuickFilter = ref(props.initialFilter)
 const dateError = ref('')
 
 function toLocalDateString(date) {

@@ -54,7 +54,8 @@
         <DateRangeSelector
           :model-from="dateFrom"
           :model-to="dateTo"
-          @change="handleDateRangeChange"
+          initial-filter="this_month"
+          @change="onDateRangeChange"
         />
       </div>
 
@@ -143,7 +144,16 @@
           description="Try another date range to view weekly booking trends."
         />
         <div v-else style="height: 240px; position: relative;">
-          <Line :data="weeklyTrendChartData" :options="lineChartOptions" />
+          <Bar
+            v-if="useBarChart"
+            :data="weeklyTrendChartData"
+            :options="lineChartOptions"
+          />
+          <Line
+            v-else
+            :data="weeklyTrendChartData"
+            :options="lineChartOptions"
+          />
         </div>
       </div>
 
@@ -202,9 +212,10 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Line } from 'vue-chartjs'
+import { Bar, Line } from 'vue-chartjs'
 import {
   Chart as ChartJS,
+  BarElement,
   CategoryScale,
   LinearScale,
   LineElement,
@@ -218,7 +229,7 @@ import DateRangeSelector from '../components/DateRangeSelector.vue'
 import ErrorState from '../components/ErrorState.vue'
 import EmptyState from '../components/EmptyState.vue'
 
-ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend)
+ChartJS.register(BarElement, CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend)
 
 const route = useRoute()
 const api = useApi()
@@ -250,6 +261,13 @@ function applyDefaultDates() {
 const weeklyTrend = computed(() => staffData.value?.weekly_trend || [])
 const servicesRows = computed(() => staffData.value?.by_service || [])
 const timeOffRows = computed(() => staffData.value?.time_off || [])
+const useBarChart = computed(() => {
+  if (!dateFrom.value || !dateTo.value) return false
+  const from = new Date(dateFrom.value)
+  const to = new Date(dateTo.value)
+  const days = Math.round((to - from) / (1000 * 60 * 60 * 24))
+  return days <= 7
+})
 
 const sortedServices = computed(() => {
   const rows = [...servicesRows.value]
@@ -394,7 +412,7 @@ function parseReasonKey(notes) {
   return 'other'
 }
 
-function handleDateRangeChange({ from, to }) {
+function onDateRangeChange({ from, to }) {
   dateFrom.value = from
   dateTo.value = to
   fetchDetail()

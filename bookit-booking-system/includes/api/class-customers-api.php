@@ -246,7 +246,7 @@ class Bookit_Customers_API {
 		$prepared_data = $wpdb->prepare( $data_query, $data_params );
 		$rows          = $wpdb->get_results( $prepared_data, ARRAY_A );
 
-		$count_query = 'SELECT COUNT(*) FROM (' . $base_query . ' ' . $group_order_sql . ') AS customers_count';
+		$count_query = 'SELECT COUNT(*) FROM (' . $base_query . ' ' . $group_order_sql . ') AS subq';
 		if ( empty( $params ) ) {
 			$total = (int) $wpdb->get_var( $count_query );
 		} else {
