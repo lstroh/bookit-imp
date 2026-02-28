@@ -1,0 +1,202 @@
+<?php
+/**
+ * Core error code definitions.
+ *
+ * @package    Bookit_Booking_System
+ * @subpackage Bookit_Booking_System/includes/config
+ */
+
+// If this file is called directly, abort.
+if ( ! defined( 'WPINC' ) ) {
+	die;
+}
+
+Bookit_Error_Registry::register(
+	'E1001',
+	array(
+		'user_message' => __( 'Login failed. Please check your email and password.', 'bookit-booking-system' ),
+		'log_message'  => 'Authentication failed for email: {email}',
+		'http_status'  => 401,
+		'category'     => 'auth',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E1002',
+	array(
+		'user_message' => __( 'Your session has expired. Please log in again.', 'bookit-booking-system' ),
+		'log_message'  => 'Session expired or not found',
+		'http_status'  => 401,
+		'category'     => 'auth',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E1003',
+	array(
+		'user_message' => __( 'You do not have permission to perform this action.', 'bookit-booking-system' ),
+		'log_message'  => 'Insufficient permissions. Required: {required_role}, actual: {actual_role}',
+		'http_status'  => 403,
+		'category'     => 'auth',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E2001',
+	array(
+		'user_message' => __( 'Sorry, that time slot is no longer available. Please choose another time.', 'bookit-booking-system' ),
+		'log_message'  => 'Slot unavailable: staff {staff_id} on {date} at {time}',
+		'http_status'  => 409,
+		'category'     => 'booking',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E2002',
+	array(
+		'user_message' => __( 'Booking {booking_id} not found.', 'bookit-booking-system' ),
+		'log_message'  => 'Booking ID {booking_id} not found',
+		'http_status'  => 404,
+		'category'     => 'booking',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E2003',
+	array(
+		'user_message' => __( 'This booking cannot be modified because it has already been completed.', 'bookit-booking-system' ),
+		'log_message'  => 'Attempted to modify completed booking ID {booking_id}',
+		'http_status'  => 422,
+		'category'     => 'booking',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E2004',
+	array(
+		'user_message' => __( 'This booking was just updated by someone else. The latest version has been loaded — please review and save again.', 'bookit-booking-system' ),
+		'log_message'  => 'Optimistic lock conflict on booking ID {booking_id}',
+		'http_status'  => 409,
+		'category'     => 'booking',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E3001',
+	array(
+		'user_message' => __( 'Payment failed. Please try again or use a different payment method.', 'bookit-booking-system' ),
+		'log_message'  => 'Payment failed: {gateway_message}',
+		'http_status'  => 402,
+		'category'     => 'payment',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E3002',
+	array(
+		'user_message' => __( 'A refund is not available for this booking.', 'bookit-booking-system' ),
+		'log_message'  => 'Refund not available for booking ID {booking_id}: {reason}',
+		'http_status'  => 422,
+		'category'     => 'payment',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E3003',
+	array(
+		'user_message' => __( 'There was a problem connecting to the payment provider. Please try again shortly.', 'bookit-booking-system' ),
+		'log_message'  => 'Payment gateway error: {gateway_message}',
+		'http_status'  => 502,
+		'category'     => 'payment',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E4001',
+	array(
+		'user_message' => __( 'Please fill in all required fields.', 'bookit-booking-system' ),
+		'log_message'  => 'Required field missing: {field}',
+		'http_status'  => 422,
+		'category'     => 'validation',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E4002',
+	array(
+		'user_message' => __( 'Please enter a valid email address.', 'bookit-booking-system' ),
+		'log_message'  => 'Invalid email: {email}',
+		'http_status'  => 422,
+		'category'     => 'validation',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E4003',
+	array(
+		'user_message' => __( 'Please enter a valid date.', 'bookit-booking-system' ),
+		'log_message'  => 'Invalid date: {date}',
+		'http_status'  => 422,
+		'category'     => 'validation',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E4004',
+	array(
+		'user_message' => __( 'Bookings cannot be made in the past.', 'bookit-booking-system' ),
+		'log_message'  => 'Date in past: {date}',
+		'http_status'  => 422,
+		'category'     => 'validation',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E4005',
+	array(
+		'user_message' => __( 'The selected service could not be found.', 'bookit-booking-system' ),
+		'log_message'  => 'Service ID {service_id} not found',
+		'http_status'  => 404,
+		'category'     => 'validation',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E4006',
+	array(
+		'user_message' => __( 'The selected staff member could not be found.', 'bookit-booking-system' ),
+		'log_message'  => 'Staff ID {staff_id} not found',
+		'http_status'  => 404,
+		'category'     => 'validation',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E9001',
+	array(
+		'user_message' => __( 'A database error occurred. Please try again.', 'bookit-booking-system' ),
+		'log_message'  => 'Database error: {db_error}',
+		'http_status'  => 500,
+		'category'     => 'system',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E9002',
+	array(
+		'user_message' => __( 'An unexpected error occurred. Please try again.', 'bookit-booking-system' ),
+		'log_message'  => 'Unexpected error: {error}',
+		'http_status'  => 500,
+		'category'     => 'system',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E9999',
+	array(
+		'user_message' => __( 'An unexpected error occurred. Please try again.', 'bookit-booking-system' ),
+		'log_message'  => 'Unknown error code used',
+		'http_status'  => 500,
+		'category'     => 'system',
+	)
+);

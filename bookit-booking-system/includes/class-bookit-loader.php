@@ -57,6 +57,8 @@ class Bookit_Loader {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-logger.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-migration-runner.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/functions-migration.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-error-registry.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/config/error-codes.php';
 
 		// Database management.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-database.php';

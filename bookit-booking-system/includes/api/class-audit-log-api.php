@@ -96,11 +96,7 @@ class Bookit_Audit_Log_API {
 
 		$role = is_array( $user ) && isset( $user['role'] ) ? (string) $user['role'] : '';
 		if ( ! $user || ! in_array( $role, array( 'bookit_admin', 'admin' ), true ) ) {
-			return new WP_Error(
-				'bookit_forbidden',
-				__( 'Admin access required.', 'bookit-booking-system' ),
-				array( 'status' => 403 )
-			);
+			return Bookit_Error_Registry::to_wp_error( 'E1003' );
 		}
 
 		return true;

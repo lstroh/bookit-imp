@@ -17,14 +17,21 @@ const createApiClient = () => {
   client.interceptors.response.use(
     response => response,
     error => {
-      if (error.response?.status === 401 && error.response?.data?.code === 'unauthorized') {
+      const message =
+        error.response?.data?.message ||
+        'Something went wrong. Please try again.'
+
+      if (
+        error.response?.status === 401 &&
+        (error.response?.data?.code === 'unauthorized' || error.response?.data?.code === 'E1002')
+      ) {
         window.location.href = '/bookit-dashboard/'
-        return Promise.reject(new Error('Session expired'))
+        return Promise.reject(new Error(message))
       }
 
-      const apiError = new Error(error.response?.data?.message || error.message || 'An error occurred')
+      const apiError = new Error(message)
       apiError.code = error.response?.data?.code || null
-      apiError.status = error.response?.status || null
+      apiError.status = error.response?.data?.data?.status || error.response?.status || null
       return Promise.reject(apiError)
     }
   )

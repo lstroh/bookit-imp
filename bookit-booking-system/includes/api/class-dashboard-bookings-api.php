@@ -1503,11 +1503,7 @@ class Bookit_Dashboard_Bookings_API {
 
 		// Check if logged in.
 		if ( ! Bookit_Auth::is_logged_in() ) {
-			return new WP_Error(
-				'unauthorized',
-				__( 'You must be logged in to access the dashboard.', 'bookit-booking-system' ),
-				array( 'status' => 401 )
-			);
+			return Bookit_Error_Registry::to_wp_error( 'E1002' );
 		}
 
 		return true;
@@ -1529,11 +1525,7 @@ class Bookit_Dashboard_Bookings_API {
 		}
 
 		if ( ! Bookit_Auth::is_logged_in() ) {
-			return new WP_Error(
-				'unauthorized',
-				'You must be logged in to access the dashboard.',
-				array( 'status' => 401 )
-			);
+			return Bookit_Error_Registry::to_wp_error( 'E1002' );
 		}
 
 		$current_staff = Bookit_Auth::get_current_staff();
@@ -2835,10 +2827,9 @@ class Bookit_Dashboard_Bookings_API {
 		);
 
 		if ( ! $booking ) {
-			return new WP_Error(
-				'booking_not_found',
-				__( 'Booking not found.', 'bookit-booking-system' ),
-				array( 'status' => 404 )
+			return Bookit_Error_Registry::to_wp_error(
+				'E2002',
+				array( 'booking_id' => $booking_id )
 			);
 		}
 
@@ -2934,10 +2925,9 @@ class Bookit_Dashboard_Bookings_API {
 		);
 
 		if ( ! $booking ) {
-			return new WP_Error(
-				'booking_not_found',
-				__( 'Booking not found.', 'bookit-booking-system' ),
-				array( 'status' => 404 )
+			return Bookit_Error_Registry::to_wp_error(
+				'E2002',
+				array( 'booking_id' => $booking_id )
 			);
 		}
 
@@ -3771,10 +3761,9 @@ class Bookit_Dashboard_Bookings_API {
 		);
 
 		if ( ! $booking ) {
-			return new WP_Error(
-				'booking_not_found',
-				'Booking not found.',
-				array( 'status' => 404 )
+			return Bookit_Error_Registry::to_wp_error(
+				'E2002',
+				array( 'booking_id' => $booking_id )
 			);
 		}
 
@@ -3828,10 +3817,9 @@ class Bookit_Dashboard_Bookings_API {
 		);
 
 		if ( ! $existing ) {
-			return new WP_Error(
-				'booking_not_found',
-				'Booking not found.',
-				array( 'status' => 404 )
+			return Bookit_Error_Registry::to_wp_error(
+				'E2002',
+				array( 'booking_id' => $booking_id )
 			);
 		}
 
@@ -4087,10 +4075,9 @@ class Bookit_Dashboard_Bookings_API {
 		);
 
 		if ( ! $existing ) {
-			return new WP_Error(
-				'booking_not_found',
-				'Booking not found.',
-				array( 'status' => 404 )
+			return Bookit_Error_Registry::to_wp_error(
+				'E2002',
+				array( 'booking_id' => $booking_id )
 			);
 		}
 
@@ -4400,6 +4387,17 @@ class Bookit_Dashboard_Bookings_API {
 		$result  = $creator->create_booking( $booking_data );
 
 		if ( is_wp_error( $result ) ) {
+			if ( 'slot_unavailable' === $result->get_error_code() ) {
+				return Bookit_Error_Registry::to_wp_error(
+					'E2001',
+					array(
+						'staff_id' => $requested_staff_id,
+						'date'     => $booking_date,
+						'time'     => $booking_time,
+					)
+				);
+			}
+
 			return $result;
 		}
 

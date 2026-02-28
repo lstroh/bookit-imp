@@ -61,11 +61,7 @@ class Bookit_Extensions_API {
 
 		// Check if logged in.
 		if ( ! Bookit_Auth::is_logged_in() ) {
-			return new WP_Error(
-				'unauthorized',
-				__( 'You must be logged in to access the dashboard.', 'bookit-booking-system' ),
-				array( 'status' => 401 )
-			);
+			return Bookit_Error_Registry::to_wp_error( 'E1003' );
 		}
 
 		return true;
