@@ -144,7 +144,7 @@ const commonActions = [
 
 const loading = ref(false)
 const entries = ref([])
-const activeDateFilter = ref('this_month')
+const activeDateFilter = ref('custom')
 
 const pagination = ref({
   total: 0,
