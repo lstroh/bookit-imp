@@ -6903,16 +6903,16 @@ class Bookit_Dashboard_Bookings_API {
 		$current = $this->load_branding_settings();
 
 		if ( null === $branding['branding_logo_url'] ) {
-			$branding['branding_logo_url'] = $current['branding_logo_url'];
+			$branding['branding_logo_url'] = $current['logoUrl'];
 		}
 		if ( null === $branding['branding_primary_colour'] ) {
-			$branding['branding_primary_colour'] = $current['branding_primary_colour'];
+			$branding['branding_primary_colour'] = $current['primaryColour'];
 		}
 		if ( null === $branding['branding_business_name'] ) {
-			$branding['branding_business_name'] = $current['branding_business_name'];
+			$branding['branding_business_name'] = $current['businessName'];
 		}
 		if ( null === $branding['branding_powered_by_visible'] ) {
-			$branding['branding_powered_by_visible'] = $current['branding_powered_by_visible'];
+			$branding['branding_powered_by_visible'] = $current['poweredByVisible'];
 		}
 
 		$branding['branding_logo_url'] = is_string( $branding['branding_logo_url'] ) ? trim( $branding['branding_logo_url'] ) : '';
@@ -6977,20 +6977,25 @@ class Bookit_Dashboard_Bookings_API {
 		global $wpdb;
 
 		$defaults = array(
-			'branding_logo_url'           => '',
-			'branding_primary_colour'     => '#4F46E5',
-			'branding_business_name'      => '',
-			'branding_powered_by_visible' => true,
+			'logoUrl'          => '',
+			'primaryColour'    => '#4F46E5',
+			'businessName'     => '',
+			'poweredByVisible' => true,
 		);
 
-		$keys         = array_keys( $defaults );
-		$placeholders = implode( ',', array_fill( 0, count( $keys ), '%s' ) );
+		$db_keys      = array(
+			'branding_logo_url',
+			'branding_primary_colour',
+			'branding_business_name',
+			'branding_powered_by_visible',
+		);
+		$placeholders = implode( ',', array_fill( 0, count( $db_keys ), '%s' ) );
 		$rows         = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT setting_key, setting_value, setting_type
 				FROM {$wpdb->prefix}bookings_settings
 				WHERE setting_key IN ($placeholders)",
-				$keys
+				$db_keys
 			),
 			ARRAY_A
 		);
@@ -6999,17 +7004,15 @@ class Bookit_Dashboard_Bookings_API {
 
 		foreach ( $rows as $row ) {
 			$key = $row['setting_key'];
-			if ( ! array_key_exists( $key, $defaults ) ) {
-				continue;
-			}
-
 			if ( 'branding_powered_by_visible' === $key ) {
-				$settings[ $key ] = (bool) $row['setting_value'];
+				$settings['poweredByVisible'] = (bool) $row['setting_value'];
 			} elseif ( 'branding_primary_colour' === $key ) {
-				$value            = strtoupper( (string) $row['setting_value'] );
-				$settings[ $key ] = preg_match( '/^#[0-9A-F]{6}$/', $value ) ? $value : $defaults[ $key ];
-			} else {
-				$settings[ $key ] = (string) $row['setting_value'];
+				$value                     = strtoupper( (string) $row['setting_value'] );
+				$settings['primaryColour'] = preg_match( '/^#[0-9A-F]{6}$/', $value ) ? $value : '#4F46E5';
+			} elseif ( 'branding_logo_url' === $key ) {
+				$settings['logoUrl'] = (string) $row['setting_value'];
+			} elseif ( 'branding_business_name' === $key ) {
+				$settings['businessName'] = (string) $row['setting_value'];
 			}
 		}
 
