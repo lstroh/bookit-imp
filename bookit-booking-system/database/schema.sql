@@ -5,7 +5,7 @@
  * DO NOT run this file directly - tables are created via Bookit_Database class.
  * 
  * Total Tables: 13
- * Last Updated: 2026-02-20
+ * Last Updated: 2026-02-28
  */
 
 -- ============================================
@@ -134,6 +134,7 @@ CREATE TABLE wp_bookings_customers (
 -- to prevent double-booking at database level
 CREATE TABLE wp_bookings (
 	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	booking_reference VARCHAR(12) NULL COMMENT 'Human-readable booking reference (BKYYMM-XXXX)',
 	customer_id BIGINT UNSIGNED NOT NULL,
 	service_id BIGINT UNSIGNED NOT NULL,
 	staff_id BIGINT UNSIGNED NOT NULL,
@@ -160,6 +161,7 @@ CREATE TABLE wp_bookings (
 	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	deleted_at DATETIME NULL DEFAULT NULL,
 	PRIMARY KEY (id),
+	UNIQUE KEY uq_booking_reference (booking_reference),
 	UNIQUE KEY unique_booking_slot (staff_id, booking_date, start_time),
 	KEY idx_customer_id (customer_id),
 	KEY idx_service_id (service_id),

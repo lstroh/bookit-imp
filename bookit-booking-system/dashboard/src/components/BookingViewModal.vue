@@ -16,7 +16,7 @@
             {{ editMode ? 'Edit Booking' : 'Booking Details' }}
           </h2>
           <p class="text-sm text-gray-500 mt-1">
-            Booking #{{ bookingId }}
+            Booking {{ booking ? getBookingReference(booking) : `#${bookingId}` }}
           </p>
         </div>
         <div class="flex items-center gap-3">
@@ -60,6 +60,13 @@
 
         <!-- Booking Content -->
         <div v-else-if="booking" class="space-y-6">
+          <div class="border border-primary-200 bg-primary-50 rounded-lg p-4">
+            <label class="text-xs text-primary-700 uppercase tracking-wide">Booking Reference</label>
+            <p class="text-lg font-semibold text-primary-900 mt-1">
+              {{ getBookingReference(booking) }}
+            </p>
+          </div>
+
           <!-- READ-ONLY VIEW -->
           <div v-if="!editMode">
             <!-- Customer Information -->
@@ -923,6 +930,13 @@ const formatDate = (dateString) => {
     month: 'short',
     year: 'numeric'
   })
+}
+
+const getBookingReference = (bookingData) => {
+  if (bookingData?.booking_reference && bookingData.booking_reference.trim() !== '') {
+    return bookingData.booking_reference
+  }
+  return `#${bookingData.id}`
 }
 
 const formatDateTime = (dateTimeString) => {

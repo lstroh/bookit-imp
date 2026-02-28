@@ -67,6 +67,7 @@ class Bookit_Loader {
 
 		// Booking wizard session manager.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/utils/class-bookit-reference-generator.php';
 
 		// Extension registry and helper functions.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-extension-registry.php';

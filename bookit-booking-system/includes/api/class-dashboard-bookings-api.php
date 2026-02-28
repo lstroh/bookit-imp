@@ -1573,6 +1573,7 @@ class Bookit_Dashboard_Bookings_API {
 		$query = "
 			SELECT
 				b.id,
+				b.booking_reference,
 				b.booking_date,
 				b.start_time,
 				b.end_time,
@@ -1670,6 +1671,7 @@ class Bookit_Dashboard_Bookings_API {
 		$query = "
 			SELECT
 				b.id,
+				b.booking_reference,
 				b.booking_date,
 				b.start_time,
 				b.end_time,
@@ -1741,8 +1743,10 @@ class Bookit_Dashboard_Bookings_API {
 				c.first_name LIKE %s OR
 				c.last_name LIKE %s OR
 				c.email LIKE %s OR
-				CONCAT(c.first_name, ' ', c.last_name) LIKE %s
+				CONCAT(c.first_name, ' ', c.last_name) LIKE %s OR
+				b.booking_reference LIKE %s
 			)";
+			$params[] = $search_param;
 			$params[] = $search_param;
 			$params[] = $search_param;
 			$params[] = $search_param;
@@ -2720,6 +2724,7 @@ class Bookit_Dashboard_Bookings_API {
 
 		$response = array(
 			'id'               => (int) $booking['id'],
+			'booking_reference' => $booking['booking_reference'] ?? '',
 			'service_id'       => isset( $booking['service_id'] ) ? (int) $booking['service_id'] : null,
 			'staff_id'         => isset( $booking['staff_id'] ) ? (int) $booking['staff_id'] : null,
 			'booking_date'     => $booking['booking_date'],
@@ -2973,6 +2978,7 @@ class Bookit_Dashboard_Bookings_API {
 			$wpdb->prepare(
 				"SELECT
 					b.id,
+					b.booking_reference,
 					b.booking_date,
 					b.start_time,
 					b.end_time,
@@ -3023,6 +3029,7 @@ class Bookit_Dashboard_Bookings_API {
 				$wpdb->prepare(
 					"SELECT
 						b.id,
+						b.booking_reference,
 						b.booking_date,
 						b.start_time,
 						b.end_time,
@@ -3621,6 +3628,7 @@ class Bookit_Dashboard_Bookings_API {
 	private function format_schedule_booking( $row, $today ) {
 		return array(
 			'id'               => (int) $row['id'],
+			'booking_reference' => $row['booking_reference'] ?? '',
 			'booking_date'     => $row['booking_date'],
 			'start_time'       => substr( $row['start_time'], 0, 5 ),
 			'end_time'         => substr( $row['end_time'], 0, 5 ),
@@ -4295,6 +4303,27 @@ class Bookit_Dashboard_Bookings_API {
 		}
 
 		$booking_id = $result;
+
+		// Generate and store booking reference if not already present.
+		$reference_data = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT booking_reference, created_at FROM {$wpdb->prefix}bookings WHERE id = %d",
+				$booking_id
+			),
+			ARRAY_A
+		);
+
+		if ( empty( $reference_data['booking_reference'] ) ) {
+			$created_at = ! empty( $reference_data['created_at'] ) ? $reference_data['created_at'] : current_time( 'mysql' );
+			$reference  = Bookit_Reference_Generator::generate_unique( $booking_id, $created_at );
+			$wpdb->update(
+				$wpdb->prefix . 'bookings',
+				array( 'booking_reference' => $reference ),
+				array( 'id' => $booking_id ),
+				array( '%s' ),
+				array( '%d' )
+			);
+		}
 
 		// Notify extensions after a booking is created from the dashboard.
 		do_action( 'bookit_after_booking_created', (int) $booking_id, $booking_data );

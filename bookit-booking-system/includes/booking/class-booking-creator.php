@@ -85,6 +85,7 @@ class Booking_System_Booking_Creator {
 		$amount_paid    = isset( $data['amount_paid'] ) ? (float) $data['amount_paid'] : 0;
 		$deposit_amount = $amount_paid;
 		$balance_due    = max( 0, $total_price - $amount_paid );
+		$created_at     = current_time( 'mysql' );
 
 		// Pay on arrival bookings start as pending_payment; paid bookings are confirmed immediately.
 		$status = ( isset( $data['payment_method'] ) && 'pay_on_arrival' === $data['payment_method'] )
@@ -108,7 +109,7 @@ class Booking_System_Booking_Creator {
 			'payment_intent_id' => isset( $data['payment_intent_id'] ) ? $data['payment_intent_id'] : null,
 			'stripe_session_id' => isset( $data['stripe_session_id'] ) ? $data['stripe_session_id'] : null,
 			'special_requests'  => isset( $data['special_requests'] ) ? $data['special_requests'] : '',
-			'created_at'        => current_time( 'mysql' ),
+			'created_at'        => $created_at,
 			'updated_at'        => current_time( 'mysql' ),
 		);
 
@@ -146,6 +147,16 @@ class Booking_System_Booking_Creator {
 		}
 
 		$booking_id = (int) $wpdb->insert_id;
+
+		// Generate and store a user-facing booking reference.
+		$reference = Bookit_Reference_Generator::generate_unique( $booking_id, $created_at );
+		$wpdb->update(
+			$wpdb->prefix . 'bookings',
+			array( 'booking_reference' => $reference ),
+			array( 'id' => $booking_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
 
 		// Also create a payment record for tracking purposes.
 		$payment_intent_id = isset( $data['payment_intent_id'] ) ? $data['payment_intent_id'] : '';
