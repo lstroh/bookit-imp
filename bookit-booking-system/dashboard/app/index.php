@@ -71,7 +71,15 @@ wp_enqueue_media();
 			restBase: '<?php echo esc_js( $dashboard_js_data['restBase'] ?? '' ); ?>',
 			nonce: '<?php echo esc_js( $dashboard_js_data['nonce'] ?? '' ); ?>',
 			pluginUrl: '<?php echo esc_url( $dashboard_js_data['pluginUrl'] ?? '' ); ?>',
-			logoutUrl: '<?php echo esc_url( $dashboard_js_data['logoutUrl'] ?? '' ); ?>'
+			logoutUrl: '<?php echo esc_url( $dashboard_js_data['logoutUrl'] ?? '' ); ?>',
+			branding: <?php echo wp_json_encode(
+				array(
+					'logoUrl'          => esc_url( $dashboard_js_data['branding']['logoUrl'] ?? '' ),
+					'primaryColour'    => sanitize_text_field( $dashboard_js_data['branding']['primaryColour'] ?? '#4F46E5' ),
+					'businessName'     => sanitize_text_field( $dashboard_js_data['branding']['businessName'] ?? '' ),
+					'poweredByVisible' => isset( $dashboard_js_data['branding']['poweredByVisible'] ) ? (bool) $dashboard_js_data['branding']['poweredByVisible'] : true,
+				)
+			); ?>
 		};
 	</script>
 

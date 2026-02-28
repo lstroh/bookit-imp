@@ -16,7 +16,16 @@
 
     <!-- Logo (desktop only) -->
     <div class="hidden lg:block px-6 py-4 border-b border-gray-200">
-      <h2 class="text-xl font-bold text-primary-600">Bookit</h2>
+      <div class="flex items-center gap-2">
+        <img
+          v-if="branding.logoUrl"
+          :src="branding.logoUrl"
+          :alt="brandingAltText"
+          class="h-10 w-10 rounded object-cover border border-gray-200"
+        />
+        <span v-else class="text-2xl">📅</span>
+        <h2 class="text-xl font-bold text-primary-600">{{ brandingDisplayName }}</h2>
+      </div>
       <p class="text-xs text-gray-500 mt-1">Booking Dashboard</p>
     </div>
 
@@ -45,7 +54,7 @@
 
     <!-- Admin Sections -->
     <div
-      v-if="props.staff.role === 'admin'"
+      v-if="isAdmin"
       class="pb-4"
     >
       <!-- Reports Section (Admin Only) -->
@@ -124,11 +133,15 @@
         </transition>
       </div>
     </div>
+
+    <div v-if="branding.poweredByVisible" class="px-6 py-4 border-t border-gray-200 mt-auto">
+      <p class="text-xs text-gray-400">Powered by Bookit</p>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 
@@ -136,6 +149,14 @@ const props = defineProps({
   staff: {
     type: Object,
     required: true
+  },
+  branding: {
+    type: Object,
+    default: () => ({
+      logoUrl: '',
+      businessName: '',
+      poweredByVisible: true
+    })
   }
 })
 
@@ -175,6 +196,9 @@ const extensionNavigation = ref([])
 // Collapsible section state — default collapsed
 const reportsOpen = ref(false)
 const settingsOpen = ref(false)
+const isAdmin = computed(() => props.staff.role === 'admin' || props.staff.role === 'bookit_admin')
+const brandingDisplayName = computed(() => props.branding?.businessName || 'Bookit')
+const brandingAltText = computed(() => props.branding?.businessName || 'Dashboard')
 
 onMounted(() => {
   // Restore from localStorage
@@ -229,10 +253,10 @@ async function loadExtensionNavigation() {
 
 function hasCapability(capability) {
   if (!capability || capability === 'bookit_manage_all') {
-    return props.staff.role === 'admin'
+    return isAdmin.value
   }
 
-  return props.staff.role === 'admin'
+  return isAdmin.value
 }
 
 function resolveNavIcon(icon) {

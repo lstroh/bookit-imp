@@ -21,7 +21,16 @@
         </svg>
       </button>
 
-      <span class="text-lg font-semibold text-gray-900">Bookit</span>
+      <div class="flex items-center gap-2">
+        <img
+          v-if="branding.logoUrl"
+          :src="branding.logoUrl"
+          :alt="brandingAltText"
+          class="h-8 w-8 rounded object-cover border border-gray-200"
+        />
+        <span v-else class="text-lg">📅</span>
+        <span class="text-lg font-semibold text-gray-900">{{ brandingDisplayName }}</span>
+      </div>
 
       <!-- User Dropdown (mobile) -->
       <div ref="mobileDropdownRef" class="relative">
@@ -89,7 +98,7 @@
       role="navigation"
       aria-label="Main navigation"
     >
-      <Sidebar :staff="staff" @close="sidebarOpen = false" />
+      <Sidebar :staff="staff" :branding="branding" @close="sidebarOpen = false" />
     </aside>
 
     <!-- Main Content Area -->
@@ -100,9 +109,22 @@
       <!-- Desktop Header (hidden on mobile) -->
       <header class="hidden lg:block sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-20">
         <div class="flex items-center justify-between">
-          <h1 class="text-2xl font-semibold text-gray-900">
-            {{ pageTitle }}
-          </h1>
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+              <img
+                v-if="branding.logoUrl"
+                :src="branding.logoUrl"
+                :alt="brandingAltText"
+                class="h-9 w-9 rounded object-cover border border-gray-200"
+              />
+              <span v-else class="text-xl">📅</span>
+              <span class="text-base font-semibold text-gray-900">{{ brandingDisplayName }}</span>
+            </div>
+            <div class="h-6 w-px bg-gray-200"></div>
+            <h1 class="text-2xl font-semibold text-gray-900">
+              {{ pageTitle }}
+            </h1>
+          </div>
 
           <!-- User Dropdown -->
           <div ref="userDropdownRef" class="relative ml-auto">
@@ -185,13 +207,17 @@ import { useRoute, useRouter } from 'vue-router'
 import Sidebar from './components/Sidebar.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import { useApi } from './composables/useApi'
+import { applyBranding, normalizeBranding } from './utils/branding'
 
 const api = useApi()
 const staff = window.BOOKIT_DASHBOARD.staff
+const branding = ref(normalizeBranding(window.BOOKIT_DASHBOARD?.branding || {}))
 
 const route = useRoute()
 const router = useRouter()
 const pageTitle = computed(() => route.meta.title || 'Dashboard')
+const brandingDisplayName = computed(() => branding.value.businessName || 'Bookit')
+const brandingAltText = computed(() => branding.value.businessName || 'Dashboard')
 
 const sidebarOpen = ref(false)
 const showUserMenu = ref(false)
@@ -213,12 +239,22 @@ const onDocumentClick = (event) => {
   }
 }
 
+const onBrandingUpdated = (event) => {
+  const updatedBranding = normalizeBranding(event?.detail || {})
+  branding.value = applyBranding(updatedBranding)
+  window.BOOKIT_DASHBOARD.branding = { ...branding.value }
+}
+
 onMounted(() => {
+  branding.value = applyBranding(branding.value)
+  window.BOOKIT_DASHBOARD.branding = { ...branding.value }
   document.addEventListener('click', onDocumentClick)
+  window.addEventListener('bookit:branding-updated', onBrandingUpdated)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', onDocumentClick)
+  window.removeEventListener('bookit:branding-updated', onBrandingUpdated)
 })
 
 const getUserInitials = (fullName) => {

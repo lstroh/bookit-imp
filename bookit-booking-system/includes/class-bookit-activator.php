@@ -160,6 +160,49 @@ class Bookit_Activator {
 			);
 		}
 
+		// Seed dashboard branding defaults if missing.
+		$branding_defaults = array(
+			'branding_logo_url'           => array(
+				'value' => '',
+				'type'  => 'string',
+			),
+			'branding_primary_colour'     => array(
+				'value' => '#4F46E5',
+				'type'  => 'string',
+			),
+			'branding_business_name'      => array(
+				'value' => '',
+				'type'  => 'string',
+			),
+			'branding_powered_by_visible' => array(
+				'value' => '1',
+				'type'  => 'boolean',
+			),
+		);
+
+		foreach ( $branding_defaults as $setting_key => $setting_data ) {
+			$exists = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT id FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s",
+					$setting_key
+				)
+			);
+
+			if ( $exists ) {
+				continue;
+			}
+
+			$wpdb->insert(
+				$wpdb->prefix . 'bookings_settings',
+				array(
+					'setting_key'   => $setting_key,
+					'setting_value' => $setting_data['value'],
+					'setting_type'  => $setting_data['type'],
+				),
+				array( '%s', '%s', '%s' )
+			);
+		}
+
 		// Create email templates table.
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 

@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bookit-primary: #4F46E5;
+  --bookit-primary-50: #f0eeff;
+  --bookit-primary-100: #e0dcff;
+  --bookit-primary-500: #4F46E5;
+  --bookit-primary-600: #463ece;
+  --bookit-primary-700: #3c36af;
+}
+
 @layer base {
   body {
     @apply antialiased;

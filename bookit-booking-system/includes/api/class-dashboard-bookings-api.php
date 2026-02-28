@@ -1422,6 +1422,29 @@ class Bookit_Dashboard_Bookings_API {
 			)
 		);
 
+		// Get/Update dashboard branding settings.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/settings/branding',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( $this, 'get_branding_settings' ),
+					'permission_callback' => array( $this, 'check_dashboard_permission' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'update_branding_settings' ),
+					'permission_callback' => array( $this, 'check_admin_permission' ),
+				),
+				array(
+					'methods'             => 'PATCH',
+					'callback'            => array( $this, 'update_branding_settings' ),
+					'permission_callback' => array( $this, 'check_admin_permission' ),
+				),
+			)
+		);
+
 		// Send test email.
 		register_rest_route(
 			self::NAMESPACE,
@@ -6848,6 +6871,190 @@ class Bookit_Dashboard_Bookings_API {
 				'success' => true,
 				'message' => 'Settings saved successfully.',
 			)
+		);
+	}
+
+	/**
+	 * Get dashboard branding settings.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response
+	 */
+	public function get_branding_settings( $request ) {
+		return rest_ensure_response( $this->load_branding_settings() );
+	}
+
+	/**
+	 * Update dashboard branding settings.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function update_branding_settings( $request ) {
+		global $wpdb;
+
+		$branding = array(
+			'branding_logo_url'           => $request->get_param( 'branding_logo_url' ),
+			'branding_primary_colour'     => $request->get_param( 'branding_primary_colour' ),
+			'branding_business_name'      => $request->get_param( 'branding_business_name' ),
+			'branding_powered_by_visible' => $request->get_param( 'branding_powered_by_visible' ),
+		);
+
+		$current = $this->load_branding_settings();
+
+		if ( null === $branding['branding_logo_url'] ) {
+			$branding['branding_logo_url'] = $current['branding_logo_url'];
+		}
+		if ( null === $branding['branding_primary_colour'] ) {
+			$branding['branding_primary_colour'] = $current['branding_primary_colour'];
+		}
+		if ( null === $branding['branding_business_name'] ) {
+			$branding['branding_business_name'] = $current['branding_business_name'];
+		}
+		if ( null === $branding['branding_powered_by_visible'] ) {
+			$branding['branding_powered_by_visible'] = $current['branding_powered_by_visible'];
+		}
+
+		$branding['branding_logo_url'] = is_string( $branding['branding_logo_url'] ) ? trim( $branding['branding_logo_url'] ) : '';
+		if ( '' !== $branding['branding_logo_url'] ) {
+			$branding['branding_logo_url'] = esc_url_raw( $branding['branding_logo_url'] );
+			if ( empty( $branding['branding_logo_url'] ) || false === filter_var( $branding['branding_logo_url'], FILTER_VALIDATE_URL ) ) {
+				return new WP_Error(
+					'invalid_branding_logo_url',
+					__( 'Logo URL must be empty or a valid URL.', 'bookit-booking-system' ),
+					array( 'status' => 400 )
+				);
+			}
+		}
+
+		$branding['branding_primary_colour'] = is_string( $branding['branding_primary_colour'] ) ? trim( $branding['branding_primary_colour'] ) : '';
+		if ( ! preg_match( '/^#[0-9A-Fa-f]{6}$/', $branding['branding_primary_colour'] ) ) {
+			return new WP_Error(
+				'invalid_branding_primary_colour',
+				__( 'Primary colour must be a valid 6-digit hex value (e.g. #4F46E5).', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$branding['branding_business_name'] = sanitize_text_field( (string) $branding['branding_business_name'] );
+		if ( function_exists( 'mb_strlen' ) ) {
+			$name_length = mb_strlen( $branding['branding_business_name'] );
+		} else {
+			$name_length = strlen( $branding['branding_business_name'] );
+		}
+		if ( $name_length > 100 ) {
+			return new WP_Error(
+				'invalid_branding_business_name',
+				__( 'Business name must be 100 characters or fewer.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$branding['branding_powered_by_visible'] = rest_sanitize_boolean( $branding['branding_powered_by_visible'] );
+
+		$this->upsert_setting( $wpdb, 'branding_logo_url', $branding['branding_logo_url'], 'string' );
+		$this->upsert_setting( $wpdb, 'branding_primary_colour', strtoupper( $branding['branding_primary_colour'] ), 'string' );
+		$this->upsert_setting( $wpdb, 'branding_business_name', $branding['branding_business_name'], 'string' );
+		$this->upsert_setting( $wpdb, 'branding_powered_by_visible', $branding['branding_powered_by_visible'] ? '1' : '0', 'boolean' );
+
+		$updated_branding = $this->load_branding_settings();
+
+		return rest_ensure_response(
+			array(
+				'success'  => true,
+				'message'  => __( 'Branding settings saved successfully.', 'bookit-booking-system' ),
+				'branding' => $updated_branding,
+			)
+		);
+	}
+
+	/**
+	 * Load branding settings from wp_bookings_settings.
+	 *
+	 * @return array
+	 */
+	private function load_branding_settings() {
+		global $wpdb;
+
+		$defaults = array(
+			'branding_logo_url'           => '',
+			'branding_primary_colour'     => '#4F46E5',
+			'branding_business_name'      => '',
+			'branding_powered_by_visible' => true,
+		);
+
+		$keys         = array_keys( $defaults );
+		$placeholders = implode( ',', array_fill( 0, count( $keys ), '%s' ) );
+		$rows         = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT setting_key, setting_value, setting_type
+				FROM {$wpdb->prefix}bookings_settings
+				WHERE setting_key IN ($placeholders)",
+				$keys
+			),
+			ARRAY_A
+		);
+
+		$settings = $defaults;
+
+		foreach ( $rows as $row ) {
+			$key = $row['setting_key'];
+			if ( ! array_key_exists( $key, $defaults ) ) {
+				continue;
+			}
+
+			if ( 'branding_powered_by_visible' === $key ) {
+				$settings[ $key ] = (bool) $row['setting_value'];
+			} elseif ( 'branding_primary_colour' === $key ) {
+				$value            = strtoupper( (string) $row['setting_value'] );
+				$settings[ $key ] = preg_match( '/^#[0-9A-F]{6}$/', $value ) ? $value : $defaults[ $key ];
+			} else {
+				$settings[ $key ] = (string) $row['setting_value'];
+			}
+		}
+
+		return $settings;
+	}
+
+	/**
+	 * Upsert a single setting in wp_bookings_settings.
+	 *
+	 * @param wpdb   $wpdb  WordPress database instance.
+	 * @param string $key   Setting key.
+	 * @param string $value Setting value.
+	 * @param string $type  Setting type.
+	 * @return void
+	 */
+	private function upsert_setting( $wpdb, $key, $value, $type ) {
+		$existing = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s",
+				$key
+			)
+		);
+
+		if ( $existing ) {
+			$wpdb->update(
+				$wpdb->prefix . 'bookings_settings',
+				array(
+					'setting_value' => $value,
+					'setting_type'  => $type,
+				),
+				array( 'setting_key' => $key ),
+				array( '%s', '%s' ),
+				array( '%s' )
+			);
+			return;
+		}
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_settings',
+			array(
+				'setting_key'   => $key,
+				'setting_value' => $value,
+				'setting_type'  => $type,
+			),
+			array( '%s', '%s', '%s' )
 		);
 	}
 

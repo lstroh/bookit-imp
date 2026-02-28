@@ -1,13 +1,5 @@
 <template>
   <div class="max-w-4xl mx-auto space-y-6">
-    <!-- Success/Error Messages -->
-    <div v-if="saveSuccess" class="bg-green-50 border border-green-200 rounded p-3">
-      <p class="text-sm text-green-800">&#10003; {{ saveSuccess }}</p>
-    </div>
-    <div v-if="saveError" class="bg-red-50 border border-red-200 rounded p-3">
-      <p class="text-sm text-red-800">{{ saveError }}</p>
-    </div>
-
     <div class="bg-white rounded-lg shadow-sm border border-gray-200">
       <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
         <h2 class="text-lg font-semibold text-gray-900">Staff</h2>
@@ -30,7 +22,7 @@
               v-model="showStaffEarnings"
               type="checkbox"
               class="sr-only peer"
-              :disabled="saving"
+              :disabled="savingGeneral"
               @change="saveShowStaffEarnings"
             />
             <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-disabled:opacity-50 peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
@@ -38,19 +30,134 @@
         </div>
       </div>
     </div>
+
+    <div v-if="isAdmin" class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">Branding</h2>
+        <p class="text-sm text-gray-500 mt-1">
+          Customize dashboard branding for your team.
+        </p>
+      </div>
+
+      <div class="px-4 sm:px-6 py-6 space-y-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Logo</label>
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="button" class="btn-secondary" @click="openMediaPicker">
+              {{ branding.logoUrl ? 'Change logo' : 'Upload logo' }}
+            </button>
+            <button
+              v-if="branding.logoUrl"
+              type="button"
+              class="btn-text"
+              @click="removeLogo"
+            >
+              Remove logo
+            </button>
+          </div>
+          <div v-if="branding.logoUrl" class="mt-3">
+            <img :src="branding.logoUrl" alt="Brand logo preview" class="h-16 w-16 rounded object-cover border border-gray-200" />
+          </div>
+        </div>
+
+        <div>
+          <label for="branding-business-name" class="block text-sm font-medium text-gray-700 mb-1">
+            Business Name
+          </label>
+          <input
+            id="branding-business-name"
+            v-model="branding.businessName"
+            type="text"
+            maxlength="100"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            placeholder="Your business name"
+          />
+          <p class="text-xs text-gray-500 mt-1">
+            Shown in the dashboard header instead of 'Bookit'.
+          </p>
+        </div>
+
+        <div>
+          <label for="branding-primary-colour" class="block text-sm font-medium text-gray-700 mb-1">
+            Primary Colour
+          </label>
+          <div class="flex items-center gap-3">
+            <input
+              id="branding-primary-colour"
+              v-model="branding.primaryColour"
+              type="color"
+              class="h-10 w-14 p-1 border border-gray-300 rounded cursor-pointer"
+              @input="syncHexFromColorPicker"
+            />
+            <input
+              v-model="brandingHexInput"
+              type="text"
+              maxlength="7"
+              class="w-40 px-3 py-2 border border-gray-300 rounded-lg uppercase focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              placeholder="#4F46E5"
+              @input="syncColorFromHexInput"
+            />
+          </div>
+          <p v-if="brandingHexError" class="text-xs text-red-600 mt-1">{{ brandingHexError }}</p>
+        </div>
+
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-sm font-medium text-gray-900">Show 'Powered by Bookit'</p>
+            <p class="text-sm text-gray-500 mt-1">
+              Uncheck to hide the Bookit branding in the dashboard footer.
+            </p>
+          </div>
+          <label class="flex items-center cursor-pointer">
+            <input
+              v-model="branding.poweredByVisible"
+              type="checkbox"
+              class="sr-only peer"
+            />
+            <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+          </label>
+        </div>
+
+        <div class="pt-4 border-t border-gray-200 flex justify-end">
+          <button
+            type="button"
+            class="btn-primary"
+            :disabled="savingBranding"
+            @click="saveBranding"
+          >
+            {{ savingBranding ? 'Saving...' : 'Save Branding' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useApi } from '../composables/useApi'
+import { useToast } from '../composables/useToast'
+import { applyBranding, normalizeBranding } from '../utils/branding'
 
 const api = useApi()
+const { success: toastSuccess, error: toastError } = useToast()
+
+const HEX_PATTERN = /^#[0-9A-Fa-f]{6}$/
+const currentUserRole = window.BOOKIT_DASHBOARD?.staff?.role || ''
+const isAdmin = computed(() => currentUserRole === 'admin' || currentUserRole === 'bookit_admin')
 
 const showStaffEarnings = ref(false)
-const saving = ref(false)
-const saveSuccess = ref('')
-const saveError = ref('')
+const savingGeneral = ref(false)
+const savingBranding = ref(false)
+const brandingHexInput = ref('#4F46E5')
+const brandingHexError = ref('')
+
+const branding = ref({
+  logoUrl: '',
+  primaryColour: '#4F46E5',
+  businessName: '',
+  poweredByVisible: true
+})
 
 const loadShowStaffEarnings = async () => {
   try {
@@ -58,19 +165,33 @@ const loadShowStaffEarnings = async () => {
 
     if (response.data.success && response.data.settings) {
       showStaffEarnings.value = Boolean(response.data.settings.show_staff_earnings ?? false)
-    } else {
-      showStaffEarnings.value = false
+      return
     }
+  } catch {
+    // Fall back to the default value.
+  }
+
+  showStaffEarnings.value = false
+}
+
+const loadBranding = async () => {
+  if (!isAdmin.value) {
+    return
+  }
+
+  try {
+    const response = await api.get('settings/branding')
+    const normalized = normalizeBranding(response.data || {})
+    branding.value = normalized
+    brandingHexInput.value = normalized.primaryColour
+    brandingHexError.value = ''
   } catch (err) {
-    showStaffEarnings.value = false
-    saveError.value = 'Failed to load settings.'
+    toastError(err.message || 'Failed to load branding settings.')
   }
 }
 
 const saveShowStaffEarnings = async () => {
-  saving.value = true
-  saveSuccess.value = ''
-  saveError.value = ''
+  savingGeneral.value = true
 
   try {
     const response = await api.post('settings', {
@@ -80,21 +201,101 @@ const saveShowStaffEarnings = async () => {
     })
 
     if (response.data.success) {
-      saveSuccess.value = 'Settings saved successfully.'
-      setTimeout(() => {
-        saveSuccess.value = ''
-      }, 3000)
+      toastSuccess('Settings saved successfully.')
     } else {
-      saveError.value = response.data.message || 'Failed to save settings.'
+      toastError(response.data.message || 'Failed to save settings.')
     }
   } catch (err) {
-    saveError.value = err.message || 'Failed to save settings.'
+    toastError(err.message || 'Failed to save settings.')
   } finally {
-    saving.value = false
+    savingGeneral.value = false
   }
 }
 
-onMounted(() => {
-  loadShowStaffEarnings()
+const syncHexFromColorPicker = () => {
+  brandingHexInput.value = branding.value.primaryColour.toUpperCase()
+  brandingHexError.value = ''
+}
+
+const syncColorFromHexInput = () => {
+  brandingHexInput.value = brandingHexInput.value.toUpperCase()
+
+  if (!HEX_PATTERN.test(brandingHexInput.value)) {
+    brandingHexError.value = 'Use a valid hex value in #RRGGBB format.'
+    return
+  }
+
+  brandingHexError.value = ''
+  branding.value.primaryColour = brandingHexInput.value
+}
+
+const removeLogo = () => {
+  branding.value.logoUrl = ''
+}
+
+const openMediaPicker = () => {
+  if (!window.wp || !window.wp.media) {
+    toastError('WordPress media library is not available.')
+    return
+  }
+
+  const frame = window.wp.media({
+    title: 'Select Logo',
+    button: { text: 'Use this image' },
+    multiple: false,
+    library: { type: 'image' }
+  })
+
+  frame.on('select', () => {
+    const attachment = frame.state().get('selection').first().toJSON()
+    branding.value.logoUrl = attachment?.url || ''
+  })
+
+  frame.open()
+}
+
+const saveBranding = async () => {
+  if (!HEX_PATTERN.test(brandingHexInput.value)) {
+    brandingHexError.value = 'Use a valid hex value in #RRGGBB format.'
+    return
+  }
+
+  savingBranding.value = true
+  brandingHexError.value = ''
+
+  try {
+    const payload = {
+      branding_logo_url: branding.value.logoUrl || '',
+      branding_primary_colour: brandingHexInput.value.toUpperCase(),
+      branding_business_name: branding.value.businessName || '',
+      branding_powered_by_visible: Boolean(branding.value.poweredByVisible)
+    }
+
+    const response = await api.patch('settings/branding', payload)
+
+    if (!response.data?.success) {
+      toastError(response.data?.message || 'Failed to save branding settings.')
+      return
+    }
+
+    const updatedBranding = normalizeBranding(response.data.branding || payload)
+    branding.value = updatedBranding
+    brandingHexInput.value = updatedBranding.primaryColour
+
+    applyBranding(updatedBranding)
+    window.BOOKIT_DASHBOARD.branding = { ...updatedBranding }
+    window.dispatchEvent(new CustomEvent('bookit:branding-updated', { detail: updatedBranding }))
+
+    toastSuccess('Branding settings saved successfully.')
+  } catch (err) {
+    toastError(err.message || 'Failed to save branding settings.')
+  } finally {
+    savingBranding.value = false
+  }
+}
+
+onMounted(async () => {
+  await loadShowStaffEarnings()
+  await loadBranding()
 })
 </script>
