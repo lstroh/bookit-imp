@@ -168,6 +168,7 @@ const appliedFilters = ref({
 function handleDateRangeChange({ from, to }) {
   draftFilters.value.date_from = from || ''
   draftFilters.value.date_to = to || ''
+  applyFilters()
 }
 
 function getActorBadgeClass(actorType) {
