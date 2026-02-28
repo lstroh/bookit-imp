@@ -2140,6 +2140,30 @@ class Bookit_Dashboard_Bookings_API {
 			}
 		}
 
+		$staff_data = array(
+			'email'               => $email,
+			'first_name'          => $request->get_param( 'first_name' ),
+			'last_name'           => $request->get_param( 'last_name' ),
+			'phone'               => $request->get_param( 'phone' ),
+			'photo_url'           => $request->get_param( 'photo_url' ),
+			'bio'                 => $request->get_param( 'bio' ),
+			'title'               => $request->get_param( 'title' ),
+			'role'                => $request->get_param( 'role' ),
+			'google_calendar_id'  => $request->get_param( 'google_calendar_id' ),
+			'is_active'           => filter_var( $request->get_param( 'is_active' ), FILTER_VALIDATE_BOOLEAN ) ? 1 : 0,
+			'display_order'       => (int) $request->get_param( 'display_order' ),
+			'service_assignments' => $service_assignments,
+		);
+
+		Bookit_Audit_Logger::log(
+			'staff.created',
+			'staff',
+			$staff_id,
+			array(
+				'new_value' => $staff_data,
+			)
+		);
+
 		// Get created staff.
 		$get_request = new WP_REST_Request( 'GET', self::NAMESPACE . "/dashboard/staff/{$staff_id}" );
 		$get_request->set_url_params( array( 'id' => $staff_id ) );
@@ -2168,7 +2192,7 @@ class Bookit_Dashboard_Bookings_API {
 		// Check if staff exists.
 		$existing = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT id, email FROM {$wpdb->prefix}bookings_staff
+				"SELECT * FROM {$wpdb->prefix}bookings_staff
 				WHERE id = %d AND deleted_at IS NULL",
 				$staff_id
 			),
@@ -2183,7 +2207,21 @@ class Bookit_Dashboard_Bookings_API {
 			);
 		}
 
-		$email = $request->get_param( 'email' );
+		$email    = $request->get_param( 'email' );
+		$old_data = $existing;
+		$new_data = array(
+			'email'              => $email,
+			'first_name'         => $request->get_param( 'first_name' ),
+			'last_name'          => $request->get_param( 'last_name' ),
+			'phone'              => $request->get_param( 'phone' ),
+			'photo_url'          => $request->get_param( 'photo_url' ),
+			'bio'                => $request->get_param( 'bio' ),
+			'title'              => $request->get_param( 'title' ),
+			'role'               => $request->get_param( 'role' ),
+			'google_calendar_id' => $request->get_param( 'google_calendar_id' ),
+			'is_active'          => filter_var( $request->get_param( 'is_active' ), FILTER_VALIDATE_BOOLEAN ) ? 1 : 0,
+			'display_order'      => (int) $request->get_param( 'display_order' ),
+		);
 
 		// Check for duplicate email (excluding current staff).
 		$duplicate = $wpdb->get_var(
@@ -2256,6 +2294,16 @@ class Bookit_Dashboard_Bookings_API {
 				);
 			}
 		}
+
+		Bookit_Audit_Logger::log(
+			'staff.updated',
+			'staff',
+			$staff_id,
+			array(
+				'old_value' => $old_data,
+				'new_value' => $new_data,
+			)
+		);
 
 		// Get updated staff.
 		$staff_response = $this->get_staff_details( $request );
@@ -2342,6 +2390,15 @@ class Bookit_Dashboard_Bookings_API {
 				array( 'status' => 500 )
 			);
 		}
+
+		Bookit_Audit_Logger::log(
+			'staff.deleted',
+			'staff',
+			$staff_id,
+			array(
+				'old_value' => $existing,
+			)
+		);
 
 		return rest_ensure_response(
 			array(
@@ -2837,6 +2894,16 @@ class Bookit_Dashboard_Bookings_API {
 			array( '%d', '%s', '%s', '%d', '%s', '%s' )
 		);
 
+		Bookit_Audit_Logger::log(
+			'booking.completed',
+			'booking',
+			$booking_id,
+			array(
+				'old_value' => array( 'status' => $booking['status'] ),
+				'new_value' => array( 'status' => 'completed' ),
+			)
+		);
+
 		return rest_ensure_response(
 			array(
 				'success'    => true,
@@ -2921,6 +2988,16 @@ class Bookit_Dashboard_Bookings_API {
 				'notes'               => null,
 			),
 			array( '%d', '%s', '%s', '%d', '%s', '%s' )
+		);
+
+		Bookit_Audit_Logger::log(
+			'booking.no_show',
+			'booking',
+			$booking_id,
+			array(
+				'old_value' => array( 'status' => $booking['status'] ),
+				'new_value' => array( 'status' => 'no_show' ),
+			)
 		);
 
 		return rest_ensure_response(
@@ -3957,6 +4034,17 @@ class Bookit_Dashboard_Bookings_API {
 			);
 		}
 
+		Bookit_Audit_Logger::log(
+			'booking.updated',
+			'booking',
+			$booking_id,
+			array(
+				'old_value' => $old_data,
+				'new_value' => $new_data,
+				'notes'     => 'Booking updated via dashboard',
+			)
+		);
+
 		return rest_ensure_response(
 			array(
 				'success'    => true,
@@ -4005,6 +4093,8 @@ class Bookit_Dashboard_Bookings_API {
 				array( 'status' => 404 )
 			);
 		}
+
+		$old_status = $existing['status'];
 
 		// Permission check: staff can only cancel their own bookings.
 		if ( 'staff' === $current_staff['role'] && (int) $existing['staff_id'] !== (int) $current_staff['id'] ) {
@@ -4097,6 +4187,17 @@ class Bookit_Dashboard_Bookings_API {
 			// For now, reuse confirmation template.
 			$email_sender->send_customer_confirmation( $booking );
 		}
+
+		Bookit_Audit_Logger::log(
+			'booking.cancelled',
+			'booking',
+			$booking_id,
+			array(
+				'old_value' => array( 'status' => $old_status ),
+				'new_value' => array( 'status' => 'cancelled' ),
+				'notes'     => 'Booking cancelled via dashboard',
+			)
+		);
 
 		return rest_ensure_response(
 			array(
@@ -4324,6 +4425,16 @@ class Bookit_Dashboard_Bookings_API {
 				array( '%d' )
 			);
 		}
+
+		Bookit_Audit_Logger::log(
+			'booking.created',
+			'booking',
+			$booking_id,
+			array(
+				'new_value' => $booking_data,
+				'notes'     => sprintf( 'Booking created manually for customer ID %d', $customer_id ),
+			)
+		);
 
 		// Notify extensions after a booking is created from the dashboard.
 		do_action( 'bookit_after_booking_created', (int) $booking_id, $booking_data );
@@ -6639,6 +6750,25 @@ class Bookit_Dashboard_Bookings_API {
 		global $wpdb;
 
 		$settings = $request->get_param( 'settings' );
+		$old_rows = $wpdb->get_results(
+			"SELECT setting_key, setting_value, setting_type FROM {$wpdb->prefix}bookings_settings",
+			ARRAY_A
+		);
+		$old_settings = array();
+
+		foreach ( $old_rows as $setting_row ) {
+			$old_value = $setting_row['setting_value'];
+
+			if ( 'integer' === $setting_row['setting_type'] ) {
+				$old_value = (int) $old_value;
+			} elseif ( 'boolean' === $setting_row['setting_type'] ) {
+				$old_value = (bool) $old_value;
+			} elseif ( 'json' === $setting_row['setting_type'] ) {
+				$old_value = json_decode( $old_value, true );
+			}
+
+			$old_settings[ $setting_row['setting_key'] ] = $old_value;
+		}
 
 		foreach ( $settings as $key => $value ) {
 			$key = sanitize_key( $key );
@@ -6683,6 +6813,37 @@ class Bookit_Dashboard_Bookings_API {
 				);
 			}
 		}
+
+		$new_rows = $wpdb->get_results(
+			"SELECT setting_key, setting_value, setting_type FROM {$wpdb->prefix}bookings_settings",
+			ARRAY_A
+		);
+		$new_settings = array();
+
+		foreach ( $new_rows as $setting_row ) {
+			$new_value = $setting_row['setting_value'];
+
+			if ( 'integer' === $setting_row['setting_type'] ) {
+				$new_value = (int) $new_value;
+			} elseif ( 'boolean' === $setting_row['setting_type'] ) {
+				$new_value = (bool) $new_value;
+			} elseif ( 'json' === $setting_row['setting_type'] ) {
+				$new_value = json_decode( $new_value, true );
+			}
+
+			$new_settings[ $setting_row['setting_key'] ] = $new_value;
+		}
+
+		Bookit_Audit_Logger::log(
+			'setting.updated',
+			'setting',
+			0,
+			array(
+				'old_value' => $old_settings,
+				'new_value' => $new_settings,
+				'notes'     => 'Settings saved via dashboard',
+			)
+		);
 
 		return rest_ensure_response(
 			array(

@@ -4,7 +4,7 @@
  * This file documents the complete database schema for reference.
  * DO NOT run this file directly - tables are created via Bookit_Database class.
  * 
- * Total Tables: 13
+ * Total Tables: 14
  * Last Updated: 2026-02-28
  */
 
@@ -305,6 +305,29 @@ CREATE TABLE wp_bookings_email_templates (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
+-- TABLE 14: wp_bookings_audit_log
+-- ============================================
+-- Immutable audit trail for admin/system actions and GDPR traceability.
+-- Created via migration: database/migrations/0002-add-audit-log.php
+CREATE TABLE wp_bookings_audit_log (
+	id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+	actor_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+	actor_type ENUM('admin','staff','customer','system') NOT NULL,
+	actor_ip VARCHAR(45) NULL,
+	action VARCHAR(100) NOT NULL,
+	object_type VARCHAR(50) NOT NULL,
+	object_id BIGINT UNSIGNED NULL,
+	old_value LONGTEXT NULL,
+	new_value LONGTEXT NULL,
+	notes TEXT NULL,
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	INDEX idx_actor_id (actor_id),
+	INDEX idx_action (action),
+	INDEX idx_object (object_type, object_id),
+	INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- MIGRATION NOTES
 -- ============================================
 -- Migration 1: Add Staff Photo, Bio, Title, and Custom Pricing
@@ -367,3 +390,11 @@ CREATE TABLE wp_bookings_email_templates (
 --   changed_by_staff_id BIGINT UNSIGNED NOT NULL
 --   changed_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 --   notes               TEXT NULL
+--
+-- Migration 6: Add Audit Log Table
+-- Date: 2026-02-28
+-- Sprint: Sprint 4B, Task 4
+--
+-- Added table: wp_bookings_audit_log
+-- Tracks auditable actions across bookings, payments, staff, settings, and GDPR flows.
+-- Migration file: database/migrations/0002-add-audit-log.php

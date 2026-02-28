@@ -126,5 +126,11 @@ export default [
     name: 'SettingsExtensions',
     component: () => import('../views/SettingsExtensions.vue'),
     meta: { title: 'Extensions', requiresAdmin: true }
+  },
+  {
+    path: '/audit-log',
+    name: 'AuditLog',
+    component: () => import('../views/AuditLog.vue'),
+    meta: { title: 'Audit Log', requiresAdmin: true }
   }
 ]

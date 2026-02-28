@@ -308,6 +308,16 @@ class Booking_System_Stripe_Webhook {
 		// Notify extensions after a payment-backed booking is completed.
 		do_action( 'bookit_after_payment_completed', (int) $booking_id, $payment_data );
 
+		Bookit_Audit_Logger::log(
+			'payment.completed',
+			'booking',
+			(int) $booking_id,
+			array(
+				'new_value' => $payment_data,
+				'notes'     => 'Payment confirmed via webhook',
+			)
+		);
+
 		set_transient( $idempotency_key, $booking_id, 24 * HOUR_IN_SECONDS );
 
 		if ( self::should_log() ) {

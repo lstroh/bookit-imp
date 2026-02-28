@@ -64,6 +64,7 @@ class Bookit_Loader {
 		// Dashboard authentication/session.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-session.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-auth.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-audit-logger.php';
 
 		// Booking wizard session manager.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
@@ -125,6 +126,8 @@ class Bookit_Loader {
 
 		// Dashboard Bookings API (Today's Schedule).
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-dashboard-bookings-api.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-audit-log-api.php';
+		new Bookit_Audit_Log_API();
 
 		// Extensions API.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-extensions-api.php';
@@ -147,6 +150,7 @@ class Bookit_Loader {
 
 		// Session cleanup cron.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-session-cleanup.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-audit-retention.php';
 	}
 
 	/**
@@ -310,6 +314,9 @@ class Bookit_Loader {
 
 		// Idempotency cleanup cron (Sprint 2, Task 6).
 		add_action( 'bookit_cleanup_expired_idempotency', array( 'Bookit_Idempotency_Cleanup', 'run_cleanup_with_tracking' ) );
+
+		// Audit retention cleanup cron.
+		add_action( 'bookit_audit_retention', array( 'Bookit_Audit_Retention', 'run' ) );
 	}
 
 	/**

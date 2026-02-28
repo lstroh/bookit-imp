@@ -501,6 +501,15 @@ class Bookit_Customers_API {
 			);
 		}
 
+		Bookit_Audit_Logger::log(
+			'customer.anonymised',
+			'customer',
+			$customer_id,
+			array(
+				'notes' => 'Customer data anonymised per GDPR request',
+			)
+		);
+
 		return rest_ensure_response(
 			array(
 				'success' => true,
