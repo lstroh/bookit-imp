@@ -40,6 +40,7 @@ class Bookit_Loader {
 		$this->plugin_name = 'bookit-booking-system';
 
 		$this->load_dependencies();
+		add_action( 'plugins_loaded', array( $this, 'run_pending_migrations' ), 20 );
 		$this->define_rewrite_rules();
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
@@ -54,6 +55,8 @@ class Bookit_Loader {
 	private function load_dependencies() {
 		// Logger (load early for use in other classes).
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-logger.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-migration-runner.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/functions-migration.php';
 
 		// Database management.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-database.php';
@@ -310,6 +313,20 @@ class Bookit_Loader {
 			return;
 		}
 		Bookit_Session_Manager::init();
+	}
+
+	/**
+	 * Run pending migrations on version upgrades.
+	 *
+	 * @return void
+	 */
+	public function run_pending_migrations(): void {
+		$installed_version = get_option( 'bookit_version', '0.0.0' );
+
+		if ( version_compare( $installed_version, BOOKIT_VERSION, '<' ) ) {
+			Bookit_Migration_Runner::run_pending();
+			update_option( 'bookit_version', BOOKIT_VERSION );
+		}
 	}
 
 	/**

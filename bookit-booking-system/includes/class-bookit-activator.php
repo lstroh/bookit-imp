@@ -76,7 +76,14 @@ class Bookit_Activator {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-database.php';
 		Bookit_Database::create_tables();
 
-		// Run migrations for additional tables (e.g. staff working hours).
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-migration-runner.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/functions-migration.php';
+		Bookit_Migration_Runner::create_migrations_table();
+		Bookit_Migration_Runner::mark_as_run( 'migration-add-staff-working-hours', 'bookit-booking-system' );
+		Bookit_Migration_Runner::mark_as_run( 'migration-add-status-log', 'bookit-booking-system' );
+		Bookit_Migration_Runner::run_pending();
+
+		// Keep explicit legacy migration calls for fresh installs and backward compatibility.
 		require_once BOOKIT_PLUGIN_DIR . 'database/migrations/migration-add-staff-working-hours.php';
 		$staff_working_hours_migration = new Bookit_Migration_Add_Staff_Working_Hours();
 		$staff_working_hours_migration->up();
