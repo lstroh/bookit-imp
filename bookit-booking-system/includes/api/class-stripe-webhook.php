@@ -286,11 +286,27 @@ class Booking_System_Stripe_Webhook {
 			'amount_paid'          => isset( $session->amount_total ) ? $session->amount_total / 100 : 0,
 		);
 
+		// Allow extensions to modify wizard booking data before insertion.
+		$booking_data = apply_filters( 'bookit_booking_data_before_insert', $booking_data );
+
 		$booking_id = $booking_creator->create_booking( $booking_data );
 
 		if ( is_wp_error( $booking_id ) ) {
 			return $booking_id;
 		}
+
+		// Notify extensions after a booking is created from Stripe checkout completion.
+		do_action( 'bookit_after_booking_created', (int) $booking_id, $booking_data );
+
+		$payment_data = array(
+			'amount'            => isset( $session->amount_total ) ? (float) $session->amount_total / 100 : 0,
+			'currency'          => isset( $session->currency ) ? sanitize_text_field( $session->currency ) : '',
+			'payment_intent_id' => isset( $session->payment_intent ) ? sanitize_text_field( (string) $session->payment_intent ) : '',
+			'method'            => 'stripe_checkout',
+		);
+
+		// Notify extensions after a payment-backed booking is completed.
+		do_action( 'bookit_after_payment_completed', (int) $booking_id, $payment_data );
 
 		set_transient( $idempotency_key, $booking_id, 24 * HOUR_IN_SECONDS );
 

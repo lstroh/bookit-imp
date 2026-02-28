@@ -162,6 +162,9 @@ class Booking_System_Payment_Processor {
 			'amount_paid'         => 0,
 		);
 
+		// Allow extensions to modify wizard booking data before insertion.
+		$booking_data = apply_filters( 'bookit_booking_data_before_insert', $booking_data );
+
 		// Create booking using Booking Creator (handles customer, conflict check, DB insert).
 		require_once BOOKIT_PLUGIN_DIR . 'includes/booking/class-booking-creator.php';
 		$booking_creator = new Booking_System_Booking_Creator();
@@ -174,6 +177,9 @@ class Booking_System_Payment_Processor {
 			}
 			return $booking_id;
 		}
+
+		// Notify extensions after a public wizard booking is created.
+		do_action( 'bookit_after_booking_created', (int) $booking_id, $booking_data );
 
 		// Retrieve full booking details for confirmation emails.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/booking/class-booking-retriever.php';

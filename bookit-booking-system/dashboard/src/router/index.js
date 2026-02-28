@@ -120,5 +120,11 @@ export default [
     name: 'BulkHours',
     component: () => import('../views/BulkHours.vue'),
     meta: { title: 'Bulk Working Hours', requiresAdmin: true }
+  },
+  {
+    path: '/settings/extensions',
+    name: 'SettingsExtensions',
+    component: () => import('../views/SettingsExtensions.vue'),
+    meta: { title: 'Extensions', requiresAdmin: true }
   }
 ]

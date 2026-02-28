@@ -281,7 +281,12 @@ class Booking_System_Booking_Creator {
 			return new WP_Error( 'database_error', 'Failed to create customer' );
 		}
 
-		return (int) $wpdb->insert_id;
+		$customer_id = (int) $wpdb->insert_id;
+
+		// Notify extensions after a customer is created during booking creation flows.
+		do_action( 'bookit_after_customer_created', $customer_id, $data );
+
+		return $customer_id;
 	}
 
 	/**

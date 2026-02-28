@@ -2718,7 +2718,7 @@ class Bookit_Dashboard_Bookings_API {
 		// Calculate if booking has passed.
 		$has_passed = $current_timestamp > strtotime( current_time( 'Y-m-d' ) . ' ' . $booking['end_time'] );
 
-		return array(
+		$response = array(
 			'id'               => (int) $booking['id'],
 			'service_id'       => isset( $booking['service_id'] ) ? (int) $booking['service_id'] : null,
 			'staff_id'         => isset( $booking['staff_id'] ) ? (int) $booking['staff_id'] : null,
@@ -2744,6 +2744,11 @@ class Bookit_Dashboard_Bookings_API {
 			'created_at'       => $booking['created_at'] ?? null,
 			'updated_at'       => $booking['updated_at'] ?? null,
 		);
+
+		// Allow extensions to customize booking payloads returned by the dashboard API.
+		$response = apply_filters( 'bookit_booking_response', $response, (int) $booking['id'] );
+
+		return $response;
 	}
 
 	/**
@@ -3841,6 +3846,12 @@ class Bookit_Dashboard_Bookings_API {
 			'full_amount_paid' => $amount_paid >= $service_price ? 1 : 0,
 		);
 
+		$old_data = $existing;
+		$new_data = $update_data;
+
+		// Notify extensions before booking update data is persisted.
+		do_action( 'bookit_before_booking_updated', $booking_id, $old_data, $new_data );
+
 		$result = $wpdb->update(
 			$wpdb->prefix . 'bookings',
 			$update_data,
@@ -3856,6 +3867,9 @@ class Bookit_Dashboard_Bookings_API {
 				array( 'status' => 500 )
 			);
 		}
+
+		// Notify extensions after booking update has been persisted.
+		do_action( 'bookit_after_booking_updated', $booking_id, $new_data );
 
 		// Send notification email if requested.
 		$send_notification = filter_var( $request->get_param( 'send_notification' ), FILTER_VALIDATE_BOOLEAN );
@@ -4012,6 +4026,9 @@ class Bookit_Dashboard_Bookings_API {
 			$format[] = '%s';
 		}
 
+		// Notify extensions before a booking is cancelled.
+		do_action( 'bookit_before_booking_cancelled', $booking_id, $existing );
+
 		$result = $wpdb->update(
 			$wpdb->prefix . 'bookings',
 			$update_data,
@@ -4027,6 +4044,9 @@ class Bookit_Dashboard_Bookings_API {
 				array( 'status' => 500 )
 			);
 		}
+
+		// Notify extensions after a booking is cancelled.
+		do_action( 'bookit_after_booking_cancelled', $booking_id, $existing );
 
 		// Send cancellation email if requested.
 		$send_notification = filter_var( $request->get_param( 'send_notification' ), FILTER_VALIDATE_BOOLEAN );
@@ -4128,16 +4148,18 @@ class Bookit_Dashboard_Bookings_API {
 				$customer_id = $existing_customer;
 			} else {
 				// Create new customer.
+				$customer_data = array(
+					'email'      => $customer_email,
+					'first_name' => $customer_first,
+					'last_name'  => $customer_last,
+					'phone'      => $customer_phone,
+					'created_at' => current_time( 'mysql' ),
+					'updated_at' => current_time( 'mysql' ),
+				);
+
 				$result = $wpdb->insert(
 					$wpdb->prefix . 'bookings_customers',
-					array(
-						'email'      => $customer_email,
-						'first_name' => $customer_first,
-						'last_name'  => $customer_last,
-						'phone'      => $customer_phone,
-						'created_at' => current_time( 'mysql' ),
-						'updated_at' => current_time( 'mysql' ),
-					),
+					$customer_data,
 					array( '%s', '%s', '%s', '%s', '%s', '%s' )
 				);
 
@@ -4150,6 +4172,9 @@ class Bookit_Dashboard_Bookings_API {
 				}
 
 				$customer_id = $wpdb->insert_id;
+
+				// Notify extensions after a customer is created from dashboard manual booking.
+				do_action( 'bookit_after_customer_created', (int) $customer_id, $customer_data );
 			}
 		}
 
@@ -4250,6 +4275,12 @@ class Bookit_Dashboard_Bookings_API {
 			'special_requests'    => $request->get_param( 'special_requests' ),
 		);
 
+		// Allow extensions to modify booking data before dashboard manual booking creation.
+		$booking_data = apply_filters( 'bookit_booking_data_before_insert', $booking_data );
+
+		// Notify extensions before a booking is created from the dashboard.
+		do_action( 'bookit_before_booking_created', $booking_data );
+
 		// Load booking creator if not loaded.
 		if ( ! class_exists( 'Booking_System_Booking_Creator' ) ) {
 			require_once plugin_dir_path( dirname( __DIR__ ) ) . 'booking/class-booking-creator.php';
@@ -4264,6 +4295,9 @@ class Bookit_Dashboard_Bookings_API {
 		}
 
 		$booking_id = $result;
+
+		// Notify extensions after a booking is created from the dashboard.
+		do_action( 'bookit_after_booking_created', (int) $booking_id, $booking_data );
 
 		// Determine initial status based on settings and payment.
 		$require_approval = get_option( 'bookit_require_approval', false );

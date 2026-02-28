@@ -68,6 +68,10 @@ class Bookit_Loader {
 		// Booking wizard session manager.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
 
+		// Extension registry and helper functions.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-extension-registry.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/functions-extensions.php';
+
 		// CSRF protection.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-csrf-protection.php';
 
@@ -120,6 +124,10 @@ class Bookit_Loader {
 
 		// Dashboard Bookings API (Today's Schedule).
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-dashboard-bookings-api.php';
+
+		// Extensions API.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-extensions-api.php';
+		new Bookit_Extensions_API();
 
 		// Reports API.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-reports-api.php';

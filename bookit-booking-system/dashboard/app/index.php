@@ -26,8 +26,23 @@ if ( ! $current_staff ) {
 	exit;
 }
 
+// Notify extensions that the authenticated dashboard app has loaded.
+do_action( 'bookit_dashboard_loaded', $current_staff );
+
 // Get WordPress REST API nonce.
 $rest_nonce = wp_create_nonce( 'wp_rest' );
+
+$dashboard_js_data = array(
+	'staff'     => $current_staff,
+	'apiBase'   => rest_url( 'bookit/v1/dashboard' ),
+	'restBase'  => rest_url( 'bookit/v1/' ),
+	'nonce'     => $rest_nonce,
+	'pluginUrl' => BOOKIT_PLUGIN_URL,
+	'logoutUrl' => home_url( '/bookit-dashboard/logout/' ),
+);
+
+// Allow extensions to enrich dashboard bootstrap payload passed to Vue.
+$dashboard_js_data = apply_filters( 'bookit_dashboard_js_data', $dashboard_js_data );
 
 // Enqueue WordPress media library for photo uploads.
 wp_enqueue_media();
@@ -51,12 +66,12 @@ wp_enqueue_media();
 	<!-- Inject session data for Vue -->
 	<script>
 		window.BOOKIT_DASHBOARD = {
-			staff: <?php echo wp_json_encode( $current_staff ); ?>,
-			apiBase: '<?php echo esc_js( rest_url( 'bookit/v1/dashboard' ) ); ?>',
-			restBase: '<?php echo esc_js( rest_url( 'bookit/v1/' ) ); ?>',
-			nonce: '<?php echo esc_js( $rest_nonce ); ?>',
-			pluginUrl: '<?php echo esc_url( BOOKIT_PLUGIN_URL ); ?>',
-			logoutUrl: '<?php echo esc_url( home_url( '/bookit-dashboard/logout/' ) ); ?>'
+			staff: <?php echo wp_json_encode( $dashboard_js_data['staff'] ?? array() ); ?>,
+			apiBase: '<?php echo esc_js( $dashboard_js_data['apiBase'] ?? '' ); ?>',
+			restBase: '<?php echo esc_js( $dashboard_js_data['restBase'] ?? '' ); ?>',
+			nonce: '<?php echo esc_js( $dashboard_js_data['nonce'] ?? '' ); ?>',
+			pluginUrl: '<?php echo esc_url( $dashboard_js_data['pluginUrl'] ?? '' ); ?>',
+			logoutUrl: '<?php echo esc_url( $dashboard_js_data['logoutUrl'] ?? '' ); ?>'
 		};
 	</script>
 

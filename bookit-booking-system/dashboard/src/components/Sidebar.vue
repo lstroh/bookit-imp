@@ -32,6 +32,15 @@
         <span class="text-xl mr-3">{{ item.icon }}</span>
         <span>{{ item.label }}</span>
       </router-link>
+      <a
+        v-for="item in extensionNavigation"
+        :key="`extension-${item.route}`"
+        :href="item.route"
+        class="nav-item"
+      >
+        <span class="text-xl mr-3">{{ resolveNavIcon(item.icon) }}</span>
+        <span>{{ item.label }}</span>
+      </a>
     </nav>
 
     <!-- Admin Sections -->
@@ -121,6 +130,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useApi } from '../composables/useApi'
 
 const props = defineProps({
   staff: {
@@ -131,6 +141,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close'])
 const route = useRoute()
+const api = useApi()
 
 const mainNavigation = [
   { name: 'dashboard', path: '/', icon: '📅', label: 'Today' },
@@ -146,7 +157,8 @@ const settingsNavigation = [
   { name: 'settings', path: '/settings', icon: '⚙️', label: 'General' },
   { name: 'emailSettings', path: '/settings/email', icon: '📧', label: 'Email Configuration' },
   { name: 'emailTemplates', path: '/settings/templates', icon: '📝', label: 'Email Templates' },
-  { name: 'bulkHours', path: '/settings/bulk-hours', icon: '👥', label: 'Bulk Working Hours' }
+  { name: 'bulkHours', path: '/settings/bulk-hours', icon: '👥', label: 'Bulk Working Hours' },
+  { name: 'settingsExtensions', path: '/settings/extensions', icon: '🧩', label: 'Extensions' }
 ]
 
 const reportsNavigation = [
@@ -156,6 +168,8 @@ const reportsNavigation = [
   { name: 'staffPerformance', path: '/reports/staff', icon: '👥', label: 'Staff Performance' },
   { name: 'customers', path: '/customers', icon: '👤', label: 'Customers' }
 ]
+
+const extensionNavigation = ref([])
 
 // Collapsible section state — default collapsed
 const reportsOpen = ref(false)
@@ -179,6 +193,8 @@ onMounted(() => {
 
   if (inReports) reportsOpen.value = true
   if (inSettings) settingsOpen.value = true
+
+  loadExtensionNavigation()
 })
 
 function toggleReports() {
@@ -198,6 +214,37 @@ watch(reportsOpen, value => {
 watch(settingsOpen, value => {
   localStorage.setItem('bookit_sidebar_settings_open', String(value))
 })
+
+async function loadExtensionNavigation() {
+  try {
+    const response = await api.get(`${window.BOOKIT_DASHBOARD.restBase}extensions`)
+    const navItems = Array.isArray(response.data?.nav_items) ? response.data.nav_items : []
+
+    extensionNavigation.value = navItems.filter(item => hasCapability(item.capability))
+  } catch {
+    extensionNavigation.value = []
+  }
+}
+
+function hasCapability(capability) {
+  if (!capability || capability === 'bookit_manage_all') {
+    return props.staff.role === 'admin'
+  }
+
+  return props.staff.role === 'admin'
+}
+
+function resolveNavIcon(icon) {
+  const iconMap = {
+    'calendar-repeat': '🔁',
+    calendar: '📅',
+    booking: '📋',
+    staff: '👥',
+    settings: '⚙️'
+  }
+
+  return iconMap[icon] || '🧩'
+}
 </script>
 
 <style scoped>
