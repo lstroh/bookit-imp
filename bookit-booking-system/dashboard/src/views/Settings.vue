@@ -56,7 +56,7 @@
             </button>
           </div>
           <div v-if="branding.logoUrl" class="mt-3">
-            <img :src="branding.logoUrl" alt="Brand logo preview" class="h-16 w-16 rounded object-cover border border-gray-200" />
+            <img :src="branding.logoUrl" alt="Brand logo preview" class="max-h-16 w-auto rounded object-contain border border-gray-200" />
           </div>
         </div>
 
@@ -97,6 +97,10 @@
               placeholder="#4F46E5"
               @input="syncColorFromHexInput"
             />
+            <div class="flex items-center gap-2">
+              <span class="h-7 w-7 rounded border border-gray-300" :style="{ backgroundColor: branding.primaryColour }"></span>
+              <span class="text-xs text-gray-500">Preview</span>
+            </div>
           </div>
           <p v-if="brandingHexError" class="text-xs text-red-600 mt-1">{{ brandingHexError }}</p>
         </div>

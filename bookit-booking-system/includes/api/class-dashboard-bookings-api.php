@@ -4459,17 +4459,6 @@ class Bookit_Dashboard_Bookings_API {
 		$result  = $creator->create_booking( $booking_data );
 
 		if ( is_wp_error( $result ) ) {
-			if ( 'slot_unavailable' === $result->get_error_code() ) {
-				return Bookit_Error_Registry::to_wp_error(
-					'E2001',
-					array(
-						'staff_id' => $requested_staff_id,
-						'date'     => $booking_date,
-						'time'     => $booking_time,
-					)
-				);
-			}
-
 			return $result;
 		}
 

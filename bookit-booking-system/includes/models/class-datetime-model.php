@@ -306,7 +306,7 @@ class Bookit_DateTime_Model {
 		$slots = array_values( $available_slots );
 
 		// Allow extensions to modify available slots (e.g. recurring or class booking constraints).
-		$slots = apply_filters( 'bookit_available_slots', $slots, (int) $staff_id, $date, (int) $service_id );
+		$slots = apply_filters( 'bookit_available_slots', $slots, (int) $staff_id, $date, 0 );
 
 		return $slots;
 	}

@@ -32,14 +32,16 @@
         <div class="flex items-end gap-2">
           <button
             type="button"
-            class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
+            class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+            :disabled="loading"
             @click="applyFilters"
           >
             Filter
           </button>
           <button
             type="button"
-            class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
+            class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+            :disabled="loading"
             @click="clearFilters"
           >
             Clear
@@ -49,9 +51,12 @@
     </div>
 
     <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div v-if="loading" class="p-8 text-sm text-gray-600">Loading audit log entries...</div>
+      <div v-if="loading" class="p-8 flex flex-col items-center justify-center gap-3 text-sm text-gray-600">
+        <div class="h-6 w-6 border-2 border-gray-200 border-t-primary-600 rounded-full animate-spin"></div>
+        <p>Loading audit log entries...</p>
+      </div>
 
-      <div v-else-if="entries.length === 0" class="p-8 text-sm text-gray-600">
+      <div v-else-if="entries.length === 0" class="p-8 text-sm text-gray-600 text-center">
         No audit log entries found for the selected filters.
       </div>
 
@@ -78,7 +83,12 @@
                     </span>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{{ entry.action }}</td>
+                <td
+                  class="px-4 py-3 text-sm text-gray-900 max-w-[220px] sm:max-w-[280px] truncate"
+                  :title="entry.action"
+                >
+                  {{ entry.action }}
+                </td>
                 <td class="px-4 py-3 text-sm text-gray-900">
                   <span class="font-medium">{{ entry.object_type }}</span>
                   <span class="text-gray-600 ml-1">{{ entry.object_summary || '' }}</span>
@@ -89,7 +99,11 @@
           </table>
         </div>
 
-        <nav class="bg-gray-50 px-4 py-3 border-t border-gray-200" aria-label="Audit log pagination">
+        <nav
+          v-if="pagination.total_pages > 1"
+          class="bg-gray-50 px-4 py-3 border-t border-gray-200"
+          aria-label="Audit log pagination"
+        >
           <div class="flex items-center justify-between">
             <div class="text-sm text-gray-700">
               Page {{ pagination.current_page }} of {{ pagination.total_pages }} ({{ pagination.total }} total)
@@ -148,7 +162,7 @@ const activeDateFilter = ref('custom')
 
 const pagination = ref({
   total: 0,
-  per_page: 50,
+  per_page: 10,
   current_page: 1,
   total_pages: 1
 })
@@ -200,7 +214,7 @@ async function fetchAuditLog(page = 1) {
   try {
     const params = new URLSearchParams({
       page: String(page),
-      per_page: '50'
+      per_page: '10'
     })
 
     if (appliedFilters.value.date_from) params.append('date_from', appliedFilters.value.date_from)
@@ -212,7 +226,7 @@ async function fetchAuditLog(page = 1) {
 
     pagination.value = {
       total: response.data?.pagination?.total || 0,
-      per_page: response.data?.pagination?.per_page || 50,
+      per_page: response.data?.pagination?.per_page || 10,
       current_page: response.data?.pagination?.current_page || 1,
       total_pages: response.data?.pagination?.total_pages || 1
     }
@@ -220,7 +234,7 @@ async function fetchAuditLog(page = 1) {
     entries.value = []
     pagination.value = {
       total: 0,
-      per_page: 50,
+      per_page: 10,
       current_page: 1,
       total_pages: 1
     }

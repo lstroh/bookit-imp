@@ -534,13 +534,15 @@
     <!-- Optimistic Lock Conflict Modal -->
     <div v-if="showConflictModal" class="fixed inset-0 bg-black bg-opacity-50 z-[70] flex items-center justify-center p-4">
       <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Booking Updated by Someone Else</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-3">Booking Updated by Someone Else</h3>
 
-        <p class="text-sm text-gray-700 mb-6">
-          This booking was modified while you were editing it.
-          Your changes have not been saved.
-          Please close this form and reopen the booking to see the latest version.
-        </p>
+        <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-6">
+          <p class="text-sm leading-relaxed text-gray-800">
+            This booking was modified while you were editing it.
+            Your changes have not been saved.
+            Please close this form and reopen the booking to see the latest version.
+          </p>
+        </div>
 
         <div class="flex justify-end">
           <button

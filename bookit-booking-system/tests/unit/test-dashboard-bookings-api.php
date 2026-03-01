@@ -529,6 +529,174 @@ class Test_Dashboard_Bookings_API extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test update booking succeeds with valid optimistic lock token.
+	 *
+	 * @covers Bookit_Dashboard_Bookings_API::update_booking
+	 */
+	public function test_update_booking_succeeds_with_correct_lock_version() {
+		global $wpdb;
+
+		$staff    = $this->create_test_staff( array( 'role' => 'staff' ) );
+		$service  = $this->create_test_service();
+		$customer = $this->create_test_customer();
+
+		$booking_id = $this->create_test_booking(
+			array(
+				'staff_id'     => $staff,
+				'service_id'   => $service,
+				'customer_id'  => $customer,
+				'booking_date' => '2026-06-15',
+				'start_time'   => '10:00:00',
+				'end_time'     => '11:00:00',
+				'status'       => 'pending',
+			)
+		);
+
+		$initial_lock_version = 'lock_' . wp_generate_password( 8, false, false );
+		$wpdb->update(
+			$wpdb->prefix . 'bookings',
+			array( 'lock_version' => $initial_lock_version ),
+			array( 'id' => $booking_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+
+		$admin = $this->create_test_staff( array( 'role' => 'admin' ) );
+		$this->login_as( $admin, 'admin' );
+
+		$request = new WP_REST_Request( 'PUT', '/' . $this->namespace . '/dashboard/bookings/' . $booking_id );
+		$request->set_body_params(
+			array(
+				'service_id'        => $service,
+				'staff_id'          => $staff,
+				'booking_date'      => '2026-06-15',
+				'booking_time'      => '10:00:00',
+				'status'            => 'confirmed',
+				'payment_method'    => 'cash',
+				'amount_paid'       => 50,
+				'send_notification' => false,
+				'lock_version'      => $initial_lock_version,
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertTrue( $data['success'] );
+
+		$db_lock_version = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT lock_version FROM {$wpdb->prefix}bookings WHERE id = %d",
+				$booking_id
+			)
+		);
+
+		$this->assertNotEmpty( $db_lock_version );
+		$this->assertNotSame( $initial_lock_version, (string) $db_lock_version );
+	}
+
+	/**
+	 * Test update booking rejects stale optimistic lock token.
+	 *
+	 * @covers Bookit_Dashboard_Bookings_API::update_booking
+	 */
+	public function test_update_booking_rejects_stale_lock_version() {
+		global $wpdb;
+
+		$staff    = $this->create_test_staff( array( 'role' => 'staff' ) );
+		$service  = $this->create_test_service();
+		$customer = $this->create_test_customer();
+
+		$booking_id = $this->create_test_booking(
+			array(
+				'staff_id'     => $staff,
+				'service_id'   => $service,
+				'customer_id'  => $customer,
+				'booking_date' => '2026-06-15',
+				'start_time'   => '10:00:00',
+				'end_time'     => '11:00:00',
+				'status'       => 'pending',
+			)
+		);
+
+		$wpdb->update(
+			$wpdb->prefix . 'bookings',
+			array( 'lock_version' => 'fresh_token_123' ),
+			array( 'id' => $booking_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+
+		$admin = $this->create_test_staff( array( 'role' => 'admin' ) );
+		$this->login_as( $admin, 'admin' );
+
+		$request = new WP_REST_Request( 'PUT', '/' . $this->namespace . '/dashboard/bookings/' . $booking_id );
+		$request->set_body_params(
+			array(
+				'service_id'        => $service,
+				'staff_id'          => $staff,
+				'booking_date'      => '2026-06-15',
+				'booking_time'      => '10:00:00',
+				'status'            => 'confirmed',
+				'payment_method'    => 'cash',
+				'amount_paid'       => 50,
+				'send_notification' => false,
+				'lock_version'      => 'stale_token_abc',
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertTrue( $response->is_error() );
+		$this->assertEquals( 409, $response->get_status() );
+		$this->assertEquals( 'E2004', $response->as_error()->get_error_code() );
+	}
+
+	/**
+	 * Test update booking remains backwards compatible without lock token.
+	 *
+	 * @covers Bookit_Dashboard_Bookings_API::update_booking
+	 */
+	public function test_update_booking_without_lock_version_succeeds() {
+		$staff    = $this->create_test_staff( array( 'role' => 'staff' ) );
+		$service  = $this->create_test_service();
+		$customer = $this->create_test_customer();
+
+		$booking_id = $this->create_test_booking(
+			array(
+				'staff_id'     => $staff,
+				'service_id'   => $service,
+				'customer_id'  => $customer,
+				'booking_date' => '2026-06-15',
+				'start_time'   => '10:00:00',
+				'end_time'     => '11:00:00',
+				'status'       => 'pending',
+			)
+		);
+
+		$admin = $this->create_test_staff( array( 'role' => 'admin' ) );
+		$this->login_as( $admin, 'admin' );
+
+		$request = new WP_REST_Request( 'PUT', '/' . $this->namespace . '/dashboard/bookings/' . $booking_id );
+		$request->set_body_params(
+			array(
+				'service_id'        => $service,
+				'staff_id'          => $staff,
+				'booking_date'      => '2026-06-15',
+				'booking_time'      => '10:00:00',
+				'status'            => 'confirmed',
+				'payment_method'    => 'cash',
+				'amount_paid'       => 50,
+				'send_notification' => false,
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+	}
+
+	/**
 	 * Test staff cannot update other staff's bookings.
 	 *
 	 * @covers Bookit_Dashboard_Bookings_API::update_booking

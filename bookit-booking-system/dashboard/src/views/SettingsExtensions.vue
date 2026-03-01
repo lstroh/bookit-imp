@@ -21,7 +21,7 @@
           <p class="text-sm text-red-800">{{ error }}</p>
         </div>
 
-        <div v-else-if="extensions.length === 0" class="text-sm text-gray-600">
+        <div v-else-if="extensions.length === 0" class="text-sm text-gray-600 text-center border border-dashed border-gray-300 rounded-lg p-6">
           No extensions installed. Extensions add features like recurring appointments and group bookings.
         </div>
 
@@ -60,7 +60,7 @@ import { useApi } from '../composables/useApi'
 
 const api = useApi()
 const staff = window.BOOKIT_DASHBOARD?.staff || {}
-const isAdmin = computed(() => staff.role === 'admin')
+const isAdmin = computed(() => staff.role === 'admin' || staff.role === 'bookit_admin')
 
 const loading = ref(true)
 const error = ref('')

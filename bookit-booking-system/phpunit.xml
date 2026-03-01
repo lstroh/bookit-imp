@@ -44,6 +44,12 @@
             <file>./tests/unit/test-customers-api.php</file>
             <file>./tests/unit/test-status-log.php</file>
             <file>./tests/unit/test-time-off-api.php</file>
+            <file>./tests/unit/test-migration-runner.php</file>
+            <file>./tests/unit/test-audit-logger.php</file>
+            <file>./tests/unit/test-error-registry.php</file>
+            <file>./tests/unit/test-reference-generator.php</file>
+            <file>./tests/unit/test-extension-registry.php</file>
+            <file>./tests/unit/test-audit-log-api.php</file>
         </testsuite>
     </testsuites>
 
