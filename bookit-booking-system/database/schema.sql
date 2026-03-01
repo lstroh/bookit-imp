@@ -398,4 +398,4 @@ CREATE TABLE wp_bookings_audit_log (
 --
 -- Added table: wp_bookings_audit_log
 -- Tracks auditable actions across bookings, payments, staff, settings, and GDPR flows.
--- Migration file: database/migrations/0002-add-audit-log.php
+-- Migration file: database/migrations/0002-add-audit-log.php.
