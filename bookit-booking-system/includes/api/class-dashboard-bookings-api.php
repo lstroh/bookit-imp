@@ -4474,42 +4474,7 @@ class Bookit_Dashboard_Bookings_API {
 		}
 
 		$booking_id = $result;
-
-		// Generate and store booking reference if not already present.
-		$reference_data = $wpdb->get_row(
-			$wpdb->prepare(
-				"SELECT booking_reference, lock_version, created_at FROM {$wpdb->prefix}bookings WHERE id = %d",
-				$booking_id
-			),
-			ARRAY_A
-		);
-
-		if ( empty( $reference_data['booking_reference'] ) ) {
-			$created_at = ! empty( $reference_data['created_at'] ) ? $reference_data['created_at'] : current_time( 'mysql' );
-			$reference  = Bookit_Reference_Generator::generate_unique( $booking_id, $created_at );
-			$wpdb->update(
-				$wpdb->prefix . 'bookings',
-				array( 'booking_reference' => $reference ),
-				array( 'id' => $booking_id ),
-				array( '%s' ),
-				array( '%d' )
-			);
-		}
-
-		if ( empty( $reference_data['lock_version'] ) ) {
-			$created_at   = ! empty( $reference_data['created_at'] ) ? $reference_data['created_at'] : current_time( 'mysql' );
-			$lock_version = Bookit_Reference_Generator::generate_lock_version(
-				$booking_id,
-				$created_at
-			);
-			$wpdb->update(
-				$wpdb->prefix . 'bookings',
-				array( 'lock_version' => $lock_version ),
-				array( 'id' => $booking_id ),
-				array( '%s' ),
-				array( '%d' )
-			);
-		}
+		// Booking_System_Booking_Creator::create_booking() persists booking_reference and lock_version.
 
 		Bookit_Audit_Logger::log(
 			'booking.created',
