@@ -99,14 +99,7 @@
           </table>
         </div>
 
-        <!-- DEBUG: remove before commit -->
-        <div class="p-4 bg-yellow-50 text-xs font-mono">
-          total: {{ pagination.total }} |
-          per_page: {{ pagination.per_page }} |
-          total_pages: {{ pagination.total_pages }} |
-          current_page: {{ pagination.current_page }}
-        </div>
-
+        
         <nav
           v-if="pagination.total_pages > 1"
           class="bg-gray-50 px-4 py-3 border-t border-gray-200"
