@@ -60,4 +60,15 @@ class Bookit_Reference_Generator {
 
 		return 'BK' . date( 'ym', strtotime( $created_at ) ) . '-' . strtoupper( substr( md5( $booking_id . microtime() ), 0, 4 ) );
 	}
+
+	/**
+	 * Generate a booking lock version token.
+	 *
+	 * @param int    $booking_id The booking's database ID.
+	 * @param string $updated_at MySQL datetime string (Y-m-d H:i:s).
+	 * @return string 32-character MD5 hex string.
+	 */
+	public static function generate_lock_version( int $booking_id, string $updated_at ): string {
+		return md5( $booking_id . $updated_at . wp_salt() );
+	}
 }

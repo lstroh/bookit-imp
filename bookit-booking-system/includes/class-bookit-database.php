@@ -305,6 +305,7 @@ class Bookit_Database {
 			google_calendar_event_id VARCHAR(255) NULL COMMENT 'For calendar sync',
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			lock_version VARCHAR(32) NULL,
 			deleted_at DATETIME NULL DEFAULT NULL,
 			PRIMARY KEY (id),
 			UNIQUE KEY unique_booking_slot (staff_id, booking_date, start_time),

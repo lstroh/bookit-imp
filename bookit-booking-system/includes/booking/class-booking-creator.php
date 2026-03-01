@@ -158,6 +158,18 @@ class Booking_System_Booking_Creator {
 			array( '%d' )
 		);
 
+		$lock_version = Bookit_Reference_Generator::generate_lock_version(
+			$booking_id,
+			$created_at
+		);
+		$wpdb->update(
+			$wpdb->prefix . 'bookings',
+			array( 'lock_version' => $lock_version ),
+			array( 'id' => $booking_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+
 		// Also create a payment record for tracking purposes.
 		$payment_intent_id = isset( $data['payment_intent_id'] ) ? $data['payment_intent_id'] : '';
 		if ( $amount_paid > 0 ) {

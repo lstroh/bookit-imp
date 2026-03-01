@@ -2797,6 +2797,7 @@ class Bookit_Dashboard_Bookings_API {
 		$response = array(
 			'id'               => (int) $booking['id'],
 			'booking_reference' => $booking['booking_reference'] ?? '',
+			'lock_version'     => $booking['lock_version'] ?? '',
 			'service_id'       => isset( $booking['service_id'] ) ? (int) $booking['service_id'] : null,
 			'staff_id'         => isset( $booking['staff_id'] ) ? (int) $booking['staff_id'] : null,
 			'booking_date'     => $booking['booking_date'],
@@ -3820,6 +3821,32 @@ class Bookit_Dashboard_Bookings_API {
 		global $wpdb;
 
 		$booking_id = (int) $request->get_param( 'id' );
+		$client_lock_version = sanitize_text_field(
+			(string) $request->get_param( 'lock_version' )
+		);
+
+		if ( ! empty( $client_lock_version ) ) {
+			$db_lock_version = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT lock_version FROM {$wpdb->prefix}bookings WHERE id = %d",
+					$booking_id
+				)
+			);
+
+			if ( null === $db_lock_version ) {
+				return Bookit_Error_Registry::to_wp_error(
+					'E2002',
+					array( 'booking_id' => $booking_id )
+				);
+			}
+
+			if ( (string) $db_lock_version !== $client_lock_version ) {
+				return Bookit_Error_Registry::to_wp_error(
+					'E2004',
+					array( 'booking_id' => $booking_id )
+				);
+			}
+		}
 
 		$current_staff = Bookit_Auth::get_current_staff();
 		if ( ! $current_staff ) {
@@ -3964,6 +3991,27 @@ class Bookit_Dashboard_Bookings_API {
 			);
 		}
 
+		$new_updated_at   = current_time( 'mysql' );
+		$new_lock_version = Bookit_Reference_Generator::generate_lock_version(
+			$booking_id,
+			$new_updated_at
+		);
+		$lock_update      = $wpdb->update(
+			$wpdb->prefix . 'bookings',
+			array( 'lock_version' => $new_lock_version ),
+			array( 'id' => $booking_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $lock_update ) {
+			return new WP_Error(
+				'update_failed',
+				'Failed to update booking lock version.',
+				array( 'status' => 500 )
+			);
+		}
+
 		// Notify extensions after booking update has been persisted.
 		do_action( 'bookit_after_booking_updated', $booking_id, $new_data );
 
@@ -4060,6 +4108,7 @@ class Bookit_Dashboard_Bookings_API {
 			array(
 				'success'    => true,
 				'message'    => 'Booking updated successfully.',
+				'lock_version' => $new_lock_version,
 				'booking'    => $this->format_booking( $updated_booking ),
 				'email_sent' => $send_notification,
 			)
@@ -4429,7 +4478,7 @@ class Bookit_Dashboard_Bookings_API {
 		// Generate and store booking reference if not already present.
 		$reference_data = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT booking_reference, created_at FROM {$wpdb->prefix}bookings WHERE id = %d",
+				"SELECT booking_reference, lock_version, created_at FROM {$wpdb->prefix}bookings WHERE id = %d",
 				$booking_id
 			),
 			ARRAY_A
@@ -4441,6 +4490,21 @@ class Bookit_Dashboard_Bookings_API {
 			$wpdb->update(
 				$wpdb->prefix . 'bookings',
 				array( 'booking_reference' => $reference ),
+				array( 'id' => $booking_id ),
+				array( '%s' ),
+				array( '%d' )
+			);
+		}
+
+		if ( empty( $reference_data['lock_version'] ) ) {
+			$created_at   = ! empty( $reference_data['created_at'] ) ? $reference_data['created_at'] : current_time( 'mysql' );
+			$lock_version = Bookit_Reference_Generator::generate_lock_version(
+				$booking_id,
+				$created_at
+			);
+			$wpdb->update(
+				$wpdb->prefix . 'bookings',
+				array( 'lock_version' => $lock_version ),
 				array( 'id' => $booking_id ),
 				array( '%s' ),
 				array( '%d' )

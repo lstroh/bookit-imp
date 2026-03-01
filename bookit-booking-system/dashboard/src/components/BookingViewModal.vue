@@ -530,6 +530,28 @@
         </div>
       </div>
     </div>
+
+    <!-- Optimistic Lock Conflict Modal -->
+    <div v-if="showConflictModal" class="fixed inset-0 bg-black bg-opacity-50 z-[70] flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Booking Updated by Someone Else</h3>
+
+        <p class="text-sm text-gray-700 mb-6">
+          This booking was modified while you were editing it.
+          Your changes have not been saved.
+          Please close this form and reopen the booking to see the latest version.
+        </p>
+
+        <div class="flex justify-end">
+          <button
+            @click="closeAndRefreshAfterConflict"
+            class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700"
+          >
+            Close and Refresh
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -628,6 +650,8 @@ const editData = ref({
 // Payment warning modal.
 const showPaymentWarning = ref(false)
 const paymentWarningMessage = ref('')
+const showConflictModal = ref(false)
+const localLockVersion = ref('')
 
 // Cancel modal.
 const showCancelModal = ref(false)
@@ -688,6 +712,7 @@ const loadBooking = async () => {
 
     if (response.data.success) {
       booking.value = response.data.booking
+      localLockVersion.value = response.data.booking?.lock_version || ''
     } else {
       throw new Error(response.data.message || 'Failed to load booking')
     }
@@ -777,6 +802,7 @@ const enableEditMode = () => {
     staff_notes: booking.value.staff_notes || '',
     send_notification: true
   }
+  localLockVersion.value = booking.value.lock_version || ''
 
   // Load services and staff for dropdowns.
   loadServices()
@@ -864,12 +890,17 @@ const executeSave = async () => {
       amount_paid: editData.value.amount_paid,
       special_requests: editData.value.special_requests,
       staff_notes: editData.value.staff_notes,
-      send_notification: editData.value.send_notification
+      send_notification: editData.value.send_notification,
+      lock_version: localLockVersion.value
     }
 
     const response = await api.put(`/bookings/${props.bookingId}`, payload)
 
     if (response.data.success) {
+      localLockVersion.value = response.data.lock_version || response.data.booking?.lock_version || ''
+      if (booking.value) {
+        booking.value.lock_version = localLockVersion.value
+      }
       emit('updated', response.data.booking)
       emit('close')
     } else {
@@ -877,10 +908,21 @@ const executeSave = async () => {
     }
   } catch (err) {
     console.error('Error updating booking:', err)
+    if (err?.code === 'E2004' && err?.status === 409) {
+      showConflictModal.value = true
+      return
+    }
     toastError(`Error updating booking: ${err.message}`)
   } finally {
     saving.value = false
   }
+}
+
+const closeAndRefreshAfterConflict = () => {
+  showConflictModal.value = false
+  editMode.value = false
+  emit('updated', booking.value)
+  emit('close')
 }
 
 const saveChanges = async () => {
