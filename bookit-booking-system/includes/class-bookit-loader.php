@@ -146,6 +146,9 @@ class Bookit_Loader {
 		// Dashboard Timeslots API (manual booking wizard).
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-dashboard-timeslots-api.php';
 
+		// Team Calendar API (admin day/week team view).
+		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-team-calendar-api.php';
+
 		// Booking retrieval and email (confirmation page).
 		require_once BOOKIT_PLUGIN_DIR . 'includes/booking/class-booking-retriever.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/email/class-email-sender.php';

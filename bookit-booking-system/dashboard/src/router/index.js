@@ -59,6 +59,12 @@ export default [
     component: () => import('../views/MyAvailability.vue'),
     meta: { title: 'My Availability' }
   },
+  {
+    path: '/team-calendar',
+    name: 'TeamCalendar',
+    component: () => import('../views/TeamCalendar.vue'),
+    meta: { title: 'Team Calendar', requiresAdmin: true }
+  },
   // Reports (admin only)
   {
     path: '/reports',

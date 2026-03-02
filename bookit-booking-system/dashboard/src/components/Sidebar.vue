@@ -57,6 +57,25 @@
       v-if="isAdmin"
       class="pb-4"
     >
+      <!-- Admin Navigation -->
+      <div class="border-t border-gray-200">
+        <div class="px-4 pt-4 pb-2">
+          <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin</span>
+        </div>
+        <div class="px-4 pb-2 space-y-1">
+          <router-link
+            v-for="item in adminNavigation"
+            :key="item.name"
+            :to="item.path"
+            class="nav-item"
+            :class="{ 'active': $route.path === item.path }"
+          >
+            <span class="text-xl mr-3">{{ item.icon }}</span>
+            <span>{{ item.label }}</span>
+          </router-link>
+        </div>
+      </div>
+
       <!-- Reports Section (Admin Only) -->
       <div class="border-t border-gray-200">
         <button
@@ -172,6 +191,10 @@ const mainNavigation = [
   { name: 'services', path: '/services', icon: '✂️', label: 'Services' },
   { name: 'categories', path: '/categories', icon: '🏷️', label: 'Categories' },
   { name: 'staff', path: '/staff', icon: '👥', label: 'Staff' }
+]
+
+const adminNavigation = [
+  { name: 'teamCalendar', path: '/team-calendar', icon: '👥', label: 'Team Calendar' }
 ]
 
 const settingsNavigation = [
