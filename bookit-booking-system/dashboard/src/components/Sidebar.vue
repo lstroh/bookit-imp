@@ -76,6 +76,19 @@
         </div>
       </div>
 
+      <div class="border-t border-gray-200">
+        <div class="px-4 pt-4 pb-2">
+          <button
+            @click="handleOpenSetupGuide"
+            type="button"
+            class="nav-item w-full text-left"
+          >
+            <span class="text-xl mr-3">🧭</span>
+            <span>Setup Guide</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Reports Section (Admin Only) -->
       <div class="border-t border-gray-200">
         <button
@@ -179,7 +192,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'open-setup-guide'])
 const route = useRoute()
 const api = useApi()
 
@@ -253,6 +266,10 @@ function toggleReports() {
 function toggleSettings() {
   settingsOpen.value = !settingsOpen.value
   localStorage.setItem('bookit_sidebar_settings_open', String(settingsOpen.value))
+}
+
+function handleOpenSetupGuide() {
+  emit('open-setup-guide')
 }
 
 watch(reportsOpen, value => {

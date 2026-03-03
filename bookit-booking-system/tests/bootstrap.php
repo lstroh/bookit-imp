@@ -72,6 +72,19 @@ if ( ! file_exists( $_tests_dir . '/includes/functions.php' ) ) {
 	die( "Error: WordPress test library not found. Make sure wp-env is running.\n" );
 }
 
+// Suppress WP_DEBUG HTML output and error_log() noise during test runs.
+// test_log_does_not_throw_on_db_failure deliberately triggers a DB
+// failure - these lines prevent that from polluting test output.
+if ( ! defined( 'WP_DEBUG' ) ) {
+	define( 'WP_DEBUG', false );
+}
+if ( ! defined( 'WP_DEBUG_DISPLAY' ) ) {
+	define( 'WP_DEBUG_DISPLAY', false );
+}
+ini_set( 'log_errors', '0' );
+$null_device = '\\' === DIRECTORY_SEPARATOR ? 'NUL' : '/dev/null';
+ini_set( 'error_log', $null_device );
+
 // Give access to tests_add_filter() function
 require_once $_tests_dir . '/includes/functions.php';
 
@@ -90,3 +103,14 @@ require $_tests_dir . '/includes/bootstrap.php';
 
 // Ensure plugin is activated
 activate_plugin( 'bookit-booking-system/bookit-booking-system.php' );
+
+// Strip the known deliberate wpdb HTML block from one audit logger test.
+ob_start(
+	static function ( $buffer ) {
+		return (string) preg_replace(
+			'/<div id="error"><p class="wpdberror">.*?nonexistent_prefix_bookings_audit_log.*?<\/p><\/div>/s',
+			'',
+			$buffer
+		);
+	}
+);

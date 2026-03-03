@@ -98,7 +98,11 @@
       role="navigation"
       aria-label="Main navigation"
     >
-      <Sidebar :staff="staff" :branding="branding" @close="sidebarOpen = false" />
+      <Sidebar
+        :staff="staff"
+        :branding="branding"
+        @close="sidebarOpen = false"
+      />
     </aside>
 
     <!-- Main Content Area -->
@@ -192,6 +196,7 @@
 
       <!-- Page Content -->
       <div class="p-4 lg:p-6">
+        <!-- TASK 3: Setup Guide overlay rendered here when showGuide is true -->
         <router-view />
       </div>
     </main>
@@ -202,16 +207,28 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, provide } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Sidebar from './components/Sidebar.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import { useApi } from './composables/useApi'
+import { useSetupGuide } from './composables/useSetupGuide'
 import { applyBranding, normalizeBranding } from './utils/branding'
 
 const api = useApi()
 const staff = window.BOOKIT_DASHBOARD.staff
 const branding = ref(normalizeBranding(window.BOOKIT_DASHBOARD?.branding || {}))
+const {
+  setupGuideStatus,
+  showGuide,
+  fetchStatus
+} = useSetupGuide()
+
+provide('setupGuideState', {
+  setupGuideStatus,
+  showGuide,
+  fetchStatus
+})
 
 const route = useRoute()
 const router = useRouter()
@@ -250,6 +267,13 @@ onMounted(() => {
   window.BOOKIT_DASHBOARD.branding = { ...branding.value }
   document.addEventListener('click', onDocumentClick)
   window.addEventListener('bookit:branding-updated', onBrandingUpdated)
+
+  const role = window.BOOKIT_DASHBOARD?.staff?.role
+  const isAdminRole = role === 'admin' || role === 'bookit_admin'
+
+  if (isAdminRole) {
+    void fetchStatus()
+  }
 })
 
 onUnmounted(() => {
@@ -286,4 +310,5 @@ const handleLogout = async () => {
   }
   window.location.href = window.BOOKIT_DASHBOARD.logoutUrl
 }
+
 </script>

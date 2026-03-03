@@ -149,6 +149,9 @@ class Bookit_Loader {
 		// Team Calendar API (admin day/week team view).
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-team-calendar-api.php';
 
+		// Setup Guide API (admin onboarding status).
+		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-setup-guide-api.php';
+
 		// Booking retrieval and email (confirmation page).
 		require_once BOOKIT_PLUGIN_DIR . 'includes/booking/class-booking-retriever.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/email/class-email-sender.php';

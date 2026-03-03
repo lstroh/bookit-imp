@@ -172,6 +172,26 @@ Bookit_Error_Registry::register(
 );
 
 Bookit_Error_Registry::register(
+	'E4010',
+	array(
+		'user_message' => __( 'Invalid setup guide action.', 'bookit-booking-system' ),
+		'log_message'  => 'Invalid setup guide action: {action}',
+		'http_status'  => 400,
+		'category'     => 'validation',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E4011',
+	array(
+		'user_message' => __( 'Please provide a valid setup guide step (1-4).', 'bookit-booking-system' ),
+		'log_message'  => 'Invalid setup guide step field: {field}',
+		'http_status'  => 400,
+		'category'     => 'validation',
+	)
+);
+
+Bookit_Error_Registry::register(
 	'E9001',
 	array(
 		'user_message' => __( 'A database error occurred. Please try again.', 'bookit-booking-system' ),

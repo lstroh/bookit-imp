@@ -177,17 +177,23 @@
                   @click="openBookingDetails(booking, column.date)"
                 >
                   <div class="flex items-start justify-between gap-2">
-                    <p class="font-semibold text-gray-900 truncate">{{ booking.customer_name }}</p>
-                    <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full flex-shrink-0" :class="getStatusClass(booking.status)">
-                      {{ formatStatus(booking.status) }}
-                    </span>
+                    <p class="font-semibold text-xs text-gray-900 truncate">{{ booking.customer_name }}</p>
+                    <span
+                      class="w-2 h-2 rounded-full flex-shrink-0 mt-0.5"
+                      :class="getStatusDotClass(booking.status)"
+                      :title="formatStatus(booking.status)"
+                      aria-hidden="true"
+                    />
                   </div>
 
-                  <p v-if="showSecondaryLine(booking)" class="text-gray-700 truncate mt-0.5">
-                    {{ currentView === 'week' ? `${getStaffName(booking.staff_id)} · ${booking.service_name}` : booking.service_name }}
+                  <p v-if="showServiceLine(booking)" class="text-xs text-gray-600 truncate mt-0.5">
+                    {{ booking.service_name }}
                   </p>
-                  <p v-if="showTimeLine(booking)" class="text-gray-600 mt-0.5">
-                    {{ booking.start_time }} - {{ booking.end_time }}
+                  <p v-if="showWeekStaffLine(booking)" class="text-xs italic text-gray-500 truncate mt-0.5">
+                    {{ getStaffName(booking.staff_id) }}
+                  </p>
+                  <p v-if="showTimeFooter(booking)" class="text-[10px] text-gray-500 mt-1 truncate">
+                    {{ booking.start_time }}–{{ booking.end_time }}
                   </p>
                 </button>
               </div>
@@ -372,7 +378,11 @@ const periodLabel = computed(() => {
 
   const start = new Date(`${dateStart.value}T12:00:00`)
   const end = new Date(`${dateEnd.value}T12:00:00`)
-  const startDay = new Intl.DateTimeFormat('en-GB', { day: 'numeric' }).format(start)
+  const isCrossMonth = start.getMonth() !== end.getMonth()
+  const startDay = new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    ...(isCrossMonth ? { month: 'short' } : {})
+  }).format(start)
   const endPart = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(end)
   return `${startDay}–${endPart}`
 })
@@ -652,16 +662,16 @@ function getTimeOffStyle(block) {
   }
 }
 
-function getStatusClass(status) {
+function getStatusDotClass(status) {
   const classes = {
-    confirmed: 'bg-green-100 text-green-800',
-    pending: 'bg-yellow-100 text-yellow-800',
-    pending_payment: 'bg-orange-100 text-orange-800',
-    completed: 'bg-blue-100 text-blue-800',
-    cancelled: 'bg-red-100 text-red-800',
-    no_show: 'bg-gray-100 text-gray-800'
+    confirmed: 'bg-green-600',
+    pending: 'bg-amber-600',
+    pending_payment: 'bg-amber-600',
+    completed: 'bg-gray-400',
+    cancelled: 'bg-red-600',
+    no_show: 'bg-red-900'
   }
-  return classes[status] || 'bg-gray-100 text-gray-800'
+  return classes[status] || 'bg-gray-400'
 }
 
 function formatStatus(status) {
@@ -688,18 +698,24 @@ function bookingDurationMinutes(booking) {
   return Math.max(timeToMinutes(booking.end_time) - timeToMinutes(booking.start_time), 0)
 }
 
-function showSecondaryLine(booking) {
-  if (currentView.value === 'week') {
-    return bookingDurationMinutes(booking) >= 20
-  }
-  return bookingDurationMinutes(booking) >= 40
+function bookingHeightPx(booking) {
+  return Math.max(bookingDurationMinutes(booking) * (SLOT_HEIGHT / MINUTES_PER_SLOT), 24)
 }
 
-function showTimeLine(booking) {
-  if (currentView.value === 'week') {
-    return bookingDurationMinutes(booking) >= 35
-  }
-  return bookingDurationMinutes(booking) >= 55
+function isCompactCard(booking) {
+  return bookingHeightPx(booking) < 60
+}
+
+function showServiceLine(booking) {
+  return !isCompactCard(booking)
+}
+
+function showWeekStaffLine(booking) {
+  return currentView.value === 'week' && !isCompactCard(booking)
+}
+
+function showTimeFooter(booking) {
+  return bookingHeightPx(booking) > 80
 }
 
 function openBookingDetails(booking, bookingDate) {
