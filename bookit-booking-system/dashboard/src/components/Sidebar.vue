@@ -57,36 +57,51 @@
       v-if="isAdmin"
       class="pb-4"
     >
-      <!-- Admin Navigation -->
+      <!-- Admin Section -->
       <div class="border-t border-gray-200">
-        <div class="px-4 pt-4 pb-2">
+        <button
+          @click="toggleAdmin"
+          class="w-full flex items-center justify-between px-4 pt-4 pb-2 text-left"
+          :aria-expanded="adminOpen"
+          aria-controls="admin-nav"
+        >
           <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin</span>
-        </div>
-        <div class="px-4 pb-2 space-y-1">
-          <router-link
-            v-for="item in adminNavigation"
-            :key="item.name"
-            :to="item.path"
-            class="nav-item"
-            :class="{ 'active': $route.path === item.path }"
+          <svg
+            class="w-3.5 h-3.5 text-gray-400 transition-transform duration-200"
+            :class="adminOpen ? 'rotate-90' : 'rotate-0'"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
           >
-            <span class="text-xl mr-3">{{ item.icon }}</span>
-            <span>{{ item.label }}</span>
-          </router-link>
-        </div>
-      </div>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
 
-      <div class="border-t border-gray-200">
-        <div class="px-4 pt-4 pb-2">
-          <button
-            @click="handleOpenSetupGuide"
-            type="button"
-            class="nav-item w-full text-left"
+        <transition name="section-slide">
+          <div
+            id="admin-nav"
+            v-show="adminOpen"
+            class="px-4 pb-2 space-y-1"
           >
-            <span class="text-xl mr-3">🧭</span>
-            <span>Setup Guide</span>
-          </button>
-        </div>
+            <router-link
+              v-for="item in adminNavigation"
+              :key="item.name"
+              :to="item.path"
+              class="nav-item"
+              :class="{ 'active': $route.path === item.path }"
+            >
+              <span class="text-xl mr-3">{{ item.icon }}</span>
+              <span>{{ item.label }}</span>
+            </router-link>
+
+            <button
+              @click="handleOpenSetupGuide"
+              type="button"
+              class="nav-item w-full text-left"
+            >
+              <span class="text-xl mr-3">🧭</span>
+              <span>Setup Guide</span>
+            </button>
+          </div>
+        </transition>
       </div>
 
       <!-- Reports Section (Admin Only) -->
@@ -230,6 +245,7 @@ const reportsNavigation = [
 const extensionNavigation = ref([])
 
 // Collapsible section state — default collapsed
+const adminOpen = ref(false)
 const reportsOpen = ref(false)
 const settingsOpen = ref(false)
 const isAdmin = computed(() => props.staff.role === 'admin' || props.staff.role === 'bookit_admin')
@@ -238,13 +254,18 @@ const brandingAltText = computed(() => props.branding?.businessName || 'Dashboar
 
 onMounted(() => {
   // Restore from localStorage
+  const storedAdmin = localStorage.getItem('bookit_sidebar_admin_open')
   const storedReports = localStorage.getItem('bookit_sidebar_reports_open')
   const storedSettings = localStorage.getItem('bookit_sidebar_settings_open')
 
+  adminOpen.value = storedAdmin === 'true'
   reportsOpen.value = storedReports === 'true'
   settingsOpen.value = storedSettings === 'true'
 
   // Auto-expand if current route is inside a collapsed section
+  const inAdmin = adminNavigation.some(
+    item => route.path === item.path || route.path.startsWith(item.path + '/')
+  )
   const inReports = reportsNavigation.some(
     item => route.path === item.path || route.path.startsWith(item.path + '/')
   )
@@ -252,11 +273,17 @@ onMounted(() => {
     item => route.path === item.path
   )
 
+  if (inAdmin) adminOpen.value = true
   if (inReports) reportsOpen.value = true
   if (inSettings) settingsOpen.value = true
 
   loadExtensionNavigation()
 })
+
+function toggleAdmin() {
+  adminOpen.value = !adminOpen.value
+  localStorage.setItem('bookit_sidebar_admin_open', String(adminOpen.value))
+}
 
 function toggleReports() {
   reportsOpen.value = !reportsOpen.value
@@ -271,6 +298,10 @@ function toggleSettings() {
 function handleOpenSetupGuide() {
   emit('open-setup-guide')
 }
+
+watch(adminOpen, value => {
+  localStorage.setItem('bookit_sidebar_admin_open', String(value))
+})
 
 watch(reportsOpen, value => {
   localStorage.setItem('bookit_sidebar_reports_open', String(value))
