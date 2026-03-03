@@ -102,6 +102,7 @@
         :staff="staff"
         :branding="branding"
         @close="sidebarOpen = false"
+        @open-setup-guide="showSetupGuide = true"
       />
     </aside>
 
@@ -196,21 +197,26 @@
 
       <!-- Page Content -->
       <div class="p-4 lg:p-6">
-        <!-- TASK 3: Setup Guide overlay rendered here when showGuide is true -->
         <router-view />
       </div>
     </main>
 
     <!-- Toast Notifications -->
     <ToastContainer />
+
+    <SetupGuideOverlay
+      v-if="showSetupGuide"
+      @close="showSetupGuide = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, provide } from 'vue'
+import { ref, computed, onMounted, onUnmounted, provide, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Sidebar from './components/Sidebar.vue'
 import ToastContainer from './components/ToastContainer.vue'
+import SetupGuideOverlay from './components/SetupGuideOverlay.vue'
 import { useApi } from './composables/useApi'
 import { useSetupGuide } from './composables/useSetupGuide'
 import { applyBranding, normalizeBranding } from './utils/branding'
@@ -220,14 +226,26 @@ const staff = window.BOOKIT_DASHBOARD.staff
 const branding = ref(normalizeBranding(window.BOOKIT_DASHBOARD?.branding || {}))
 const {
   setupGuideStatus,
+  currentStep,
+  stepsCompleted,
+  isLoading: isSetupGuideLoading,
   showGuide,
-  fetchStatus
+  fetchStatus,
+  markComplete,
+  dismiss,
+  updateStep
 } = useSetupGuide()
 
 provide('setupGuideState', {
   setupGuideStatus,
+  currentStep,
+  stepsCompleted,
+  isSetupGuideLoading,
   showGuide,
-  fetchStatus
+  fetchStatus,
+  markComplete,
+  dismiss,
+  updateStep
 })
 
 const route = useRoute()
@@ -240,6 +258,7 @@ const sidebarOpen = ref(false)
 const showUserMenu = ref(false)
 const userDropdownRef = ref(null)
 const mobileDropdownRef = ref(null)
+const showSetupGuide = ref(false)
 
 router.afterEach(() => {
   sidebarOpen.value = false
@@ -272,7 +291,17 @@ onMounted(() => {
   const isAdminRole = role === 'admin' || role === 'bookit_admin'
 
   if (isAdminRole) {
-    void fetchStatus()
+    void fetchStatus().then(() => {
+      if (showGuide.value) {
+        showSetupGuide.value = true
+      }
+    })
+  }
+})
+
+watch(showGuide, (shouldShow) => {
+  if (shouldShow) {
+    showSetupGuide.value = true
   }
 })
 
