@@ -116,6 +116,12 @@ export default [
     meta: { title: 'Email Configuration', requiresAdmin: true }
   },
   {
+    path: '/settings/cancellation',
+    name: 'CancellationPolicy',
+    component: () => import('../views/CancellationPolicy.vue'),
+    meta: { title: 'Cancellation Policy', requiresAdmin: true }
+  },
+  {
     path: '/settings/templates',
     name: 'EmailTemplates',
     component: () => import('../views/EmailTemplates.vue'),

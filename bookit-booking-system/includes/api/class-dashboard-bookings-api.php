@@ -6730,20 +6730,31 @@ class Bookit_Dashboard_Bookings_API {
 		global $wpdb;
 
 		$keys_param = $request->get_param( 'keys' );
+		$requested_keys = array();
+		$allowed_keys   = $this->get_allowed_settings_keys();
 
 		if ( $keys_param ) {
-			$keys         = array_map( 'trim', explode( ',', $keys_param ) );
+			$requested_keys = array_values(
+				array_filter(
+					array_map( 'sanitize_key', array_map( 'trim', explode( ',', $keys_param ) ) )
+				)
+			);
+			$keys         = array_values( array_intersect( $requested_keys, $allowed_keys ) );
 			$placeholders = implode( ',', array_fill( 0, count( $keys ), '%s' ) );
 
-			$settings = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT setting_key, setting_value, setting_type
-					FROM {$wpdb->prefix}bookings_settings
-					WHERE setting_key IN ($placeholders)",
-					$keys
-				),
-				ARRAY_A
-			);
+			if ( empty( $keys ) ) {
+				$settings = array();
+			} else {
+				$settings = $wpdb->get_results(
+					$wpdb->prepare(
+						"SELECT setting_key, setting_value, setting_type
+						FROM {$wpdb->prefix}bookings_settings
+						WHERE setting_key IN ($placeholders)",
+						$keys
+					),
+					ARRAY_A
+				);
+			}
 		} else {
 			$settings = $wpdb->get_results(
 				"SELECT setting_key, setting_value, setting_type
@@ -6771,6 +6782,15 @@ class Bookit_Dashboard_Bookings_API {
 			$formatted[ $setting['setting_key'] ] = $value;
 		}
 
+		if ( ! empty( $requested_keys ) ) {
+			$cancellation_defaults = $this->get_cancellation_default_settings();
+			foreach ( $cancellation_defaults as $default_key => $default_value ) {
+				if ( in_array( $default_key, $requested_keys, true ) && ! array_key_exists( $default_key, $formatted ) ) {
+					$formatted[ $default_key ] = $default_value;
+				}
+			}
+		}
+
 		return rest_ensure_response(
 			array(
 				'success'  => true,
@@ -6789,6 +6809,17 @@ class Bookit_Dashboard_Bookings_API {
 		global $wpdb;
 
 		$settings = $request->get_param( 'settings' );
+		if ( ! is_array( $settings ) ) {
+			return new WP_Error(
+				'invalid_settings',
+				__( 'Settings payload must be an array.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$cancellation_defaults = $this->get_cancellation_default_settings();
+		$cancellation_keys     = array_keys( $cancellation_defaults );
+		$saved_cancellation    = array();
 		$old_rows = $wpdb->get_results(
 			"SELECT setting_key, setting_value, setting_type FROM {$wpdb->prefix}bookings_settings",
 			ARRAY_A
@@ -6811,6 +6842,13 @@ class Bookit_Dashboard_Bookings_API {
 
 		foreach ( $settings as $key => $value ) {
 			$key = sanitize_key( $key );
+			if ( '' === $key ) {
+				continue;
+			}
+
+			if ( in_array( $key, $cancellation_keys, true ) ) {
+				$value = $this->sanitize_cancellation_setting_value( $key, $value );
+			}
 
 			$type = 'string';
 			if ( is_int( $value ) ) {
@@ -6851,6 +6889,10 @@ class Bookit_Dashboard_Bookings_API {
 					array( '%s', '%s', '%s' )
 				);
 			}
+
+			if ( in_array( $key, $cancellation_keys, true ) ) {
+				$saved_cancellation[ $key ] = $value;
+			}
 		}
 
 		$new_rows = $wpdb->get_results(
@@ -6883,6 +6925,23 @@ class Bookit_Dashboard_Bookings_API {
 				'notes'     => 'Settings saved via dashboard',
 			)
 		);
+
+		if ( ! empty( $saved_cancellation ) ) {
+			$current_staff = Bookit_Auth::get_current_staff();
+			$staff_id      = isset( $current_staff['id'] ) ? absint( $current_staff['id'] ) : 0;
+
+			Bookit_Audit_Logger::log(
+				'cancellation_policy_updated',
+				'setting',
+				0,
+				array(
+					'actor_id'  => $staff_id,
+					'staff_id'  => $staff_id,
+					'new_value' => $saved_cancellation,
+					'notes'     => 'Cancellation policy updated via dashboard',
+				)
+			);
+		}
 
 		return rest_ensure_response(
 			array(
@@ -7035,6 +7094,114 @@ class Bookit_Dashboard_Bookings_API {
 		}
 
 		return $settings;
+	}
+
+	/**
+	 * Get allowlisted setting keys.
+	 *
+	 * @return array
+	 */
+	private function get_allowed_settings_keys() {
+		return array(
+			'business_name',
+			'business_phone',
+			'business_address',
+			'timezone',
+			'show_staff_earnings',
+			'smtp_enabled',
+			'smtp_host',
+			'smtp_port',
+			'smtp_encryption',
+			'smtp_username',
+			'smtp_password',
+			'smtp_from_name',
+			'smtp_from_email',
+			'stripe_connected',
+			'stripe_account_id',
+			'paypal_connected',
+			'paypal_client_id',
+			'cancellation_window_hours',
+			'within_window_refund_type',
+			'within_window_refund_percent',
+			'late_cancel_refund_type',
+			'late_cancel_refund_percent',
+			'noshow_refund_type',
+			'noshow_refund_percent',
+			'reschedule_policy',
+			'reschedule_fee_amount',
+			'cancellation_policy_text',
+			'auto_refund_enabled',
+		);
+	}
+
+	/**
+	 * Get cancellation policy setting defaults.
+	 *
+	 * @return array
+	 */
+	private function get_cancellation_default_settings() {
+		return array(
+			'cancellation_window_hours'    => 24,
+			'within_window_refund_type'    => 'full',
+			'within_window_refund_percent' => 100,
+			'late_cancel_refund_type'      => 'none',
+			'late_cancel_refund_percent'   => 0,
+			'noshow_refund_type'           => 'none',
+			'noshow_refund_percent'        => 0,
+			'reschedule_policy'            => 'free',
+			'reschedule_fee_amount'        => '0.00',
+			'cancellation_policy_text'     => 'Free cancellation up to 24 hours before your appointment. Late cancellations and no-shows may forfeit their deposit.',
+			'auto_refund_enabled'          => false,
+		);
+	}
+
+	/**
+	 * Sanitize cancellation policy settings values.
+	 *
+	 * @param string $key   Setting key.
+	 * @param mixed  $value Setting value.
+	 * @return mixed
+	 */
+	private function sanitize_cancellation_setting_value( $key, $value ) {
+		$defaults = $this->get_cancellation_default_settings();
+
+		switch ( $key ) {
+			case 'cancellation_window_hours':
+				$value = absint( $value );
+				return $value > 0 ? $value : $defaults['cancellation_window_hours'];
+
+			case 'within_window_refund_type':
+			case 'late_cancel_refund_type':
+			case 'noshow_refund_type':
+				$value = sanitize_key( (string) $value );
+				return in_array( $value, array( 'full', 'partial', 'none' ), true ) ? $value : $defaults[ $key ];
+
+			case 'within_window_refund_percent':
+			case 'late_cancel_refund_percent':
+			case 'noshow_refund_percent':
+				$value = is_numeric( $value ) ? (int) $value : (int) $defaults[ $key ];
+				return max( 0, min( 100, $value ) );
+
+			case 'reschedule_policy':
+				$value = sanitize_key( (string) $value );
+				return in_array( $value, array( 'free', 'limited', 'fee', 'not_allowed' ), true ) ? $value : $defaults['reschedule_policy'];
+
+			case 'reschedule_fee_amount':
+				$amount = is_numeric( $value ) ? (float) $value : 0.0;
+				if ( $amount < 0 ) {
+					$amount = 0.0;
+				}
+				return number_format( $amount, 2, '.', '' );
+
+			case 'cancellation_policy_text':
+				return sanitize_textarea_field( (string) $value );
+
+			case 'auto_refund_enabled':
+				return rest_sanitize_boolean( $value );
+
+			default:
+				return $value;
+		}
 	}
 
 	/**
