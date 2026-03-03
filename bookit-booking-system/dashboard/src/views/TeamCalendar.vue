@@ -58,6 +58,7 @@
           <button
             class="px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors"
             :class="currentView === 'day' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+            :aria-pressed="currentView === 'day'"
             @click="currentView = 'day'"
           >
             Day
@@ -65,14 +66,16 @@
           <button
             class="px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors"
             :class="currentView === 'week' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+            :aria-pressed="currentView === 'week'"
             @click="currentView = 'week'"
           >
             Week
           </button>
           <button
-            disabled
-            title="Month view coming soon"
-            class="px-3 py-1.5 text-sm font-medium border rounded-lg bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+            class="px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors"
+            :class="currentView === 'month' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+            :aria-pressed="currentView === 'month'"
+            @click="currentView = 'month'"
           >
             Month
           </button>
@@ -80,7 +83,7 @@
       </div>
 
       <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
-        <div class="max-h-[72vh] overflow-auto">
+        <div v-if="currentView !== 'month'" class="max-h-[72vh] overflow-auto">
           <div :style="{ minWidth: `${80 + columns.length * minColumnWidth}px` }">
             <div class="grid sticky top-0 z-30 bg-white border-b border-gray-200" :style="gridTemplateStyle">
               <div class="sticky left-0 z-40 bg-white border-r border-gray-200 p-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -191,6 +194,90 @@
             </div>
           </div>
         </div>
+
+        <div v-else class="overflow-hidden">
+          <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
+            <div
+              v-for="dayName in monthWeekdays"
+              :key="dayName"
+              class="p-2 text-xs font-semibold uppercase tracking-wide text-gray-500 text-center"
+            >
+              {{ dayName }}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-7">
+            <template v-for="(week, weekIndex) in monthGrid" :key="`week-${weekIndex}`">
+              <div
+                v-for="cell in week"
+                :key="`month-cell-${cell.date || `${weekIndex}-${cell.dayNumber}`}`"
+                class="border-r border-b border-gray-200 p-2 min-h-[60px] md:min-h-[96px]"
+                :class="[
+                  cell.isCurrentMonth ? 'bg-white' : 'bg-gray-50',
+                  cell.isToday && cell.isCurrentMonth ? 'bg-primary-50 ring-1 ring-inset ring-primary-300' : ''
+                ]"
+              >
+                <button
+                  v-if="cell.isCurrentMonth"
+                  type="button"
+                  class="w-full h-full text-left rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  :aria-label="`Open day view for ${formatLongDate(cell.date)}`"
+                  @click="openMonthDay(cell.date)"
+                >
+                  <div class="flex items-start justify-between gap-2">
+                    <span
+                      class="text-sm font-semibold"
+                      :class="cell.isToday ? 'text-primary-700' : 'text-gray-900'"
+                    >
+                      {{ cell.dayNumber }}
+                    </span>
+                    <span
+                      v-if="cell.bookingCount > 0"
+                      class="inline-flex md:hidden items-center rounded-full bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-800"
+                    >
+                      {{ cell.bookingCount }}
+                    </span>
+                  </div>
+
+                  <div class="mt-2 hidden md:block space-y-1">
+                    <div v-if="cell.staffWithBookings.length > 0" class="flex items-center gap-1 flex-wrap">
+                      <span
+                        v-for="staffDot in cell.staffWithBookings.slice(0, 4)"
+                        :key="`dot-${cell.date}-${staffDot}`"
+                        class="w-2 h-2 rounded-full"
+                        :style="{ backgroundColor: getStaffColour(staffDot) }"
+                      />
+                      <span
+                        v-if="cell.staffWithBookings.length > 4"
+                        class="text-[10px] text-gray-500"
+                      >
+                        +{{ cell.staffWithBookings.length - 4 }} more
+                      </span>
+                    </div>
+
+                    <div
+                      v-if="cell.bookingCount > 0"
+                      class="text-[11px] font-medium text-gray-700"
+                    >
+                      {{ cell.bookingCount }} booking{{ cell.bookingCount === 1 ? '' : 's' }}
+                    </div>
+
+                    <div
+                      v-if="cell.timeOff.length > 0"
+                      class="text-[10px] text-gray-500"
+                    >
+                      {{ cell.timeOff.length }} off
+                    </div>
+                  </div>
+                </button>
+
+                <div v-else class="h-full">
+                  <span class="text-sm font-medium text-gray-400">{{ cell.dayNumber }}</span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -275,6 +362,13 @@ const periodLabel = computed(() => {
   if (currentView.value === 'day') {
     return formatLongDate(dateStart.value)
   }
+  if (currentView.value === 'month') {
+    const monthDate = new Date(`${dateStart.value}T12:00:00`)
+    return new Intl.DateTimeFormat('en-GB', {
+      month: 'long',
+      year: 'numeric'
+    }).format(monthDate)
+  }
 
   const start = new Date(`${dateStart.value}T12:00:00`)
   const end = new Date(`${dateEnd.value}T12:00:00`)
@@ -309,6 +403,55 @@ const columns = computed(() => {
     bookings: day.bookings,
     timeOff: day.time_off
   }))
+})
+
+const monthWeekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+const monthGrid = computed(() => {
+  if (currentView.value !== 'month' || !dateStart.value || !dateEnd.value) {
+    return []
+  }
+
+  const monthStart = new Date(`${dateStart.value}T12:00:00`)
+  const monthEnd = new Date(`${dateEnd.value}T12:00:00`)
+  const monthStartDow = (monthStart.getDay() + 6) % 7
+  const monthEndDow = (monthEnd.getDay() + 6) % 7
+  const gridStart = addDays(monthStart, -monthStartDow)
+  const gridEnd = addDays(monthEnd, 6 - monthEndDow)
+  const monthKey = `${monthStart.getFullYear()}-${monthStart.getMonth()}`
+  const todayKey = dateToYMD(new Date())
+  const weeks = []
+
+  let cursor = new Date(gridStart.getTime())
+  while (cursor <= gridEnd) {
+    const week = []
+    for (let i = 0; i < 7; i++) {
+      const cellDate = dateToYMD(cursor)
+      const dayData = dayLookup.value[cellDate]
+      const isCurrentMonth = `${cursor.getFullYear()}-${cursor.getMonth()}` === monthKey
+      const bookings = Array.isArray(dayData?.bookings) ? dayData.bookings : []
+      const timeOff = Array.isArray(dayData?.time_off) ? dayData.time_off : []
+      const uniqueStaff = Array.from(
+        new Set(bookings.map(booking => Number(booking.staff_id)).filter(staffId => Number.isInteger(staffId) && staffId > 0))
+      )
+
+      week.push({
+        date: isCurrentMonth ? cellDate : null,
+        dayNumber: cursor.getDate(),
+        isCurrentMonth,
+        isToday: dayData ? !!dayData.is_today : cellDate === todayKey,
+        bookings,
+        timeOff,
+        bookingCount: Number(dayData?.booking_count ?? bookings.length),
+        staffWithBookings: uniqueStaff
+      })
+
+      cursor = addDays(cursor, 1)
+    }
+    weeks.push(week)
+  }
+
+  return weeks
 })
 
 const timeBounds = computed(() => {
@@ -371,6 +514,12 @@ function addDays(date, daysToAdd) {
   return next
 }
 
+function addMonths(date, monthsToAdd) {
+  const next = new Date(date.getFullYear(), date.getMonth(), 1, 12, 0, 0, 0)
+  next.setMonth(next.getMonth() + monthsToAdd)
+  return next
+}
+
 function formatLongDate(dateString) {
   const date = new Date(`${dateString}T12:00:00`)
   return new Intl.DateTimeFormat('en-GB', {
@@ -390,10 +539,18 @@ function formatShortDate(dateString) {
 }
 
 function prevPeriod() {
+  if (currentView.value === 'month') {
+    currentDate.value = addMonths(currentDate.value, -1)
+    return
+  }
   currentDate.value = addDays(currentDate.value, currentView.value === 'day' ? -1 : -7)
 }
 
 function nextPeriod() {
+  if (currentView.value === 'month') {
+    currentDate.value = addMonths(currentDate.value, 1)
+    return
+  }
   currentDate.value = addDays(currentDate.value, currentView.value === 'day' ? 1 : 7)
 }
 
@@ -523,6 +680,10 @@ function getStaffName(staffId) {
   return staffMap.value[staffId]?.full_name || 'Unknown staff'
 }
 
+function getStaffColour(staffId) {
+  return staffMap.value[staffId]?.colour || '#9CA3AF'
+}
+
 function bookingDurationMinutes(booking) {
   return Math.max(timeToMinutes(booking.end_time) - timeToMinutes(booking.start_time), 0)
 }
@@ -546,6 +707,12 @@ function openBookingDetails(booking, bookingDate) {
     ...booking,
     booking_date: bookingDate || dateStart.value
   }
+}
+
+function openMonthDay(dateString) {
+  if (!dateString) return
+  currentDate.value = new Date(`${dateString}T12:00:00`)
+  currentView.value = 'day'
 }
 
 watch([currentView, currentDateKey], fetchCalendar)

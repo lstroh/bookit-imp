@@ -121,7 +121,7 @@ class Bookit_Team_Calendar_API {
 		$view_type = sanitize_text_field( (string) $request->get_param( 'view_type' ) );
 		$date_raw  = sanitize_text_field( (string) $request->get_param( 'date' ) );
 
-		if ( ! in_array( $view_type, array( 'day', 'week' ), true ) ) {
+		if ( ! in_array( $view_type, array( 'day', 'week', 'month' ), true ) ) {
 			return Bookit_Error_Registry::to_wp_error( 'E4001', array( 'field' => 'view_type' ) );
 		}
 
@@ -135,6 +135,9 @@ class Bookit_Team_Calendar_API {
 		if ( 'week' === $view_type ) {
 			$start_date = $date_obj->modify( 'monday this week' );
 			$end_date   = $start_date->modify( '+6 days' );
+		} elseif ( 'month' === $view_type ) {
+			$start_date = $date_obj->modify( 'first day of this month' );
+			$end_date   = $date_obj->modify( 'last day of this month' );
 		} else {
 			$start_date = $date_obj;
 			$end_date   = $date_obj;
@@ -289,6 +292,7 @@ class Bookit_Team_Calendar_API {
 				'label'     => wp_date( 'l j F', $current->getTimestamp(), $timezone ),
 				'is_today'  => $day_key === $today,
 				'bookings'  => isset( $bookings_by_day[ $day_key ] ) ? $bookings_by_day[ $day_key ] : array(),
+				'booking_count' => isset( $bookings_by_day[ $day_key ] ) ? count( $bookings_by_day[ $day_key ] ) : 0,
 				'time_off'  => isset( $time_off_by_day[ $day_key ] ) ? $time_off_by_day[ $day_key ] : array(),
 			);
 			$current = $current->modify( '+1 day' );
