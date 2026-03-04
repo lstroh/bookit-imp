@@ -6729,7 +6729,7 @@ class Bookit_Dashboard_Bookings_API {
 	public function get_settings( $request ) {
 		global $wpdb;
 
-		$keys_param = $request->get_param( 'keys' );
+		$keys_param     = $request->get_param( 'keys' );
 		$requested_keys = array();
 		$allowed_keys   = $this->get_allowed_settings_keys();
 
@@ -6779,12 +6779,20 @@ class Bookit_Dashboard_Bookings_API {
 					break;
 			}
 
+			if ( $this->is_sensitive_setting_key( $setting['setting_key'] ) && '' !== (string) $value ) {
+				$value = 'SAVED';
+			}
+
 			$formatted[ $setting['setting_key'] ] = $value;
 		}
 
 		if ( ! empty( $requested_keys ) ) {
-			$cancellation_defaults = $this->get_cancellation_default_settings();
-			foreach ( $cancellation_defaults as $default_key => $default_value ) {
+			$default_settings = array_merge(
+				$this->get_cancellation_default_settings(),
+				$this->get_payment_default_settings()
+			);
+
+			foreach ( $default_settings as $default_key => $default_value ) {
 				if ( in_array( $default_key, $requested_keys, true ) && ! array_key_exists( $default_key, $formatted ) ) {
 					$formatted[ $default_key ] = $default_value;
 				}
@@ -6819,7 +6827,10 @@ class Bookit_Dashboard_Bookings_API {
 
 		$cancellation_defaults = $this->get_cancellation_default_settings();
 		$cancellation_keys     = array_keys( $cancellation_defaults );
+		$allowed_keys          = $this->get_allowed_settings_keys();
+		$payment_keys          = $this->get_payment_setting_keys();
 		$saved_cancellation    = array();
+		$updated_payment       = false;
 		$old_rows = $wpdb->get_results(
 			"SELECT setting_key, setting_value, setting_type FROM {$wpdb->prefix}bookings_settings",
 			ARRAY_A
@@ -6844,6 +6855,23 @@ class Bookit_Dashboard_Bookings_API {
 			$key = sanitize_key( $key );
 			if ( '' === $key ) {
 				continue;
+			}
+
+			if ( ! in_array( $key, $allowed_keys, true ) ) {
+				continue;
+			}
+
+			if ( $this->is_sensitive_setting_key( $key ) && is_string( $value ) && '' === trim( $value ) ) {
+				$existing_sensitive = $wpdb->get_var(
+					$wpdb->prepare(
+						"SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s",
+						$key
+					)
+				);
+
+				if ( ! empty( $existing_sensitive ) ) {
+					continue;
+				}
 			}
 
 			if ( in_array( $key, $cancellation_keys, true ) ) {
@@ -6893,6 +6921,10 @@ class Bookit_Dashboard_Bookings_API {
 			if ( in_array( $key, $cancellation_keys, true ) ) {
 				$saved_cancellation[ $key ] = $value;
 			}
+
+			if ( in_array( $key, $payment_keys, true ) ) {
+				$updated_payment = true;
+			}
 		}
 
 		$new_rows = $wpdb->get_results(
@@ -6939,6 +6971,22 @@ class Bookit_Dashboard_Bookings_API {
 					'staff_id'  => $staff_id,
 					'new_value' => $saved_cancellation,
 					'notes'     => 'Cancellation policy updated via dashboard',
+				)
+			);
+		}
+
+		if ( $updated_payment ) {
+			$current_staff = Bookit_Auth::get_current_staff();
+			$staff_id      = isset( $current_staff['id'] ) ? absint( $current_staff['id'] ) : 0;
+
+			Bookit_Audit_Logger::log(
+				'payment_settings_updated',
+				'setting',
+				0,
+				array(
+					'actor_id' => $staff_id,
+					'staff_id' => $staff_id,
+					'notes'    => 'Payment settings updated via dashboard',
 				)
 			);
 		}
@@ -7120,6 +7168,13 @@ class Bookit_Dashboard_Bookings_API {
 			'stripe_account_id',
 			'paypal_connected',
 			'paypal_client_id',
+			'stripe_publishable_key',
+			'stripe_secret_key',
+			'stripe_webhook_secret',
+			'stripe_test_mode',
+			'paypal_client_secret',
+			'paypal_sandbox_mode',
+			'pay_on_arrival_enabled',
 			'cancellation_window_hours',
 			'within_window_refund_type',
 			'within_window_refund_percent',
@@ -7131,6 +7186,65 @@ class Bookit_Dashboard_Bookings_API {
 			'reschedule_fee_amount',
 			'cancellation_policy_text',
 			'auto_refund_enabled',
+		);
+	}
+
+	/**
+	 * Get payment setting keys.
+	 *
+	 * @return array
+	 */
+	private function get_payment_setting_keys() {
+		return array(
+			'stripe_publishable_key',
+			'stripe_secret_key',
+			'stripe_webhook_secret',
+			'stripe_test_mode',
+			'paypal_client_id',
+			'paypal_client_secret',
+			'paypal_sandbox_mode',
+			'pay_on_arrival_enabled',
+		);
+	}
+
+	/**
+	 * Get sensitive setting keys that should be masked in responses.
+	 *
+	 * @return array
+	 */
+	private function get_sensitive_setting_keys() {
+		return array(
+			'stripe_secret_key',
+			'stripe_webhook_secret',
+			'paypal_client_secret',
+		);
+	}
+
+	/**
+	 * Check if setting key is sensitive.
+	 *
+	 * @param string $key Setting key.
+	 * @return bool
+	 */
+	private function is_sensitive_setting_key( $key ) {
+		return in_array( $key, $this->get_sensitive_setting_keys(), true );
+	}
+
+	/**
+	 * Get payment settings defaults.
+	 *
+	 * @return array
+	 */
+	private function get_payment_default_settings() {
+		return array(
+			'stripe_publishable_key'   => '',
+			'stripe_secret_key'        => '',
+			'stripe_webhook_secret'    => '',
+			'stripe_test_mode'         => true,
+			'paypal_client_id'         => '',
+			'paypal_client_secret'     => '',
+			'paypal_sandbox_mode'      => true,
+			'pay_on_arrival_enabled'   => true,
 		);
 	}
 

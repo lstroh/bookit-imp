@@ -122,6 +122,12 @@ export default [
     meta: { title: 'Cancellation Policy', requiresAdmin: true }
   },
   {
+    path: '/settings/payments',
+    name: 'PaymentSettings',
+    component: () => import('../views/PaymentSettings.vue'),
+    meta: { title: 'Payment Gateways', requiresAdmin: true }
+  },
+  {
     path: '/settings/templates',
     name: 'EmailTemplates',
     component: () => import('../views/EmailTemplates.vue'),
