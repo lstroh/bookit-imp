@@ -29,6 +29,9 @@ $email             = isset( $session['customer_email'] ) ? $session['customer_em
 $phone             = isset( $session['customer_phone'] ) ? $session['customer_phone'] : '';
 $special_requests  = isset( $session['customer_special_requests'] ) ? $session['customer_special_requests'] : '';
 $marketing_consent = isset( $session['marketing_consent'] ) ? (int) $session['marketing_consent'] : 0;
+$booking_date      = isset( $session['date'] ) ? $session['date'] : '';
+$requires_waiver   = ! empty( $booking_date ) && bookit_booking_requires_waiver( $booking_date );
+$waiver_given      = isset( $session['cooling_off_waiver'] ) ? (bool) $session['cooling_off_waiver'] : false;
 ?>
 
 <div class="bookit-step bookit-step-4">
@@ -171,6 +174,34 @@ $marketing_consent = isset( $session['marketing_consent'] ) ? (int) $session['ma
 				?>
 			</p>
 		</div>
+
+		<?php if ( $requires_waiver ) : ?>
+			<div class="form-group bookit-waiver-group" id="cooling-off-waiver-group">
+				<div class="bookit-legal-notice">
+					<p class="bookit-legal-notice__heading">
+						<?php esc_html_e( 'Important: Right to Cancel', 'bookit-booking-system' ); ?>
+					</p>
+					<p class="bookit-legal-notice__body">
+						<?php esc_html_e( 'Your appointment is scheduled within 14 days. Under the Consumer Contracts Regulations 2013, you normally have a 14-day right to cancel. By checking the box below, you request that we begin the service before this period expires and acknowledge that you will lose this cancellation right once the service has been performed.', 'bookit-booking-system' ); ?>
+					</p>
+				</div>
+				<label class="checkbox-label bookit-checkbox-label bookit-checkbox-label--legal">
+					<input
+						type="checkbox"
+						id="cooling-off-waiver"
+						name="cooling_off_waiver"
+						value="1"
+						<?php checked( $waiver_given, true ); ?>
+						aria-required="true"
+						aria-describedby="cooling-off-waiver-error"
+					/>
+					<span class="bookit-checkbox-text">
+						<?php esc_html_e( 'I expressly request this service to begin before the 14-day cancellation period expires, and I understand that I will lose my right to cancel once the service has begun.', 'bookit-booking-system' ); ?>
+					</span>
+				</label>
+				<span id="cooling-off-waiver-error" class="error-message" role="alert"></span>
+			</div>
+		<?php endif; ?>
 
 		<!-- Terms Acceptance -->
 		<p class="terms-notice">

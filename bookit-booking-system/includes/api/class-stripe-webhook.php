@@ -280,6 +280,7 @@ class Booking_System_Stripe_Webhook {
 			'customer_email'       => $metadata['customer_email'],
 			'customer_phone'       => $metadata['customer_phone'] ?? '',
 			'special_requests'     => $metadata['special_requests'] ?? '',
+			'cooling_off_waiver'  => isset( $metadata['cooling_off_waiver'] ) ? absint( $metadata['cooling_off_waiver'] ) : 0,
 			'payment_method'       => 'stripe',
 			'payment_intent_id'    => $session->payment_intent ?? '',
 			'stripe_session_id'    => $session->id,

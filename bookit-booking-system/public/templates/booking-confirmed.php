@@ -132,6 +132,14 @@ $time_formatted = $retriever->format_time( $booking['start_time'] );
 				<span class="bookit-detail-label"><?php esc_html_e( 'Customer:', 'booking-system' ); ?></span>
 				<span class="bookit-detail-value"><?php echo esc_html( $booking['customer_name'] ); ?></span>
 			</div>
+
+			<?php if ( ! empty( $booking['cooling_off_waiver_given'] ) ) : ?>
+				<div class="bookit-detail-row">
+					<span class="bookit-detail-value">
+						<?php esc_html_e( '✓ You have waived your 14-day right to cancel for this booking (Consumer Contracts Regulations 2013).', 'bookit-booking-system' ); ?>
+					</span>
+				</div>
+			<?php endif; ?>
 		</div>
 
 		<div class="bookit-payment-summary">

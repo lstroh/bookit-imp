@@ -170,6 +170,10 @@ class Booking_System_Email_Sender {
 						</div>
 					</div>
 
+					<?php if ( ! empty( $booking['cooling_off_waiver_given'] ) ) : ?>
+						<p><strong><?php esc_html_e( '✓ You have waived your 14-day right to cancel for this booking (Consumer Contracts Regulations 2013).', 'bookit-booking-system' ); ?></strong></p>
+					<?php endif; ?>
+
 					<div class="payment-summary">
 						<h3><?php esc_html_e( 'Payment Summary', 'booking-system' ); ?></h3>
 						<div class="detail-row">

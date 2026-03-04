@@ -156,6 +156,7 @@ class Booking_System_Payment_Processor {
 			'customer_email'      => isset( $session_data['customer_email'] ) ? $session_data['customer_email'] : '',
 			'customer_phone'      => isset( $session_data['customer_phone'] ) ? $session_data['customer_phone'] : '',
 			'special_requests'    => isset( $session_data['customer_special_requests'] ) ? $session_data['customer_special_requests'] : '',
+			'cooling_off_waiver' => isset( $session_data['cooling_off_waiver'] ) ? absint( $session_data['cooling_off_waiver'] ) : 0,
 			'payment_method'      => 'pay_on_arrival',
 			'payment_intent_id'   => null,
 			'stripe_session_id'   => null,

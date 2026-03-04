@@ -42,6 +42,8 @@ class Booking_System_Booking_Retriever {
 				b.payment_intent_id,
 				b.stripe_session_id,
 				b.special_requests,
+				b.cooling_off_waiver_given,
+				b.cooling_off_waiver_at,
 				b.created_at,
 				c.id AS customer_id,
 				c.first_name AS customer_first_name,

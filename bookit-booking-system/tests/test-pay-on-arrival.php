@@ -159,13 +159,14 @@ class Test_Pay_On_Arrival extends WP_UnitTestCase {
 		$_SESSION['bookit_wizard'] = array(
 			'service_id'                => $this->test_service_id,
 			'staff_id'                  => $this->test_staff_id,
-			'date'                      => '2026-03-15',
+			'date'                      => wp_date( 'Y-m-d', strtotime( '+30 days' ), wp_timezone() ),
 			'time'                      => '10:00:00',
 			'customer_first_name'       => 'Jane',
 			'customer_last_name'        => 'Doe',
 			'customer_email'            => 'jane@example.com',
 			'customer_phone'            => '07700900456',
 			'customer_special_requests' => 'First time client',
+			'cooling_off_waiver'        => 1,
 		);
 
 		// Mock email sending (prevent actual emails in tests).

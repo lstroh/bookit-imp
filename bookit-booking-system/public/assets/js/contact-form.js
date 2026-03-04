@@ -221,6 +221,20 @@
 				if (error) hasErrors = true;
 			}, this);
 
+			var waiverGroup = document.getElementById('cooling-off-waiver-group');
+			if (waiverGroup) {
+				var waiverCheckbox = document.getElementById('cooling-off-waiver');
+				if (waiverCheckbox && !waiverCheckbox.checked) {
+					this.showFieldError(
+						'cooling-off-waiver',
+						'You must acknowledge the cancellation policy to proceed.'
+					);
+					hasErrors = true;
+				} else {
+					this.clearFieldError('cooling-off-waiver');
+				}
+			}
+
 			if (hasErrors) {
 				var firstError = document.querySelector('.bookit-contact-form .field-error');
 				if (firstError) {
@@ -236,7 +250,10 @@
 				email: document.getElementById('email').value.trim().toLowerCase(),
 				phone: document.getElementById('phone').value.replace(/\s/g, ''),
 				special_requests: document.getElementById('special-requests').value.trim(),
-				marketing_consent: document.getElementById('marketing-consent').checked
+				marketing_consent: document.getElementById('marketing-consent').checked,
+				cooling_off_waiver: document.getElementById('cooling-off-waiver')
+					? (document.getElementById('cooling-off-waiver').checked ? 1 : 0)
+					: 0
 			};
 
 			var submitBtn = this.form.querySelector('button[type="submit"]');
@@ -262,7 +279,14 @@
 					window.location.href = data.redirect_url || '/book?step=5';
 				} else {
 					if (data.errors) {
-						var map = { first_name: 'first-name', last_name: 'last-name', email: 'email', phone: 'phone', special_requests: 'special-requests' };
+						var map = {
+							first_name: 'first-name',
+							last_name: 'last-name',
+							email: 'email',
+							phone: 'phone',
+							special_requests: 'special-requests',
+							cooling_off_waiver: 'cooling-off-waiver'
+						};
 						Object.keys(data.errors).forEach(function(fieldName) {
 							var fieldId = map[fieldName] || fieldName.replace('_', '-');
 							self.showFieldError(fieldId, data.errors[fieldName]);

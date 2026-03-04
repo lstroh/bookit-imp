@@ -304,6 +304,15 @@ class Booking_System_Stripe_Checkout {
 			return new WP_Error( 'invalid_email', __( 'Invalid email address', 'bookit-booking-system' ) );
 		}
 
+		$booking_date = isset( $session_data['date'] ) ? (string) $session_data['date'] : '';
+		$waiver       = isset( $session_data['cooling_off_waiver'] ) ? absint( $session_data['cooling_off_waiver'] ) : 0;
+		if ( bookit_booking_requires_waiver( $booking_date ) && 1 !== $waiver ) {
+			return new WP_Error(
+				'cooling_off_waiver_required',
+				__( 'Cooling-off waiver is required for bookings within 14 days.', 'bookit-booking-system' )
+			);
+		}
+
 		return true;
 	}
 
@@ -449,6 +458,7 @@ class Booking_System_Stripe_Checkout {
 			'customer_last_name'    => $session_data['customer_last_name'],
 			'customer_email'        => $session_data['customer_email'],
 			'customer_phone'        => isset( $session_data['customer_phone'] ) ? $session_data['customer_phone'] : '',
+			'cooling_off_waiver'    => isset( $session_data['cooling_off_waiver'] ) ? (string) absint( $session_data['cooling_off_waiver'] ) : '0',
 		);
 		if ( ! empty( $session_data['customer_special_requests'] ) ) {
 			$metadata['special_requests'] = substr( $session_data['customer_special_requests'], 0, 500 );

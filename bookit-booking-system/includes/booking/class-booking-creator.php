@@ -86,6 +86,18 @@ class Booking_System_Booking_Creator {
 		$deposit_amount = $amount_paid;
 		$balance_due    = max( 0, $total_price - $amount_paid );
 		$created_at     = current_time( 'mysql' );
+		$waiver_value   = isset( $data['cooling_off_waiver'] ) ? absint( $data['cooling_off_waiver'] ) : 0;
+		$requires_waiver = bookit_booking_requires_waiver( (string) $data['booking_date'] );
+
+		if ( $requires_waiver && 1 !== $waiver_value ) {
+			return new WP_Error(
+				'cooling_off_waiver_required',
+				'Cooling-off waiver is required for bookings within 14 days.'
+			);
+		}
+
+		$waiver_given = ( $requires_waiver && 1 === $waiver_value ) ? 1 : 0;
+		$waiver_at    = $waiver_given ? current_time( 'mysql', true ) : null;
 
 		// Pay on arrival bookings start as pending_payment; paid bookings are confirmed immediately.
 		$status = ( isset( $data['payment_method'] ) && 'pay_on_arrival' === $data['payment_method'] )
@@ -109,6 +121,8 @@ class Booking_System_Booking_Creator {
 			'payment_intent_id' => isset( $data['payment_intent_id'] ) ? $data['payment_intent_id'] : null,
 			'stripe_session_id' => isset( $data['stripe_session_id'] ) ? $data['stripe_session_id'] : null,
 			'special_requests'  => isset( $data['special_requests'] ) ? $data['special_requests'] : '',
+			'cooling_off_waiver_given' => $waiver_given,
+			'cooling_off_waiver_at' => $waiver_at,
 			'created_at'        => $created_at,
 			'updated_at'        => current_time( 'mysql' ),
 		);
@@ -130,6 +144,8 @@ class Booking_System_Booking_Creator {
 			'%s', // payment_intent_id
 			'%s', // stripe_session_id
 			'%s', // special_requests
+			'%d', // cooling_off_waiver_given
+			'%s', // cooling_off_waiver_at
 			'%s', // created_at
 			'%s', // updated_at
 		);

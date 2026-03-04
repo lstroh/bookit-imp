@@ -110,6 +110,39 @@
 	flex: 1;
 }
 
+.bookit-waiver-group {
+	margin-top: 1.5rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid #e5e7eb;
+}
+
+.bookit-legal-notice {
+	background: #fffbeb;
+	border: 1px solid #f59e0b;
+	border-radius: 6px;
+	padding: 12px 16px;
+	margin-bottom: 12px;
+}
+
+.bookit-legal-notice__heading {
+	font-weight: 600;
+	font-size: 0.875rem;
+	color: #92400e;
+	margin-bottom: 6px;
+}
+
+.bookit-legal-notice__body {
+	font-size: 0.8125rem;
+	color: #78350f;
+	line-height: 1.5;
+}
+
+.bookit-checkbox-label--legal .bookit-checkbox-text {
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: #1f2937;
+}
+
 /* Terms Notice */
 .bookit-contact-form .terms-notice {
 	padding: 1rem;

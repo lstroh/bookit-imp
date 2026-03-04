@@ -73,6 +73,11 @@ class Bookit_Contact_API {
 							return (bool) $value;
 						},
 					),
+					'cooling_off_waiver' => array(
+						'required'          => false,
+						'type'              => 'integer',
+						'sanitize_callback' => 'absint',
+					),
 				),
 			)
 		);
@@ -107,6 +112,7 @@ class Bookit_Contact_API {
 		$phone             = sanitize_text_field( $request->get_param( 'phone' ) );
 		$special_requests  = sanitize_textarea_field( $request->get_param( 'special_requests' ) );
 		$marketing_consent = (bool) $request->get_param( 'marketing_consent' );
+		$cooling_off_waiver = absint( $request->get_param( 'cooling_off_waiver' ) );
 
 		$errors = array();
 
@@ -194,6 +200,20 @@ class Bookit_Contact_API {
 			);
 		}
 
+		$requires_waiver = ! empty( $session['date'] ) && bookit_booking_requires_waiver( (string) $session['date'] );
+		if ( $requires_waiver && 1 !== $cooling_off_waiver ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Cooling-off waiver is required for bookings within 14 days.', 'bookit-booking-system' ),
+					'errors'  => array(
+						'cooling_off_waiver' => __( 'Cooling-off waiver is required for bookings within 14 days.', 'bookit-booking-system' ),
+					),
+				),
+				400
+			);
+		}
+
 		$session['customer_first_name']       = trim( $first_name );
 		$session['customer_last_name']        = trim( $last_name );
 		$session['customer_email']            = is_email( $email ) ? $email : trim( $email );
@@ -201,11 +221,13 @@ class Bookit_Contact_API {
 		$session['customer_special_requests'] = trim( $special_requests );
 		$session['marketing_consent']         = $marketing_consent ? 1 : 0;
 		$session['consent_date']              = $marketing_consent ? current_time( 'mysql' ) : null;
+		$session['cooling_off_waiver']        = $cooling_off_waiver ? 1 : 0;
 
 		// Advance wizard to step 5 (payment).
 		$session['current_step'] = 5;
 
 		Bookit_Session_Manager::set_data( $session );
+		Bookit_Session_Manager::set( 'cooling_off_waiver', $session['cooling_off_waiver'] );
 
 		return new WP_REST_Response(
 			array(
