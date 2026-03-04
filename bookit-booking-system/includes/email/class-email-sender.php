@@ -118,6 +118,7 @@ class Booking_System_Email_Sender {
 	public function generate_customer_email( $booking ) {
 		$date_formatted = $this->format_date( $booking['booking_date'] );
 		$time_formatted = $this->format_time( $booking['start_time'] );
+		$cancellation_policy_text = $this->get_cancellation_policy_text();
 
 		ob_start();
 		?>
@@ -221,6 +222,17 @@ class Booking_System_Email_Sender {
 						</div>
 					<?php endif; ?>
 
+					<?php if ( ! empty( $cancellation_policy_text ) ) : ?>
+						<div style="background:#f0f4f8; border:1px solid #b0c4d8; border-left:4px solid #0073aa; border-radius:6px; padding:12px 16px; margin:20px 0;">
+							<p style="margin:0 0 6px; font-weight:600; font-size:13px; color:#1a3a52;">
+								📋 <?php esc_html_e( 'Cancellation Policy', 'bookit-booking-system' ); ?>
+							</p>
+							<p style="margin:0; font-size:13px; color:#2c5282; line-height:1.6;">
+								<?php echo nl2br( esc_html( $cancellation_policy_text ) ); ?>
+							</p>
+						</div>
+					<?php endif; ?>
+
 					<p><?php esc_html_e( 'We look forward to seeing you!', 'booking-system' ); ?></p>
 				</div>
 
@@ -316,5 +328,33 @@ class Booking_System_Email_Sender {
 	 */
 	private function format_time( $time ) {
 		return date( 'g:i A', strtotime( $time ) );
+	}
+
+	/**
+	 * Get cancellation policy text from settings storage.
+	 *
+	 * @return string
+	 */
+	private function get_cancellation_policy_text() {
+		global $wpdb;
+
+		$default_policy = __( 'Please contact us if you need to cancel or reschedule your appointment.', 'bookit-booking-system' );
+
+		$policy_text = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s LIMIT 1",
+				'cancellation_policy_text'
+			)
+		);
+
+		if ( null === $policy_text || '' === trim( (string) $policy_text ) ) {
+			$policy_text = get_option( 'bookit_setting_cancellation_policy_text', '' );
+		}
+
+		if ( '' === trim( (string) $policy_text ) ) {
+			return $default_policy;
+		}
+
+		return (string) $policy_text;
 	}
 }

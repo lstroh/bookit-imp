@@ -71,6 +71,24 @@ if ( 'percentage' === $service_deposit_type && $service_deposit_amount > 0 ) {
 	$deposit_label = '';
 }
 // deposit_type "none" (or empty/unknown): no deposit split, full amount due today.
+
+// Load cancellation policy text from settings storage.
+$default_cancellation_policy_text = __( 'Please contact us if you need to cancel or reschedule your appointment.', 'bookit-booking-system' );
+$cancellation_policy_text         = $wpdb->get_var(
+	$wpdb->prepare(
+		"SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s LIMIT 1",
+		'cancellation_policy_text'
+	)
+);
+
+if ( null === $cancellation_policy_text || '' === trim( (string) $cancellation_policy_text ) ) {
+	// Backward-compatible fallback if a site stores this in wp_options.
+	$cancellation_policy_text = get_option( 'bookit_setting_cancellation_policy_text', '' );
+}
+
+if ( '' === trim( (string) $cancellation_policy_text ) ) {
+	$cancellation_policy_text = $default_cancellation_policy_text;
+}
 ?>
 
 <div class="bookit-payment-step bookit-step bookit-step-5">
@@ -252,6 +270,17 @@ if ( 'percentage' === $service_deposit_type && $service_deposit_amount > 0 ) {
 					</div>
 				<?php endif; ?>
 			</div>
+
+			<?php if ( ! empty( $cancellation_policy_text ) ) : ?>
+				<div class="bookit-policy-notice" role="note">
+					<p class="bookit-policy-notice__heading">
+						📋 <?php esc_html_e( 'Cancellation Policy', 'bookit-booking-system' ); ?>
+					</p>
+					<p class="bookit-policy-notice__body">
+						<?php echo wp_kses_post( nl2br( (string) $cancellation_policy_text ) ); ?>
+					</p>
+				</div>
+			<?php endif; ?>
 
 			<div class="bookit-form-actions">
 				<a href="<?php echo esc_url( home_url( '/book?step=4' ) ); ?>" class="bookit-btn-secondary">

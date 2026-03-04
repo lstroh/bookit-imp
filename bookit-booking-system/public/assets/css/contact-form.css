@@ -137,6 +137,29 @@
 	line-height: 1.5;
 }
 
+.bookit-policy-notice {
+	background: #f0f4f8;
+	border: 1px solid #b0c4d8;
+	border-left: 4px solid #0073aa;
+	border-radius: 6px;
+	padding: 12px 16px;
+	margin: 20px 0;
+}
+
+.bookit-policy-notice__heading {
+	font-weight: 600;
+	font-size: 0.875rem;
+	color: #1a3a52;
+	margin-bottom: 6px;
+}
+
+.bookit-policy-notice__body {
+	font-size: 0.8125rem;
+	color: #2c5282;
+	line-height: 1.6;
+	margin: 0;
+}
+
 .bookit-checkbox-label--legal .bookit-checkbox-text {
 	font-size: 0.875rem;
 	font-weight: 500;
