@@ -128,6 +128,12 @@ export default [
     meta: { title: 'Payment Gateways', requiresAdmin: true }
   },
   {
+    path: '/settings/deposits',
+    name: 'DepositSettings',
+    component: () => import('../views/DepositSettings.vue'),
+    meta: { title: 'Deposit Settings', requiresAdmin: true }
+  },
+  {
     path: '/settings/templates',
     name: 'EmailTemplates',
     component: () => import('../views/EmailTemplates.vue'),

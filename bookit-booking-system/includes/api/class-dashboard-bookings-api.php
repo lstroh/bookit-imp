@@ -6789,7 +6789,8 @@ class Bookit_Dashboard_Bookings_API {
 		if ( ! empty( $requested_keys ) ) {
 			$default_settings = array_merge(
 				$this->get_cancellation_default_settings(),
-				$this->get_payment_default_settings()
+				$this->get_payment_default_settings(),
+				$this->get_deposit_default_settings()
 			);
 
 			foreach ( $default_settings as $default_key => $default_value ) {
@@ -6829,8 +6830,10 @@ class Bookit_Dashboard_Bookings_API {
 		$cancellation_keys     = array_keys( $cancellation_defaults );
 		$allowed_keys          = $this->get_allowed_settings_keys();
 		$payment_keys          = $this->get_payment_setting_keys();
+		$deposit_keys          = $this->get_deposit_setting_keys();
 		$saved_cancellation    = array();
 		$updated_payment       = false;
+		$updated_deposit       = false;
 		$old_rows = $wpdb->get_results(
 			"SELECT setting_key, setting_value, setting_type FROM {$wpdb->prefix}bookings_settings",
 			ARRAY_A
@@ -6925,6 +6928,10 @@ class Bookit_Dashboard_Bookings_API {
 			if ( in_array( $key, $payment_keys, true ) ) {
 				$updated_payment = true;
 			}
+
+			if ( in_array( $key, $deposit_keys, true ) ) {
+				$updated_deposit = true;
+			}
 		}
 
 		$new_rows = $wpdb->get_results(
@@ -6987,6 +6994,22 @@ class Bookit_Dashboard_Bookings_API {
 					'actor_id' => $staff_id,
 					'staff_id' => $staff_id,
 					'notes'    => 'Payment settings updated via dashboard',
+				)
+			);
+		}
+
+		if ( $updated_deposit ) {
+			$current_staff = Bookit_Auth::get_current_staff();
+			$staff_id      = isset( $current_staff['id'] ) ? absint( $current_staff['id'] ) : 0;
+
+			Bookit_Audit_Logger::log(
+				'deposit_settings_updated',
+				'setting',
+				0,
+				array(
+					'actor_id' => $staff_id,
+					'staff_id' => $staff_id,
+					'notes'    => 'Deposit settings updated via dashboard',
 				)
 			);
 		}
@@ -7175,6 +7198,15 @@ class Bookit_Dashboard_Bookings_API {
 			'paypal_client_secret',
 			'paypal_sandbox_mode',
 			'pay_on_arrival_enabled',
+			'deposit_required_default',
+			'deposit_type_default',
+			'deposit_amount_default',
+			'deposit_minimum_percent',
+			'deposit_maximum_percent',
+			'deposit_applies_to',
+			'deposit_required_for_pay_on_arrival',
+			'deposit_refundable_within_window',
+			'deposit_refundable_outside_window',
 			'cancellation_window_hours',
 			'within_window_refund_type',
 			'within_window_refund_percent',
@@ -7204,6 +7236,25 @@ class Bookit_Dashboard_Bookings_API {
 			'paypal_client_secret',
 			'paypal_sandbox_mode',
 			'pay_on_arrival_enabled',
+		);
+	}
+
+	/**
+	 * Get deposit setting keys.
+	 *
+	 * @return array
+	 */
+	private function get_deposit_setting_keys() {
+		return array(
+			'deposit_required_default',
+			'deposit_type_default',
+			'deposit_amount_default',
+			'deposit_minimum_percent',
+			'deposit_maximum_percent',
+			'deposit_applies_to',
+			'deposit_required_for_pay_on_arrival',
+			'deposit_refundable_within_window',
+			'deposit_refundable_outside_window',
 		);
 	}
 
@@ -7245,6 +7296,25 @@ class Bookit_Dashboard_Bookings_API {
 			'paypal_client_secret'     => '',
 			'paypal_sandbox_mode'      => true,
 			'pay_on_arrival_enabled'   => true,
+		);
+	}
+
+	/**
+	 * Get deposit setting defaults.
+	 *
+	 * @return array
+	 */
+	private function get_deposit_default_settings() {
+		return array(
+			'deposit_required_default'            => false,
+			'deposit_type_default'                => 'percentage',
+			'deposit_amount_default'              => 50,
+			'deposit_minimum_percent'             => 10,
+			'deposit_maximum_percent'             => 100,
+			'deposit_applies_to'                  => 'all',
+			'deposit_required_for_pay_on_arrival' => false,
+			'deposit_refundable_within_window'    => true,
+			'deposit_refundable_outside_window'   => false,
 		);
 	}
 

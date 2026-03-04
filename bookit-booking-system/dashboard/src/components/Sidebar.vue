@@ -227,6 +227,7 @@ const adminNavigation = [
 
 const settingsNavigation = [
   { name: 'paymentSettings', path: '/settings/payments', icon: '💳', label: 'Payments' },
+  { name: 'depositSettings', path: '/settings/deposits', icon: '💰', label: 'Deposits' },
   { name: 'settings', path: '/settings', icon: '⚙️', label: 'General' },
   { name: 'auditLog', path: '/audit-log', icon: '🛡️', label: 'Audit Log' },
   { name: 'emailSettings', path: '/settings/email', icon: '📧', label: 'Email Configuration' },
