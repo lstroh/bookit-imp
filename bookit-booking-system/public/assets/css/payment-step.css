@@ -60,9 +60,34 @@
 }
 
 .price-row.deposit {
-	font-weight: bold;
-	font-size: 18px;
+	font-weight: 600;
+	font-size: 1.05rem;
 	color: #0073aa;
+	border-top: 2px solid #0073aa;
+	padding-top: 12px;
+	margin-top: 4px;
+}
+
+.price-row.balance {
+	color: #555;
+	font-size: 0.9rem;
+}
+
+.bookit-deposit-notice {
+	background: #e8f4fd;
+	border: 1px solid #b3d9f7;
+	border-radius: 6px;
+	padding: 10px 14px;
+	margin-top: 12px;
+	font-size: 0.875rem;
+	color: #0a5a8a;
+}
+
+.bookit-summary-service-line {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 12px;
 }
 
 .bookit-form-actions {

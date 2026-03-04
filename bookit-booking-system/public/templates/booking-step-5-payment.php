@@ -34,10 +34,43 @@ if ( ! $service ) {
 	return;
 }
 
-$stripe_checkout = new Booking_System_Stripe_Checkout();
-$deposit_amount  = $stripe_checkout->calculate_deposit( $service );
-$total_price     = (float) ( $service['price'] ?? 0 );
-$balance         = $total_price - $deposit_amount;
+// Fetch service deposit config.
+$service_deposit_type   = $service['deposit_type'] ?? 'none';
+$service_deposit_amount = (float) ( $service['deposit_amount'] ?? 0 );
+$total_price            = (float) ( $service['price'] ?? 0 );
+
+// Load staff for summary display.
+$staff = $wpdb->get_row(
+	$wpdb->prepare(
+		"SELECT first_name, last_name FROM {$wpdb->prefix}bookings_staff WHERE id = %d",
+		(int) $session_data['staff_id']
+	),
+	ARRAY_A
+);
+
+$staff_name = '';
+if ( ! empty( $staff ) ) {
+	$staff_name = trim( (string) ( $staff['first_name'] ?? '' ) . ' ' . (string) ( $staff['last_name'] ?? '' ) );
+}
+
+// Calculate deposit due today and balance due on arrival for summary display.
+$has_deposit   = false;
+$deposit_due   = 0.00;
+$balance_due   = $total_price;
+$deposit_label = '';
+
+if ( 'percentage' === $service_deposit_type && $service_deposit_amount > 0 ) {
+	$has_deposit   = true;
+	$deposit_due   = round( $total_price * ( $service_deposit_amount / 100 ), 2 );
+	$balance_due   = round( $total_price - $deposit_due, 2 );
+	$deposit_label = number_format( $service_deposit_amount, 0 ) . '%';
+} elseif ( 'fixed' === $service_deposit_type && $service_deposit_amount > 0 ) {
+	$has_deposit   = true;
+	$deposit_due   = min( $service_deposit_amount, $total_price );
+	$balance_due   = round( $total_price - $deposit_due, 2 );
+	$deposit_label = '';
+}
+// deposit_type "none" (or empty/unknown): no deposit split, full amount due today.
 ?>
 
 <div class="bookit-payment-step bookit-step bookit-step-5">
@@ -83,9 +116,31 @@ $balance         = $total_price - $deposit_amount;
 
 	<div class="bookit-booking-summary">
 		<h3><?php esc_html_e( 'Booking Summary', 'bookit-booking-system' ); ?></h3>
-		<p><strong><?php echo esc_html( $service['name'] ); ?></strong></p>
-		<p><?php echo esc_html( gmdate( 'l, j F Y', strtotime( $session_data['date'] ) ) ); ?></p>
-		<p><?php echo esc_html( gmdate( 'g:i A', strtotime( $session_data['time'] ) ) ); ?></p>
+		<p class="bookit-summary-service-line">
+			<strong><?php echo esc_html( $service['name'] ); ?></strong>
+			<span>£<?php echo esc_html( number_format( $total_price, 2 ) ); ?></span>
+		</p>
+		<p>
+			<?php
+			printf(
+				/* translators: 1: booking date, 2: booking time */
+				esc_html__( '%1$s at %2$s', 'bookit-booking-system' ),
+				esc_html( gmdate( 'D, j F Y', strtotime( $session_data['date'] ) ) ),
+				esc_html( gmdate( 'g:i A', strtotime( $session_data['time'] ) ) )
+			);
+			?>
+		</p>
+		<?php if ( '' !== $staff_name ) : ?>
+			<p>
+				<?php
+				printf(
+					/* translators: %s: staff name */
+					esc_html__( 'with %s', 'bookit-booking-system' ),
+					esc_html( $staff_name )
+				);
+				?>
+			</p>
+		<?php endif; ?>
 	</div>
 
 	<div class="bookit-payment-options">
@@ -141,11 +196,19 @@ $balance         = $total_price - $deposit_amount;
 				<div id="bookit-poa-info" style="display: none;">
 					<p>
 						<?php
-						printf(
-							/* translators: %s: formatted total price */
-							esc_html__( "No payment required now. You'll pay %s when you arrive for your appointment.", 'bookit-booking-system' ),
-							'<strong>&pound;' . esc_html( number_format( $total_price, 2 ) ) . '</strong>'
-						);
+						if ( $has_deposit ) {
+							printf(
+								/* translators: %s: formatted total price */
+								esc_html__( 'Pay %s when you arrive. No deposit required for this payment method.', 'bookit-booking-system' ),
+								'<strong>&pound;' . esc_html( number_format( $total_price, 2 ) ) . '</strong>'
+							);
+						} else {
+							printf(
+								/* translators: %s: formatted total price */
+								esc_html__( "No payment required now. You'll pay %s when you arrive for your appointment.", 'bookit-booking-system' ),
+								'<strong>&pound;' . esc_html( number_format( $total_price, 2 ) ) . '</strong>'
+							);
+						}
 						?>
 					</p>
 					<p class="bookit-poa-note">
@@ -155,18 +218,39 @@ $balance         = $total_price - $deposit_amount;
 			</div>
 
 			<div class="bookit-payment-summary">
-				<div class="price-row">
-					<span><?php esc_html_e( 'Total:', 'bookit-booking-system' ); ?></span>
-					<span>£<?php echo esc_html( number_format( $total_price, 2 ) ); ?></span>
-				</div>
-				<div class="price-row deposit">
-					<span><?php esc_html_e( 'Deposit:', 'bookit-booking-system' ); ?></span>
-					<span>£<?php echo esc_html( number_format( $deposit_amount, 2 ) ); ?></span>
-				</div>
-				<div class="price-row balance">
-					<span><?php esc_html_e( 'Balance (pay on arrival):', 'bookit-booking-system' ); ?></span>
-					<span>£<?php echo esc_html( number_format( $balance, 2 ) ); ?></span>
-				</div>
+				<?php if ( $has_deposit ) : ?>
+					<div class="price-row deposit">
+						<span>
+							<?php esc_html_e( 'Due today (deposit):', 'bookit-booking-system' ); ?>
+							<?php if ( '' !== $deposit_label ) : ?>
+								<small>(<?php echo esc_html( $deposit_label ); ?>)</small>
+							<?php endif; ?>
+						</span>
+						<span>£<?php echo esc_html( number_format( $deposit_due, 2 ) ); ?></span>
+					</div>
+					<div class="price-row balance">
+						<span><?php esc_html_e( 'Due on arrival (balance):', 'bookit-booking-system' ); ?></span>
+						<span>£<?php echo esc_html( number_format( $balance_due, 2 ) ); ?></span>
+					</div>
+					<div class="price-row">
+						<span><?php esc_html_e( 'Total:', 'bookit-booking-system' ); ?></span>
+						<span>£<?php echo esc_html( number_format( $total_price, 2 ) ); ?></span>
+					</div>
+					<div class="bookit-deposit-notice">
+						<?php
+						printf(
+							/* translators: %s: formatted balance amount */
+							esc_html__( 'You are paying a deposit today. The remaining balance of %s is due when you arrive for your appointment.', 'bookit-booking-system' ),
+							'£' . esc_html( number_format( $balance_due, 2 ) )
+						);
+						?>
+					</div>
+				<?php else : ?>
+					<div class="price-row">
+						<span><?php esc_html_e( 'Total due today:', 'bookit-booking-system' ); ?></span>
+						<span>£<?php echo esc_html( number_format( $total_price, 2 ) ); ?></span>
+					</div>
+				<?php endif; ?>
 			</div>
 
 			<div class="bookit-form-actions">
@@ -186,6 +270,7 @@ $balance         = $total_price - $deposit_amount;
 	'use strict';
 
 	document.addEventListener( 'DOMContentLoaded', function() {
+		var hasDeposit       = <?php echo wp_json_encode( $has_deposit ); ?>;
 		var paymentOptions    = document.querySelectorAll( 'input[name="payment_method"]' );
 		var paymentInfo       = document.getElementById( 'bookit-payment-info' );
 		var stripeInfo        = document.getElementById( 'bookit-stripe-info' );
@@ -202,13 +287,13 @@ $balance         = $total_price - $deposit_amount;
 
 			if ( value === 'stripe' ) {
 				stripeInfo.style.display = 'block';
-				if ( depositRow ) depositRow.style.display = '';
-				if ( balanceRow ) balanceRow.style.display = '';
+				if ( hasDeposit && depositRow ) depositRow.style.display = '';
+				if ( hasDeposit && balanceRow ) balanceRow.style.display = '';
 				if ( submitBtn )  submitBtn.textContent = '<?php echo esc_js( __( 'Complete Booking →', 'bookit-booking-system' ) ); ?>';
 			} else if ( value === 'pay_on_arrival' ) {
 				poaInfo.style.display = 'block';
-				if ( depositRow ) depositRow.style.display = 'none';
-				if ( balanceRow ) balanceRow.style.display = 'none';
+				if ( hasDeposit && depositRow ) depositRow.style.display = 'none';
+				if ( hasDeposit && balanceRow ) balanceRow.style.display = 'none';
 				if ( submitBtn )  submitBtn.textContent = '<?php echo esc_js( __( 'Confirm Booking →', 'bookit-booking-system' ) ); ?>';
 			}
 		}
