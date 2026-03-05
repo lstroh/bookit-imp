@@ -71,6 +71,11 @@ class Bookit_Team_Calendar_API {
 						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
+					'staff_id'  => array(
+						'required'          => false,
+						'type'              => 'integer',
+						'sanitize_callback' => 'absint',
+					),
 				),
 			)
 		);
@@ -120,9 +125,10 @@ class Bookit_Team_Calendar_API {
 
 		$view_type = sanitize_text_field( (string) $request->get_param( 'view_type' ) );
 		$date_raw  = sanitize_text_field( (string) $request->get_param( 'date' ) );
+		$staff_id  = absint( $request->get_param( 'staff_id' ) );
 
 		if ( ! in_array( $view_type, array( 'day', 'week', 'month' ), true ) ) {
-			return Bookit_Error_Registry::to_wp_error( 'E4001', array( 'field' => 'view_type' ) );
+			return Bookit_Error_Registry::to_wp_error( 'E4012', array( 'field' => 'view_type' ) );
 		}
 
 		$timezone = new DateTimeZone( 'Europe/London' );
@@ -147,14 +153,29 @@ class Bookit_Team_Calendar_API {
 		$date_end   = $end_date->format( 'Y-m-d' );
 		$today      = wp_date( 'Y-m-d', null, $timezone );
 
-		$staff_rows = $wpdb->get_results(
-			"SELECT id, first_name, last_name, photo_url
-			FROM {$wpdb->prefix}bookings_staff
-			WHERE deleted_at IS NULL
-				AND is_active = 1
-			ORDER BY display_order ASC, first_name ASC, last_name ASC",
-			ARRAY_A
-		);
+		if ( $staff_id > 0 ) {
+			$staff_rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT id, first_name, last_name, photo_url
+					FROM {$wpdb->prefix}bookings_staff
+					WHERE deleted_at IS NULL
+						AND is_active = 1
+						AND id = %d
+					ORDER BY display_order ASC, first_name ASC, last_name ASC",
+					$staff_id
+				),
+				ARRAY_A
+			);
+		} else {
+			$staff_rows = $wpdb->get_results(
+				"SELECT id, first_name, last_name, photo_url
+				FROM {$wpdb->prefix}bookings_staff
+				WHERE deleted_at IS NULL
+					AND is_active = 1
+				ORDER BY display_order ASC, first_name ASC, last_name ASC",
+				ARRAY_A
+			);
+		}
 
 		if ( null === $staff_rows ) {
 			return Bookit_Error_Registry::to_wp_error( 'E9001', array( 'db_error' => $wpdb->last_error ) );
@@ -177,68 +198,78 @@ class Bookit_Team_Calendar_API {
 			$staff_rows
 		);
 
-		$booking_rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT
-					b.id,
-					b.staff_id,
-					b.booking_date,
-					b.start_time,
-					b.end_time,
-					b.status,
-					b.total_price,
-					s.name AS service_name,
-					c.first_name AS customer_first_name,
-					c.last_name AS customer_last_name,
-					COALESCE(p.payment_status, 'pending') AS payment_status
-				FROM {$wpdb->prefix}bookings b
-				INNER JOIN {$wpdb->prefix}bookings_services s
-					ON s.id = b.service_id
-				LEFT JOIN {$wpdb->prefix}bookings_customers c
-					ON c.id = b.customer_id
-				LEFT JOIN {$wpdb->prefix}bookings_payments p
-					ON p.id = (
-						SELECT p2.id
-						FROM {$wpdb->prefix}bookings_payments p2
-						WHERE p2.booking_id = b.id
-						ORDER BY p2.transaction_date DESC, p2.id DESC
-						LIMIT 1
-					)
-				WHERE b.deleted_at IS NULL
-					AND b.booking_date BETWEEN %s AND %s
-				ORDER BY b.booking_date ASC, b.start_time ASC",
-				$date_start,
-				$date_end
-			),
-			ARRAY_A
-		);
+		$booking_query = "SELECT
+				b.id,
+				b.staff_id,
+				b.booking_date,
+				b.start_time,
+				b.end_time,
+				b.status,
+				b.total_price,
+				s.name AS service_name,
+				c.first_name AS customer_first_name,
+				c.last_name AS customer_last_name,
+				COALESCE(p.payment_status, 'pending') AS payment_status
+			FROM {$wpdb->prefix}bookings b
+			INNER JOIN {$wpdb->prefix}bookings_services s
+				ON s.id = b.service_id
+			LEFT JOIN {$wpdb->prefix}bookings_customers c
+				ON c.id = b.customer_id
+			LEFT JOIN {$wpdb->prefix}bookings_payments p
+				ON p.id = (
+					SELECT p2.id
+					FROM {$wpdb->prefix}bookings_payments p2
+					WHERE p2.booking_id = b.id
+					ORDER BY p2.transaction_date DESC, p2.id DESC
+					LIMIT 1
+				)
+			WHERE b.deleted_at IS NULL
+				AND b.booking_date BETWEEN %s AND %s";
+
+		if ( $staff_id > 0 ) {
+			$booking_query .= ' AND b.staff_id = %d';
+			$booking_rows   = $wpdb->get_results(
+				$wpdb->prepare( $booking_query . ' ORDER BY b.booking_date ASC, b.start_time ASC', $date_start, $date_end, $staff_id ),
+				ARRAY_A
+			);
+		} else {
+			$booking_rows = $wpdb->get_results(
+				$wpdb->prepare( $booking_query . ' ORDER BY b.booking_date ASC, b.start_time ASC', $date_start, $date_end ),
+				ARRAY_A
+			);
+		}
 
 		if ( null === $booking_rows ) {
 			return Bookit_Error_Registry::to_wp_error( 'E9001', array( 'db_error' => $wpdb->last_error ) );
 		}
 
-		$time_off_rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT
-					wh.staff_id,
-					wh.specific_date,
-					wh.start_time,
-					wh.end_time,
-					wh.notes
-				FROM {$wpdb->prefix}bookings_staff_working_hours wh
-				INNER JOIN {$wpdb->prefix}bookings_staff st
-					ON st.id = wh.staff_id
-					AND st.deleted_at IS NULL
-					AND st.is_active = 1
-				WHERE wh.is_working = 0
-					AND wh.specific_date IS NOT NULL
-					AND wh.specific_date BETWEEN %s AND %s
-				ORDER BY wh.specific_date ASC, wh.staff_id ASC",
-				$date_start,
-				$date_end
-			),
-			ARRAY_A
-		);
+		$time_off_query = "SELECT
+				wh.staff_id,
+				wh.specific_date,
+				wh.start_time,
+				wh.end_time,
+				wh.notes
+			FROM {$wpdb->prefix}bookings_staff_working_hours wh
+			INNER JOIN {$wpdb->prefix}bookings_staff st
+				ON st.id = wh.staff_id
+				AND st.deleted_at IS NULL
+				AND st.is_active = 1
+			WHERE wh.is_working = 0
+				AND wh.specific_date IS NOT NULL
+				AND wh.specific_date BETWEEN %s AND %s";
+
+		if ( $staff_id > 0 ) {
+			$time_off_query .= ' AND wh.staff_id = %d';
+			$time_off_rows   = $wpdb->get_results(
+				$wpdb->prepare( $time_off_query . ' ORDER BY wh.specific_date ASC, wh.staff_id ASC', $date_start, $date_end, $staff_id ),
+				ARRAY_A
+			);
+		} else {
+			$time_off_rows = $wpdb->get_results(
+				$wpdb->prepare( $time_off_query . ' ORDER BY wh.specific_date ASC, wh.staff_id ASC', $date_start, $date_end ),
+				ARRAY_A
+			);
+		}
 
 		if ( null === $time_off_rows ) {
 			return Bookit_Error_Registry::to_wp_error( 'E9001', array( 'db_error' => $wpdb->last_error ) );

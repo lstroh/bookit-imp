@@ -192,6 +192,16 @@ Bookit_Error_Registry::register(
 );
 
 Bookit_Error_Registry::register(
+	'E4012',
+	array(
+		'user_message' => __( 'Please select a valid calendar view.', 'bookit-booking-system' ),
+		'log_message'  => 'Invalid team calendar view type: {field}',
+		'http_status'  => 400,
+		'category'     => 'validation',
+	)
+);
+
+Bookit_Error_Registry::register(
 	'E9001',
 	array(
 		'user_message' => __( 'A database error occurred. Please try again.', 'bookit-booking-system' ),
