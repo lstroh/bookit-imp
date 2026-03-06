@@ -777,7 +777,7 @@ const confirmBulkAction = async () => {
   bulkActionLoading.value = true
 
   try {
-    const response = await api.post('/wp-json/bookit/v1/bookings/bulk-action', {
+    const response = await api.post('/bookings/bulk-action', {
       action: bulkAction.value,
       booking_ids: selectedIds.value,
       _wpnonce: window.BOOKIT_DASHBOARD.nonce
