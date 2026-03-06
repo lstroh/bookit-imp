@@ -229,11 +229,42 @@
 
       <!-- Actual Content -->
       <div v-else>
+      <div
+        v-if="selectedIds.length > 0 && isAdmin"
+        class="px-4 sm:px-6 pt-4 flex flex-col sm:flex-row sm:items-center gap-3"
+      >
+        <select
+          v-model="bulkAction"
+          class="w-full sm:w-auto px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+        >
+          <option value="">Select action...</option>
+          <option value="cancel">Cancel bookings</option>
+          <option value="complete">Mark as complete</option>
+          <option value="no_show">Mark as no-show</option>
+        </select>
+        <button
+          @click="applyBulkAction"
+          :disabled="!bulkAction || bulkActionLoading"
+          class="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {{ bulkActionLoading ? 'Applying...' : `Apply to ${selectedIds.length} booking(s)` }}
+        </button>
+      </div>
+
       <!-- Desktop Table View -->
       <div class="hidden md:block overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
+              <th v-if="isAdmin" scope="col" class="px-6 py-3 w-12">
+                <input
+                  type="checkbox"
+                  :checked="allVisibleSelected"
+                  @change="toggleSelectAllVisible"
+                  aria-label="Select all bookings on this page"
+                  class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                />
+              </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Reference
               </th>
@@ -267,6 +298,16 @@
               class="hover:bg-gray-50 cursor-pointer transition-colors"
               @click="viewBooking(booking)"
             >
+              <td v-if="isAdmin" class="px-6 py-4 whitespace-nowrap">
+                <input
+                  v-model="selectedIds"
+                  :value="booking.id"
+                  type="checkbox"
+                  @click.stop
+                  aria-label="Select booking"
+                  class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                />
+              </td>
               <!-- Reference -->
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm font-semibold text-gray-900">
@@ -474,6 +515,31 @@
         @cancelled="handleBookingCancelled"
       />
     </Transition>
+
+    <!-- Bulk Action Confirmation Modal -->
+    <div v-if="showBulkConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-3">{{ getBulkActionTitle() }}</h3>
+        <p class="text-sm text-gray-700 mb-2">This will apply to {{ selectedIds.length }} booking(s).</p>
+        <p class="text-sm text-red-600 mb-6">This action cannot be undone.</p>
+        <div class="flex flex-col-reverse sm:flex-row justify-end gap-2">
+          <button
+            @click="showBulkConfirmModal = false"
+            :disabled="bulkActionLoading"
+            class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            @click="confirmBulkAction"
+            :disabled="bulkActionLoading"
+            class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+          >
+            {{ bulkActionLoading ? 'Applying...' : 'Confirm' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -489,7 +555,7 @@ import CardSkeleton from '../components/CardSkeleton.vue'
 import EmptyState from '../components/EmptyState.vue'
 
 const api = useApi()
-const { success: toastSuccess } = useToast()
+const { success: toastSuccess, error: toastError } = useToast()
 
 // Get current user role
 const currentUser = window.BOOKIT_DASHBOARD.staff
@@ -507,6 +573,10 @@ const servicesList = ref([])
 const searchQuery = ref('')
 const showFilters = ref(false)
 let searchTimeout = null
+const selectedIds = ref([])
+const bulkAction = ref('')
+const bulkActionLoading = ref(false)
+const showBulkConfirmModal = ref(false)
 
 // Filters
 const filters = ref({
@@ -570,10 +640,18 @@ const visiblePages = computed(() => {
   return pages
 })
 
+const visibleBookingIds = computed(() => bookings.value.map(booking => booking.id))
+
+const allVisibleSelected = computed(() => {
+  if (visibleBookingIds.value.length === 0) return false
+  return visibleBookingIds.value.every(id => selectedIds.value.includes(id))
+})
+
 // Methods
 const loadBookings = async (page = 1) => {
   loading.value = true
   error.value = null
+  selectedIds.value = []
 
   try {
     // Build query params
@@ -668,6 +746,66 @@ const goToPage = (page) => {
   loadBookings(page)
   // Scroll to top
   window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+const toggleSelectAllVisible = () => {
+  if (allVisibleSelected.value) {
+    const visibleSet = new Set(visibleBookingIds.value)
+    selectedIds.value = selectedIds.value.filter(id => !visibleSet.has(id))
+    return
+  }
+
+  const merged = new Set([...selectedIds.value, ...visibleBookingIds.value])
+  selectedIds.value = Array.from(merged)
+}
+
+const getBulkActionTitle = () => {
+  if (bulkAction.value === 'cancel') return 'Cancel bookings'
+  if (bulkAction.value === 'complete') return 'Mark bookings as complete'
+  if (bulkAction.value === 'no_show') return 'Mark bookings as no-show'
+  return 'Bulk action'
+}
+
+const applyBulkAction = () => {
+  if (!bulkAction.value || selectedIds.value.length === 0) return
+  showBulkConfirmModal.value = true
+}
+
+const confirmBulkAction = async () => {
+  if (!bulkAction.value || selectedIds.value.length === 0 || bulkActionLoading.value) return
+
+  bulkActionLoading.value = true
+
+  try {
+    const response = await api.post('/wp-json/bookit/v1/bookings/bulk-action', {
+      action: bulkAction.value,
+      booking_ids: selectedIds.value,
+      _wpnonce: window.BOOKIT_DASHBOARD.nonce
+    })
+
+    const succeeded = Array.isArray(response.data?.succeeded) ? response.data.succeeded : []
+    const failed = Array.isArray(response.data?.failed) ? response.data.failed : []
+    const total = selectedIds.value.length
+
+    if (succeeded.length === total) {
+      toastSuccess(`${succeeded.length} bookings updated.`)
+    } else if (succeeded.length > 0) {
+      const reasons = failed.map(item => item.reason).filter(Boolean).join('; ')
+      toastError(`${succeeded.length} of ${total} bookings updated. ${failed.length} failed: ${reasons}`)
+    } else {
+      const reasons = failed.map(item => item.reason).filter(Boolean).join('; ')
+      toastError(`No bookings were updated. ${reasons || 'Please review booking statuses and try again.'}`)
+    }
+  } catch (err) {
+    console.error('Error applying bulk action:', err)
+    toastError(`Bulk update failed: ${err.message}`)
+  } finally {
+    bulkActionLoading.value = false
+    showBulkConfirmModal.value = false
+    selectedIds.value = []
+    bulkAction.value = ''
+    loadBookings(pagination.value.current_page)
+  }
 }
 
 // View/Edit modal state.

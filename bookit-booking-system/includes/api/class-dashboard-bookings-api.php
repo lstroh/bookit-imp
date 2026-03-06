@@ -85,6 +85,17 @@ class Bookit_Dashboard_Bookings_API {
 			)
 		);
 
+		// Bulk booking actions (admin only).
+		register_rest_route(
+			self::NAMESPACE,
+			'/bookings/bulk-action',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'bulk_action' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+			)
+		);
+
 		// Staff personal schedule (week view).
 		register_rest_route(
 			self::NAMESPACE,
@@ -3019,6 +3030,221 @@ class Bookit_Dashboard_Bookings_API {
 				'success'    => true,
 				'message'    => __( 'Booking marked as no-show.', 'bookit-booking-system' ),
 				'booking_id' => $booking_id,
+			)
+		);
+	}
+
+	/**
+	 * Apply a bulk status transition to multiple bookings.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function bulk_action( $request ) {
+		global $wpdb;
+
+		$current_staff = Bookit_Auth::get_current_staff();
+		if ( ! $current_staff ) {
+			return new WP_Error(
+				'unauthorized',
+				__( 'Could not retrieve staff information.', 'bookit-booking-system' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		$nonce = sanitize_text_field( (string) $request->get_param( '_wpnonce' ) );
+		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+			return new WP_Error(
+				'invalid_nonce',
+				__( 'Invalid security token.', 'bookit-booking-system' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		$action        = sanitize_key( (string) $request->get_param( 'action' ) );
+		$valid_actions = array( 'cancel', 'complete', 'no_show' );
+		if ( ! in_array( $action, $valid_actions, true ) ) {
+			return Bookit_Error_Registry::to_wp_error(
+				'BULK_INVALID_ACTION',
+				array( 'action' => $action )
+			);
+		}
+
+		$booking_ids = $request->get_param( 'booking_ids' );
+		if ( ! is_array( $booking_ids ) || empty( $booking_ids ) ) {
+			return Bookit_Error_Registry::to_wp_error( 'BULK_EMPTY_IDS' );
+		}
+
+		$booking_ids = array_values(
+			array_unique(
+				array_filter(
+					array_map( 'absint', $booking_ids ),
+					function ( $id ) {
+						return $id > 0;
+					}
+				)
+			)
+		);
+
+		if ( empty( $booking_ids ) ) {
+			return Bookit_Error_Registry::to_wp_error( 'BULK_EMPTY_IDS' );
+		}
+
+		if ( count( $booking_ids ) > 100 ) {
+			return Bookit_Error_Registry::to_wp_error(
+				'BULK_TOO_MANY_IDS',
+				array( 'count' => count( $booking_ids ) )
+			);
+		}
+
+		$target_status   = '';
+		$audit_action    = '';
+		$allowed_statuses = array();
+
+		if ( 'cancel' === $action ) {
+			$target_status    = 'cancelled';
+			$audit_action     = 'booking_bulk_cancelled';
+			$allowed_statuses = array( 'pending', 'confirmed' );
+		} elseif ( 'complete' === $action ) {
+			$target_status    = 'completed';
+			$audit_action     = 'booking_bulk_completed';
+			$allowed_statuses = array( 'confirmed' );
+		} else {
+			$target_status    = 'no_show';
+			$audit_action     = 'booking_bulk_no_show';
+			$allowed_statuses = array( 'confirmed' );
+		}
+
+		$succeeded = array();
+		$failed    = array();
+
+		foreach ( $booking_ids as $booking_id ) {
+			$booking = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT id, staff_id, status, deleted_at FROM {$wpdb->prefix}bookings WHERE id = %d",
+					$booking_id
+				),
+				ARRAY_A
+			);
+
+			if ( ! $booking || ! empty( $booking['deleted_at'] ) ) {
+				$failed[] = array(
+					'id'     => $booking_id,
+					'reason' => __( 'Booking not found.', 'bookit-booking-system' ),
+				);
+				continue;
+			}
+
+			$current_status = (string) $booking['status'];
+			if ( ! in_array( $current_status, $allowed_statuses, true ) ) {
+				$reason = __( 'Booking cannot be transitioned to the requested status.', 'bookit-booking-system' );
+				if ( 'cancel' === $action ) {
+					if ( 'cancelled' === $current_status ) {
+						$reason = __( 'Booking is already cancelled.', 'bookit-booking-system' );
+					} elseif ( 'completed' === $current_status ) {
+						$reason = __( 'Completed bookings cannot be cancelled.', 'bookit-booking-system' );
+					} elseif ( 'no_show' === $current_status ) {
+						$reason = __( 'No-show bookings cannot be cancelled.', 'bookit-booking-system' );
+					}
+				} elseif ( 'complete' === $action ) {
+					if ( 'completed' === $current_status ) {
+						$reason = __( 'Booking is already completed.', 'bookit-booking-system' );
+					} elseif ( 'cancelled' === $current_status ) {
+						$reason = __( 'Cancelled bookings cannot be completed.', 'bookit-booking-system' );
+					} elseif ( 'no_show' === $current_status ) {
+						$reason = __( 'No-show bookings cannot be completed.', 'bookit-booking-system' );
+					} elseif ( 'pending' === $current_status || 'pending_payment' === $current_status ) {
+						$reason = __( 'Only confirmed bookings can be marked as complete.', 'bookit-booking-system' );
+					}
+				} else {
+					if ( 'no_show' === $current_status ) {
+						$reason = __( 'Booking is already marked as no-show.', 'bookit-booking-system' );
+					} elseif ( 'cancelled' === $current_status ) {
+						$reason = __( 'Cancelled bookings cannot be marked as no-show.', 'bookit-booking-system' );
+					} elseif ( 'completed' === $current_status ) {
+						$reason = __( 'Completed bookings cannot be marked as no-show.', 'bookit-booking-system' );
+					} elseif ( 'pending' === $current_status || 'pending_payment' === $current_status ) {
+						$reason = __( 'Only confirmed bookings can be marked as no-show.', 'bookit-booking-system' );
+					}
+				}
+
+				$failed[] = array(
+					'id'     => $booking_id,
+					'reason' => $reason,
+				);
+				continue;
+			}
+
+			$update_data = array(
+				'status'     => $target_status,
+				'updated_at' => current_time( 'mysql' ),
+			);
+			$formats = array( '%s', '%s' );
+
+			if ( 'cancel' === $action ) {
+				$update_data['deleted_at'] = current_time( 'mysql' );
+				$formats[]                 = '%s';
+			}
+
+			$result = $wpdb->update(
+				$wpdb->prefix . 'bookings',
+				$update_data,
+				array( 'id' => $booking_id ),
+				$formats,
+				array( '%d' )
+			);
+
+			if ( false === $result ) {
+				$failed[] = array(
+					'id'     => $booking_id,
+					'reason' => __( 'Failed to update booking.', 'bookit-booking-system' ),
+				);
+				continue;
+			}
+
+			$wpdb->insert(
+				$wpdb->prefix . 'bookings_status_log',
+				array(
+					'booking_id'          => $booking_id,
+					'old_status'          => $current_status,
+					'new_status'          => $target_status,
+					'changed_by_staff_id' => (int) $current_staff['id'],
+					'changed_at'          => current_time( 'mysql' ),
+					'notes'               => null,
+				),
+				array( '%d', '%s', '%s', '%d', '%s', '%s' )
+			);
+
+			if ( 'cancel' === $action ) {
+				do_action( 'bookit_after_booking_cancelled', $booking_id, $booking );
+			} else {
+				do_action(
+					'bookit_after_booking_updated',
+					$booking_id,
+					array(
+						'status' => $target_status,
+					)
+				);
+			}
+
+			Bookit_Audit_Logger::log(
+				$audit_action,
+				'booking',
+				$booking_id,
+				array(
+					'actor_id'  => (int) $current_staff['id'],
+					'old_value' => array( 'status' => $current_status ),
+					'new_value' => array( 'status' => $target_status ),
+				)
+			);
+
+			$succeeded[] = $booking_id;
+		}
+
+		return rest_ensure_response(
+			array(
+				'succeeded' => $succeeded,
+				'failed'    => $failed,
 			)
 		);
 	}

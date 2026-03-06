@@ -202,6 +202,36 @@ Bookit_Error_Registry::register(
 );
 
 Bookit_Error_Registry::register(
+	'BULK_INVALID_ACTION',
+	array(
+		'user_message' => __( 'Invalid bulk action. Allowed actions: cancel, complete, no_show.', 'bookit-booking-system' ),
+		'log_message'  => 'Invalid bulk action: {action}',
+		'http_status'  => 400,
+		'category'     => 'validation',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'BULK_EMPTY_IDS',
+	array(
+		'user_message' => __( 'Please select at least one booking.', 'bookit-booking-system' ),
+		'log_message'  => 'Bulk action requested with empty booking_ids payload',
+		'http_status'  => 400,
+		'category'     => 'validation',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'BULK_TOO_MANY_IDS',
+	array(
+		'user_message' => __( 'You can update up to 100 bookings at once.', 'bookit-booking-system' ),
+		'log_message'  => 'Bulk action exceeded booking limit: {count}',
+		'http_status'  => 400,
+		'category'     => 'validation',
+	)
+);
+
+Bookit_Error_Registry::register(
 	'E9001',
 	array(
 		'user_message' => __( 'A database error occurred. Please try again.', 'bookit-booking-system' ),
