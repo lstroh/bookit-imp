@@ -787,7 +787,8 @@ const confirmBulkAction = async () => {
       {
         headers: {
           'X-WP-Nonce': window.BOOKIT_DASHBOARD.nonce
-        }
+        },
+        withCredentials: true
       }
     )
 
