@@ -545,6 +545,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
 import { useApi } from '../composables/useApi'
 import { useToast } from '../composables/useToast'
 import BookingModal from '../components/BookingModal.vue'
@@ -777,11 +778,18 @@ const confirmBulkAction = async () => {
   bulkActionLoading.value = true
 
   try {
-    const response = await api.post('/bookings/bulk-action', {
-      action: bulkAction.value,
-      booking_ids: selectedIds.value,
-      _wpnonce: window.BOOKIT_DASHBOARD.nonce
-    })
+    const response = await axios.post(
+      window.BOOKIT_DASHBOARD.restBase + 'bookings/bulk-action',
+      {
+        action: bulkAction.value,
+        booking_ids: selectedIds.value
+      },
+      {
+        headers: {
+          'X-WP-Nonce': window.BOOKIT_DASHBOARD.nonce
+        }
+      }
+    )
 
     const succeeded = Array.isArray(response.data?.succeeded) ? response.data.succeeded : []
     const failed = Array.isArray(response.data?.failed) ? response.data.failed : []
