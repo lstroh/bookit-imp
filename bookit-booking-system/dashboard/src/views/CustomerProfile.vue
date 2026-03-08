@@ -161,6 +161,29 @@
         </span>
       </div>
 
+      <div v-if="isAdmin" class="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+        <h3 class="text-base font-semibold text-gray-900">Export Customer Data</h3>
+        <p class="text-sm text-gray-600 mt-1">
+          Download this customer's personal, booking, payment, and audit data.
+        </p>
+        <div class="mt-4 flex flex-col sm:flex-row gap-2">
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700"
+            @click="exportCustomerData('json')"
+          >
+            Export as JSON
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            @click="exportCustomerData('csv')"
+          >
+            Export as CSV
+          </button>
+        </div>
+      </div>
+
       <div class="bg-white rounded-lg border border-gray-200">
         <div class="border-b border-gray-200 px-4 sm:px-6 py-3 flex gap-3">
           <button
@@ -267,6 +290,7 @@ const route = useRoute()
 const router = useRouter()
 const api = useApi()
 const { success: toastSuccess, error: toastError } = useToast()
+const currentUser = window.BOOKIT_DASHBOARD?.staff || {}
 
 const loading = ref(true)
 const error = ref(false)
@@ -302,6 +326,10 @@ const cancellationRate = computed(() => {
   if (!rows.length) return 0
   const cancelled = rows.filter((row) => row.status === 'cancelled').length
   return ((cancelled / rows.length) * 100).toFixed(1)
+})
+
+const isAdmin = computed(() => {
+  return currentUser.role === 'admin' || currentUser.role === 'bookit_admin'
 })
 
 function getInitials(firstName, lastName) {
@@ -493,6 +521,13 @@ async function deleteCustomer() {
   } finally {
     deleting.value = false
   }
+}
+
+function exportCustomerData(format) {
+  if (!customer.value?.id) return
+  const apiBase = window.BOOKIT_DASHBOARD?.apiBase || `${window.location.origin}/wp-json/bookit/v1/dashboard`
+  const url = `${apiBase}/customers/${customer.value.id}/export?format=${encodeURIComponent(format)}`
+  window.open(url, '_blank')
 }
 
 onMounted(() => {

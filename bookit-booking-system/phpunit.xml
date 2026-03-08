@@ -22,6 +22,7 @@
             <file>./tests/test-stripe-checkout.php</file>
             <file>./tests/test-stripe-webhook.php</file>
             <file>./tests/test-idempotency.php</file>
+            <file>./tests/test-customer-data-export.php</file>
             <file>./tests/test-payment-success.php</file>
             <file>./tests/test-bulk-booking-actions.php</file>
             <file>./tests/unit/test-session-manager.php</file>

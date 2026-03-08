@@ -79,6 +79,30 @@ class Bookit_Customers_API {
 
 		register_rest_route(
 			self::NAMESPACE,
+			'/dashboard/customers/(?P<id>\d+)/export',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'export_customer_data' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'id'     => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param );
+						},
+					),
+					'format' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'enum'              => array( 'json', 'csv' ),
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
 			'/dashboard/customers/(?P<id>\d+)',
 			array(
 				'methods'             => 'GET',
@@ -710,6 +734,395 @@ class Bookit_Customers_API {
 		);
 
 		return new WP_REST_Response( null, 200 );
+	}
+
+	/**
+	 * GET /dashboard/customers/{id}/export
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function export_customer_data( $request ) {
+		$customer_id = absint( $request->get_param( 'id' ) );
+		$format      = sanitize_text_field( (string) $request->get_param( 'format' ) );
+
+		$export_data = $this->build_customer_export_data( $customer_id );
+		if ( is_wp_error( $export_data ) ) {
+			return $export_data;
+		}
+
+		$date_token = current_time( 'Y-m-d' );
+		$filename   = 'customer-' . $customer_id . '-data-export-' . $date_token;
+		$mime_type  = 'application/json; charset=utf-8';
+		$content    = '';
+
+		if ( 'json' === $format ) {
+			$content  = wp_json_encode( $export_data, JSON_PRETTY_PRINT );
+			$filename = $filename . '.json';
+		} else {
+			$zip_result = $this->build_customer_export_zip( $export_data );
+			if ( is_wp_error( $zip_result ) ) {
+				return $zip_result;
+			}
+
+			$content   = $zip_result;
+			$filename  = $filename . '.zip';
+			$mime_type = 'application/zip';
+		}
+
+		$current_staff = class_exists( 'Bookit_Auth' ) ? Bookit_Auth::get_current_staff() : array();
+		$actor_id      = is_array( $current_staff ) && isset( $current_staff['id'] ) ? absint( $current_staff['id'] ) : 0;
+
+		Bookit_Audit_Logger::log(
+			'customer_data_exported',
+			'customer',
+			$customer_id,
+			array(
+				'actor_id' => $actor_id,
+			)
+		);
+
+		add_filter(
+			'rest_pre_serve_request',
+			function( $served ) use ( $content, $filename, $mime_type ) {
+				if ( ! $served ) {
+					if ( $this->is_test_environment() ) {
+						return true;
+					}
+					header( 'Content-Type: ' . $mime_type );
+					header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+					header( 'Cache-Control: no-cache, no-store, must-revalidate' );
+					header( 'Content-Length: ' . strlen( $content ) );
+					echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				}
+				return true;
+			}
+		);
+
+		$response = new WP_REST_Response( null, 200 );
+		$response->header( 'Content-Type', $mime_type );
+		$response->header( 'Content-Disposition', 'attachment; filename="' . $filename . '"' );
+
+		if ( $this->is_test_environment() ) {
+			$response->set_data( $content );
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Build customer export payload.
+	 *
+	 * @param int $customer_id Customer ID.
+	 * @return array|WP_Error
+	 */
+	private function build_customer_export_data( $customer_id ) {
+		global $wpdb;
+
+		$customer = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, first_name, last_name, email, phone, marketing_consent, created_at, deleted_at
+				FROM {$wpdb->prefix}bookings_customers
+				WHERE id = %d AND deleted_at IS NULL",
+				$customer_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $customer ) {
+			if ( class_exists( 'Bookit_Error_Registry' ) ) {
+				return Bookit_Error_Registry::to_wp_error(
+					'E4013',
+					array(
+						'customer_id' => $customer_id,
+					)
+				);
+			}
+
+			return new WP_Error(
+				'customer_not_found',
+				__( 'Customer not found.', 'bookit-booking-system' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$has_waiver_at = $this->column_exists( $wpdb->prefix . 'bookings', 'waiver_at' );
+		$waiver_sql    = $has_waiver_at ? 'b.waiver_at AS waiver_at' : 'NULL AS waiver_at';
+
+		$bookings = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					b.id,
+					b.booking_reference,
+					b.booking_date,
+					b.start_time,
+					b.end_time,
+					b.status,
+					b.total_price,
+					b.deposit_paid,
+					b.balance_due,
+					b.payment_method,
+					b.special_requests,
+					{$waiver_sql},
+					s.name AS service_name,
+					st.first_name AS staff_first_name,
+					st.last_name AS staff_last_name
+				FROM {$wpdb->prefix}bookings b
+				LEFT JOIN {$wpdb->prefix}bookings_services s ON s.id = b.service_id
+				LEFT JOIN {$wpdb->prefix}bookings_staff st ON st.id = b.staff_id
+				WHERE b.customer_id = %d
+				ORDER BY b.booking_date DESC, b.start_time DESC",
+				$customer_id
+			),
+			ARRAY_A
+		);
+
+		$payments_table_exists = $this->table_exists( $wpdb->prefix . 'bookings_payments' );
+		$payments              = array();
+
+		if ( $payments_table_exists ) {
+			$payments = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT p.*
+					FROM {$wpdb->prefix}bookings_payments p
+					INNER JOIN {$wpdb->prefix}bookings b ON b.id = p.booking_id
+					WHERE b.customer_id = %d
+					ORDER BY p.transaction_date DESC, p.id DESC",
+					$customer_id
+				),
+				ARRAY_A
+			);
+		} else {
+			foreach ( $bookings as $booking ) {
+				$payments[] = array(
+					'booking_id'      => isset( $booking['id'] ) ? (int) $booking['id'] : 0,
+					'payment_method'  => $booking['payment_method'] ?? '',
+					'deposit_paid'    => isset( $booking['deposit_paid'] ) ? (float) $booking['deposit_paid'] : 0.0,
+					'balance_due'     => isset( $booking['balance_due'] ) ? (float) $booking['balance_due'] : 0.0,
+					'total_price'     => isset( $booking['total_price'] ) ? (float) $booking['total_price'] : 0.0,
+					'booking_date'    => $booking['booking_date'] ?? '',
+					'booking_status'  => $booking['status'] ?? '',
+				);
+			}
+		}
+
+		$audit_log = array();
+		if ( $this->table_exists( $wpdb->prefix . 'bookings_audit_log' ) ) {
+			$audit_rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT id, action, actor_id, actor_type, actor_ip, created_at, old_value, new_value, notes
+					FROM {$wpdb->prefix}bookings_audit_log
+					WHERE object_type = 'customer' AND object_id = %d
+					ORDER BY created_at DESC, id DESC",
+					$customer_id
+				),
+				ARRAY_A
+			);
+
+			$audit_log = array_map(
+				function ( $row ) {
+					return array(
+						'id'         => (int) $row['id'],
+						'action'     => (string) $row['action'],
+						'actor_id'   => (int) $row['actor_id'],
+						'created_at' => (string) $row['created_at'],
+						'context'    => array(
+							'actor_type' => isset( $row['actor_type'] ) ? (string) $row['actor_type'] : '',
+							'actor_ip'   => isset( $row['actor_ip'] ) ? (string) $row['actor_ip'] : '',
+							'old_value'  => $row['old_value'] ?? null,
+							'new_value'  => $row['new_value'] ?? null,
+							'notes'      => $row['notes'] ?? null,
+						),
+					);
+				},
+				$audit_rows
+			);
+		}
+
+		return array(
+			'export_date' => current_time( 'Y-m-d' ),
+			'customer'    => array(
+				'id'                => (int) $customer['id'],
+				'first_name'        => (string) $customer['first_name'],
+				'last_name'         => (string) $customer['last_name'],
+				'email'             => (string) $customer['email'],
+				'phone'             => (string) $customer['phone'],
+				'marketing_consent' => (bool) (int) $customer['marketing_consent'],
+				'created_at'        => (string) $customer['created_at'],
+				'deleted_at'        => $customer['deleted_at'],
+			),
+			'bookings'    => $bookings,
+			'payments'    => $payments,
+			'audit_log'   => $audit_log,
+		);
+	}
+
+	/**
+	 * Build zip file content for CSV export.
+	 *
+	 * @param array $export_data Export payload.
+	 * @return string|WP_Error
+	 */
+	private function build_customer_export_zip( $export_data ) {
+		$files = array(
+			'personal-details.csv' => $this->rows_to_csv(
+				array( $export_data['customer'] ),
+				array( 'id', 'first_name', 'last_name', 'email', 'phone', 'marketing_consent', 'created_at', 'deleted_at' )
+			),
+			'bookings.csv'         => $this->rows_to_csv(
+				$export_data['bookings'],
+				array( 'id', 'booking_reference', 'booking_date', 'start_time', 'end_time', 'status', 'total_price', 'deposit_paid', 'balance_due', 'payment_method', 'special_requests', 'waiver_at', 'service_name', 'staff_first_name', 'staff_last_name' )
+			),
+			'payments.csv'         => $this->rows_to_csv( $export_data['payments'] ),
+			'audit-log.csv'        => $this->rows_to_csv(
+				$export_data['audit_log'],
+				array( 'id', 'action', 'actor_id', 'created_at', 'context' )
+			),
+		);
+
+		$temp_zip_path = wp_tempnam( 'bookit-customer-export.zip' );
+		if ( ! $temp_zip_path ) {
+			$temp_zip_path = tempnam( sys_get_temp_dir(), 'bookit-customer-export' );
+		}
+
+		if ( ! $temp_zip_path ) {
+			return new WP_Error(
+				'customer_export_zip_failed',
+				__( 'Failed to create export archive.', 'bookit-booking-system' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		if ( class_exists( 'ZipArchive' ) ) {
+			$zip = new ZipArchive();
+			if ( true !== $zip->open( $temp_zip_path, ZipArchive::CREATE | ZipArchive::OVERWRITE ) ) {
+				return new WP_Error(
+					'customer_export_zip_failed',
+					__( 'Failed to create export archive.', 'bookit-booking-system' ),
+					array( 'status' => 500 )
+				);
+			}
+
+			foreach ( $files as $filename => $contents ) {
+				$zip->addFromString( $filename, $contents );
+			}
+			$zip->close();
+		} else {
+			require_once ABSPATH . 'wp-admin/includes/class-pclzip.php';
+			$pcl_zip = new PclZip( $temp_zip_path );
+
+			$zip_entries = array();
+			foreach ( $files as $filename => $contents ) {
+				$zip_entries[] = array(
+					PCLZIP_ATT_FILE_NAME    => $filename,
+					PCLZIP_ATT_FILE_CONTENT => $contents,
+				);
+			}
+
+			$result = $pcl_zip->create( $zip_entries, PCLZIP_OPT_NO_COMPRESSION );
+			if ( 0 === $result ) {
+				return new WP_Error(
+					'customer_export_zip_failed',
+					__( 'Failed to create export archive.', 'bookit-booking-system' ),
+					array( 'status' => 500 )
+				);
+			}
+		}
+
+		$zip_content = file_get_contents( $temp_zip_path );
+		@unlink( $temp_zip_path );
+
+		if ( false === $zip_content ) {
+			return new WP_Error(
+				'customer_export_zip_failed',
+				__( 'Failed to read export archive.', 'bookit-booking-system' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		return $zip_content;
+	}
+
+	/**
+	 * Convert rows to CSV string.
+	 *
+	 * @param array $rows Rows.
+	 * @param array $default_headers Default headers if no rows.
+	 * @return string
+	 */
+	private function rows_to_csv( $rows, $default_headers = array() ) {
+		$stream = fopen( 'php://temp', 'r+' );
+		$rows   = is_array( $rows ) ? $rows : array();
+
+		$headers = $default_headers;
+		if ( empty( $headers ) && ! empty( $rows ) && is_array( $rows[0] ) ) {
+			$headers = array_keys( $rows[0] );
+		}
+
+		if ( ! empty( $headers ) ) {
+			fputcsv( $stream, $headers );
+		}
+
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+
+			$line = array();
+			foreach ( $headers as $header_key ) {
+				$value = $row[ $header_key ] ?? null;
+				if ( is_array( $value ) || is_object( $value ) ) {
+					$value = wp_json_encode( $value );
+				}
+				$line[] = $value;
+			}
+			fputcsv( $stream, $line );
+		}
+
+		rewind( $stream );
+		$csv = stream_get_contents( $stream );
+		fclose( $stream );
+
+		return false === $csv ? '' : $csv;
+	}
+
+	/**
+	 * Check if table exists.
+	 *
+	 * @param string $table_name Table name.
+	 * @return bool
+	 */
+	private function table_exists( $table_name ) {
+		global $wpdb;
+		$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) );
+		return $exists === $table_name;
+	}
+
+	/**
+	 * Check if table column exists.
+	 *
+	 * @param string $table_name Table name.
+	 * @param string $column_name Column name.
+	 * @return bool
+	 */
+	private function column_exists( $table_name, $column_name ) {
+		global $wpdb;
+		$column = $wpdb->get_var(
+			$wpdb->prepare(
+				"SHOW COLUMNS FROM `{$table_name}` LIKE %s",
+				$column_name
+			)
+		);
+		return ! empty( $column );
+	}
+
+	/**
+	 * Detect if current execution is under tests.
+	 *
+	 * @return bool
+	 */
+	private function is_test_environment() {
+		return defined( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH' ) || defined( 'WP_TESTS_DIR' );
 	}
 
 	/**

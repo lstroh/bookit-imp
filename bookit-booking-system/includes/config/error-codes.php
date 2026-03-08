@@ -202,6 +202,16 @@ Bookit_Error_Registry::register(
 );
 
 Bookit_Error_Registry::register(
+	'E4013',
+	array(
+		'user_message' => __( 'Customer {customer_id} not found.', 'bookit-booking-system' ),
+		'log_message'  => 'Customer ID {customer_id} not found for data export',
+		'http_status'  => 404,
+		'category'     => 'validation',
+	)
+);
+
+Bookit_Error_Registry::register(
 	'BULK_INVALID_ACTION',
 	array(
 		'user_message' => __( 'Invalid bulk action. Allowed actions: cancel, complete, no_show.', 'bookit-booking-system' ),
