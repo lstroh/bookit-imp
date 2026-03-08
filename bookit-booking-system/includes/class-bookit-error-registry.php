@@ -82,4 +82,61 @@ class Bookit_Error_Registry {
 	public static function all(): array {
 		return self::$errors;
 	}
+
+	/**
+	 * Register package-specific errors (E500x series).
+	 *
+	 * @return void
+	 */
+	public static function register_package_errors(): void {
+		self::register(
+			BOOKIT_E5001,
+			array(
+				'user_message' => __( 'Package not found.', 'bookit-booking-system' ),
+				'log_message'  => 'Package ID {package_id} not found',
+				'http_status'  => 404,
+				'category'     => 'packages',
+			)
+		);
+
+		self::register(
+			BOOKIT_E5002,
+			array(
+				'user_message' => __( 'This package has no sessions remaining.', 'bookit-booking-system' ),
+				'log_message'  => 'Package exhausted for customer package ID {customer_package_id}',
+				'http_status'  => 422,
+				'category'     => 'packages',
+			)
+		);
+
+		self::register(
+			BOOKIT_E5003,
+			array(
+				'user_message' => __( 'This package has expired.', 'bookit-booking-system' ),
+				'log_message'  => 'Package expired for customer package ID {customer_package_id}',
+				'http_status'  => 422,
+				'category'     => 'packages',
+			)
+		);
+
+		self::register(
+			BOOKIT_E5004,
+			array(
+				'user_message' => __( 'This package cannot be used for the selected service.', 'bookit-booking-system' ),
+				'log_message'  => 'Package/service mismatch. Package {customer_package_id}, service {service_id}',
+				'http_status'  => 422,
+				'category'     => 'packages',
+			)
+		);
+
+		self::register(
+			BOOKIT_E5005,
+			array(
+				'user_message' => __( 'Insufficient package sessions to complete this booking.', 'bookit-booking-system' ),
+				'log_message'  => 'Insufficient package sessions. Package {customer_package_id}, required {required_sessions}',
+				'http_status'  => 422,
+				'category'     => 'packages',
+			)
+		);
+	}
 }

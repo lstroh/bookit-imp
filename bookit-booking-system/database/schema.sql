@@ -4,8 +4,8 @@
  * This file documents the complete database schema for reference.
  * DO NOT run this file directly - tables are created via Bookit_Database class.
  * 
- * Total Tables: 14
- * Last Updated: 2026-02-28
+ * Total Tables: 17
+ * Last Updated: 2026-03-08
  */
 
 -- ============================================
@@ -150,6 +150,7 @@ CREATE TABLE wp_bookings (
 	full_amount_paid TINYINT(1) DEFAULT 0,
 	payment_method VARCHAR(50) NULL COMMENT 'stripe, paypal, cash, card',
 	payment_intent_id VARCHAR(255) NULL COMMENT 'Stripe PaymentIntent ID',
+	customer_package_id BIGINT UNSIGNED NULL COMMENT 'Optional link to redeemed customer package',
 	stripe_session_id VARCHAR(255) NULL DEFAULT NULL COMMENT 'Stripe Checkout session ID for lookup after payment',
 	special_requests TEXT NULL COMMENT 'Special requests from customer during booking',
 	staff_notes TEXT NULL COMMENT 'Internal staff notes',
@@ -171,7 +172,8 @@ CREATE TABLE wp_bookings (
 	KEY idx_status (status),
 	KEY idx_deleted_at (deleted_at),
 	KEY idx_date_time (booking_date, start_time),
-	KEY idx_payment_intent (payment_intent_id)
+	KEY idx_payment_intent (payment_intent_id),
+	KEY idx_customer_package_id (customer_package_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
@@ -329,6 +331,79 @@ CREATE TABLE wp_bookings_audit_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
+-- TABLE 15: wp_bookings_package_types
+-- ============================================
+-- Created via migration: database/migrations/0005-create-package-types-table.php
+CREATE TABLE wp_bookings_package_types (
+	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	name VARCHAR(255) NOT NULL,
+	description TEXT NULL,
+	sessions_count INT UNSIGNED NOT NULL,
+	price_mode ENUM('fixed', 'discount') NOT NULL,
+	fixed_price DECIMAL(10,2) NULL,
+	discount_percentage DECIMAL(5,2) NULL,
+	expiry_enabled TINYINT(1) NOT NULL DEFAULT 0,
+	expiry_days INT UNSIGNED NULL,
+	applicable_service_ids LONGTEXT NULL COMMENT 'JSON array of service IDs; NULL = applies to all services',
+	is_active TINYINT(1) NOT NULL DEFAULT 1,
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (id),
+	KEY idx_is_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- TABLE 16: wp_bookings_customer_packages
+-- ============================================
+-- Created via migration: database/migrations/0006-create-customer-packages-table.php
+CREATE TABLE wp_bookings_customer_packages (
+	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	customer_id BIGINT UNSIGNED NOT NULL,
+	package_type_id BIGINT UNSIGNED NOT NULL,
+	sessions_total INT UNSIGNED NOT NULL,
+	sessions_remaining INT UNSIGNED NOT NULL,
+	purchase_price DECIMAL(10,2) NULL,
+	purchased_at DATETIME NULL,
+	expires_at DATETIME NULL,
+	status ENUM('active','exhausted','expired','cancelled') NOT NULL DEFAULT 'active',
+	payment_method VARCHAR(50) NULL,
+	payment_reference VARCHAR(255) NULL,
+	notes TEXT NULL,
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (id),
+	KEY idx_customer_id (customer_id),
+	KEY idx_package_type_id (package_type_id),
+	KEY idx_status (status),
+	KEY idx_expires_at (expires_at),
+	CONSTRAINT fk_cp_customer
+		FOREIGN KEY (customer_id) REFERENCES wp_bookings_customers(id),
+	CONSTRAINT fk_cp_package_type
+		FOREIGN KEY (package_type_id) REFERENCES wp_bookings_package_types(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- TABLE 17: wp_bookings_package_redemptions
+-- ============================================
+-- Created via migration: database/migrations/0007-create-package-redemptions-table.php
+CREATE TABLE wp_bookings_package_redemptions (
+	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	customer_package_id BIGINT UNSIGNED NOT NULL,
+	booking_id BIGINT UNSIGNED NOT NULL,
+	redeemed_at DATETIME NOT NULL,
+	redeemed_by BIGINT UNSIGNED NOT NULL COMMENT 'WP user ID of staff/admin who redeemed',
+	notes TEXT NULL,
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (id),
+	KEY idx_customer_package_id (customer_package_id),
+	KEY idx_booking_id (booking_id),
+	CONSTRAINT fk_pr_customer_package
+		FOREIGN KEY (customer_package_id) REFERENCES wp_bookings_customer_packages(id),
+	CONSTRAINT fk_pr_booking
+		FOREIGN KEY (booking_id) REFERENCES wp_bookings(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- MIGRATION NOTES
 -- ============================================
 -- Migration 1: Add Staff Photo, Bio, Title, and Custom Pricing
@@ -399,3 +474,21 @@ CREATE TABLE wp_bookings_audit_log (
 -- Added table: wp_bookings_audit_log
 -- Tracks auditable actions across bookings, payments, staff, settings, and GDPR flows.
 -- Migration file: database/migrations/0002-add-audit-log.php.
+--
+-- Migration 7: Packages Schema
+-- Date: 2026-03-08
+-- Sprint: Sprint 4D, Task 1
+--
+-- Added tables:
+-- 1. wp_bookings_package_types
+-- 2. wp_bookings_customer_packages
+-- 3. wp_bookings_package_redemptions
+--
+-- Added column:
+-- wp_bookings.customer_package_id BIGINT UNSIGNED NULL
+--
+-- Migration files:
+-- - database/migrations/0005-create-package-types-table.php
+-- - database/migrations/0006-create-customer-packages-table.php
+-- - database/migrations/0007-create-package-redemptions-table.php
+-- - database/migrations/0008-add-customer-package-id-to-bookings.php

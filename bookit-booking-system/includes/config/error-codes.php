@@ -11,6 +11,23 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+// Package error codes (E5xxx series).
+if ( ! defined( 'BOOKIT_E5001' ) ) {
+	define( 'BOOKIT_E5001', 'E5001' ); // PACKAGE_NOT_FOUND
+}
+if ( ! defined( 'BOOKIT_E5002' ) ) {
+	define( 'BOOKIT_E5002', 'E5002' ); // PACKAGE_EXHAUSTED
+}
+if ( ! defined( 'BOOKIT_E5003' ) ) {
+	define( 'BOOKIT_E5003', 'E5003' ); // PACKAGE_EXPIRED
+}
+if ( ! defined( 'BOOKIT_E5004' ) ) {
+	define( 'BOOKIT_E5004', 'E5004' ); // PACKAGE_SERVICE_MISMATCH
+}
+if ( ! defined( 'BOOKIT_E5005' ) ) {
+	define( 'BOOKIT_E5005', 'E5005' ); // PACKAGE_INSUFFICIENT_SESSIONS
+}
+
 Bookit_Error_Registry::register(
 	'E1001',
 	array(
@@ -240,6 +257,8 @@ Bookit_Error_Registry::register(
 		'category'     => 'validation',
 	)
 );
+
+Bookit_Error_Registry::register_package_errors();
 
 Bookit_Error_Registry::register(
 	'E9001',
