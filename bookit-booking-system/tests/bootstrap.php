@@ -101,6 +101,37 @@ tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 // Start up the WP testing environment
 require $_tests_dir . '/includes/bootstrap.php';
 
+/**
+ * Prevent package table CREATE statements from being rewritten to
+ * CREATE TEMPORARY TABLE in the WP test framework.
+ *
+ * InnoDB temporary tables do not support foreign key constraints, which
+ * causes noisy wpdb errors for package migration tests.
+ */
+add_filter(
+	'query',
+	static function ( string $query ): string {
+		if ( preg_match(
+			'/^\s*CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?(wp_bookings_package_types|wp_bookings_customer_packages|wp_bookings_package_redemptions)`?/i',
+			$query
+		) ) {
+			remove_filter( 'query', '_create_temporary_tables', 10 );
+			remove_filter( 'query', '_drop_temporary_tables', 10 );
+
+			global $wpdb;
+			$wpdb->query( $query ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.NotPrepared
+
+			add_filter( 'query', '_create_temporary_tables', 10 );
+			add_filter( 'query', '_drop_temporary_tables', 10 );
+
+			return '';
+		}
+
+		return $query;
+	},
+	9
+);
+
 // Ensure plugin is activated
 activate_plugin( 'bookit-booking-system/bookit-booking-system.php' );
 
