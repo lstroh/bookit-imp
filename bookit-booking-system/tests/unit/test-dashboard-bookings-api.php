@@ -31,14 +31,19 @@ class Test_Dashboard_Bookings_API extends WP_UnitTestCase {
 	public function setUp(): void {
 		parent::setUp();
 
-		global $wpdb;
-
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_staff" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_services" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_customers" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_staff_services" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_payments" );
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_redemptions',
+				'bookings_customer_packages',
+				'bookings_package_types',
+				'bookings_payments',
+				'bookings',
+				'bookings_staff',
+				'bookings_services',
+				'bookings_customers',
+				'bookings_staff_services',
+			)
+		);
 
 		$_SESSION = array();
 
@@ -49,14 +54,19 @@ class Test_Dashboard_Bookings_API extends WP_UnitTestCase {
 	 * Tear down each test.
 	 */
 	public function tearDown(): void {
-		global $wpdb;
-
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_staff" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_services" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_customers" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_staff_services" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_payments" );
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_redemptions',
+				'bookings_customer_packages',
+				'bookings_package_types',
+				'bookings_payments',
+				'bookings',
+				'bookings_staff',
+				'bookings_services',
+				'bookings_customers',
+				'bookings_staff_services',
+			)
+		);
 
 		$_SESSION = array();
 

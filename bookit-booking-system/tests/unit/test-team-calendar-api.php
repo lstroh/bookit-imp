@@ -38,14 +38,19 @@ class Test_Team_Calendar_API extends WP_UnitTestCase {
 	public function setUp(): void {
 		parent::setUp();
 
-		global $wpdb;
-
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_payments" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_customers" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_staff_working_hours" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_staff" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_services" );
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_redemptions',
+				'bookings_customer_packages',
+				'bookings_package_types',
+				'bookings_payments',
+				'bookings',
+				'bookings_customers',
+				'bookings_staff_working_hours',
+				'bookings_staff',
+				'bookings_services',
+			)
+		);
 
 		$_SESSION = array();
 
@@ -59,14 +64,19 @@ class Test_Team_Calendar_API extends WP_UnitTestCase {
 	 * Tear down each test.
 	 */
 	public function tearDown(): void {
-		global $wpdb;
-
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_payments" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_customers" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_staff_working_hours" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_staff" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_services" );
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_redemptions',
+				'bookings_customer_packages',
+				'bookings_package_types',
+				'bookings_payments',
+				'bookings',
+				'bookings_customers',
+				'bookings_staff_working_hours',
+				'bookings_staff',
+				'bookings_services',
+			)
+		);
 
 		$_SESSION = array();
 

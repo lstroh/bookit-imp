@@ -24,14 +24,19 @@ class Test_Customer_Data_Export extends WP_UnitTestCase {
 	public function setUp(): void {
 		parent::setUp();
 
-		global $wpdb;
-
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_payments" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_customers" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_services" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_staff" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_audit_log" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_redemptions',
+				'bookings_customer_packages',
+				'bookings_package_types',
+				'bookings_payments',
+				'bookings',
+				'bookings_customers',
+				'bookings_services',
+				'bookings_staff',
+				'bookings_audit_log',
+			)
+		);
 
 		require_once BOOKIT_PLUGIN_DIR . 'includes/config/error-codes.php';
 		$_SESSION = array();
@@ -42,14 +47,19 @@ class Test_Customer_Data_Export extends WP_UnitTestCase {
 	 * Tear down each test.
 	 */
 	public function tearDown(): void {
-		global $wpdb;
-
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_payments" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_customers" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_services" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_staff" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_audit_log" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_redemptions',
+				'bookings_customer_packages',
+				'bookings_package_types',
+				'bookings_payments',
+				'bookings',
+				'bookings_customers',
+				'bookings_services',
+				'bookings_staff',
+				'bookings_audit_log',
+			)
+		);
 
 		$_SESSION = array();
 		parent::tearDown();

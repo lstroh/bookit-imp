@@ -17,16 +17,28 @@ class Test_Bookit_Reference_Generator extends WP_UnitTestCase {
 	public function setUp(): void {
 		parent::setUp();
 
-		global $wpdb;
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_redemptions',
+				'bookings_customer_packages',
+				'bookings_package_types',
+				'bookings',
+			)
+		);
 	}
 
 	/**
 	 * Tear down each test.
 	 */
 	public function tearDown(): void {
-		global $wpdb;
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_redemptions',
+				'bookings_customer_packages',
+				'bookings_package_types',
+				'bookings',
+			)
+		);
 
 		parent::tearDown();
 	}

@@ -35,6 +35,7 @@ class Test_Stripe_Webhook extends WP_UnitTestCase {
 	 */
 	private $webhook_route = '/bookit/v1/stripe/webhook';
 
+
 	/**
 	 * Set up each test.
 	 */
@@ -81,7 +82,6 @@ class Test_Stripe_Webhook extends WP_UnitTestCase {
 
 		global $wpdb;
 		$prefix = $wpdb->prefix;
-
 		// Create test service.
 		$wpdb->insert(
 			$prefix . 'bookings_services',

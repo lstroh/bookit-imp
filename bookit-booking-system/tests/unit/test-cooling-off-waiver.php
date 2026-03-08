@@ -35,11 +35,18 @@ class Test_Cooling_Off_Waiver extends WP_UnitTestCase {
 
 		$this->ensure_waiver_columns();
 
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_payments" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_customers" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_staff" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_services" );
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_redemptions',
+				'bookings_customer_packages',
+				'bookings_package_types',
+				'bookings_payments',
+				'bookings',
+				'bookings_customers',
+				'bookings_staff',
+				'bookings_services',
+			)
+		);
 
 		$wpdb->insert(
 			$wpdb->prefix . 'bookings_services',

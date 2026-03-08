@@ -78,17 +78,23 @@ class Test_Availability_Algorithm extends WP_UnitTestCase {
 	 */
 	private function truncate_availability_tables() {
 		global $wpdb;
+
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_redemptions',
+				'bookings_customer_packages',
+				'bookings_package_types',
+				'bookings',
+				'bookings_staff_services',
+				'bookings_staff',
+				'bookings_services',
+				'bookings_customers',
+			)
+		);
+
 		$p = $wpdb->prefix;
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "TRUNCATE TABLE {$p}bookings" );
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$wpdb->query( "DELETE FROM {$p}bookings_staff_working_hours" );
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "TRUNCATE TABLE {$p}bookings_staff_services" );
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "TRUNCATE TABLE {$p}bookings_staff" );
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "TRUNCATE TABLE {$p}bookings_services" );
 	}
 
 	/**

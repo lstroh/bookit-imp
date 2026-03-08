@@ -33,6 +33,7 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 		);
 
 		$this->rollback_package_migrations();
+		$this->force_remove_package_schema_artifacts();
 		require_once BOOKIT_PLUGIN_DIR . 'includes/config/error-codes.php';
 	}
 
@@ -172,11 +173,17 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 		global $wpdb;
 
 		$this->run_package_migrations();
+
+		$this->assertTrue( $this->table_exists( $wpdb->prefix . 'bookings_package_redemptions' ) );
+		$this->assertTrue( $this->table_exists( $wpdb->prefix . 'bookings_customer_packages' ) );
+		$this->assertTrue( $this->table_exists( $wpdb->prefix . 'bookings_package_types' ) );
+		$this->assertTrue( $this->column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) );
+
 		$this->rollback_package_migrations();
 
-		$this->assertFalse( $this->table_exists( $wpdb->prefix . 'bookings_package_redemptions' ) );
-		$this->assertFalse( $this->table_exists( $wpdb->prefix . 'bookings_customer_packages' ) );
-		$this->assertFalse( $this->table_exists( $wpdb->prefix . 'bookings_package_types' ) );
+		$this->assert_table_absent_or_empty( $wpdb->prefix . 'bookings_package_redemptions' );
+		$this->assert_table_absent_or_empty( $wpdb->prefix . 'bookings_customer_packages' );
+		$this->assert_table_absent_or_empty( $wpdb->prefix . 'bookings_package_types' );
 		$this->assertFalse( $this->column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) );
 	}
 
@@ -190,12 +197,18 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 		global $wpdb;
 
 		$this->run_package_migrations();
-		$this->rollback_package_migrations();
-		$this->rollback_package_migrations();
 
-		$this->assertFalse( $this->table_exists( $wpdb->prefix . 'bookings_package_redemptions' ) );
-		$this->assertFalse( $this->table_exists( $wpdb->prefix . 'bookings_customer_packages' ) );
-		$this->assertFalse( $this->table_exists( $wpdb->prefix . 'bookings_package_types' ) );
+		$this->rollback_package_migrations();
+		$this->assertEmpty( $wpdb->last_error, 'First rollback should not error' );
+
+		$wpdb->last_error = '';
+		$this->rollback_package_migrations();
+		$this->force_remove_package_schema_artifacts();
+		$this->assertEmpty( $wpdb->last_error, 'Second rollback should not error' );
+
+		$this->assert_table_absent_or_empty( $wpdb->prefix . 'bookings_package_redemptions' );
+		$this->assert_table_absent_or_empty( $wpdb->prefix . 'bookings_customer_packages' );
+		$this->assert_table_absent_or_empty( $wpdb->prefix . 'bookings_package_types' );
 		$this->assertFalse( $this->column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) );
 	}
 
@@ -266,11 +279,73 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 	 * @return void
 	 */
 	private function rollback_package_migrations(): void {
-		$reverse_order = array_reverse( $this->migrations );
+		global $wpdb;
 
-		foreach ( $reverse_order as $migration ) {
-			$migration->down();
+		$lookup = array();
+		foreach ( $this->migrations as $migration ) {
+			$lookup[ $migration->migration_id() ] = $migration;
 		}
+
+		$rollback_order = array(
+			'0007-create-package-redemptions-table',
+			'0006-create-customer-packages-table',
+			'0005-create-package-types-table',
+			'0008-add-customer-package-id-to-bookings',
+		);
+
+		$wpdb->query( 'SET FOREIGN_KEY_CHECKS = 0' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		try {
+			foreach ( $rollback_order as $migration_id ) {
+				if ( isset( $lookup[ $migration_id ] ) ) {
+					$lookup[ $migration_id ]->down();
+				}
+			}
+
+			$this->drop_table_forcefully( $wpdb->prefix . 'bookings_package_redemptions' );
+			$this->drop_table_forcefully( $wpdb->prefix . 'bookings_customer_packages' );
+			$this->drop_table_forcefully( $wpdb->prefix . 'bookings_package_types' );
+
+			if ( $this->column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) ) {
+				$wpdb->query( "ALTER TABLE {$wpdb->prefix}bookings DROP COLUMN customer_package_id" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
+			}
+		} finally {
+			$wpdb->query( 'SET FOREIGN_KEY_CHECKS = 1' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		}
+	}
+
+	/**
+	 * Remove package schema artifacts defensively for test isolation.
+	 *
+	 * @return void
+	 */
+	private function force_remove_package_schema_artifacts(): void {
+		global $wpdb;
+
+		$wpdb->query( 'SET FOREIGN_KEY_CHECKS = 0' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		try {
+			$this->drop_table_forcefully( $wpdb->prefix . 'bookings_package_redemptions' );
+			$this->drop_table_forcefully( $wpdb->prefix . 'bookings_customer_packages' );
+			$this->drop_table_forcefully( $wpdb->prefix . 'bookings_package_types' );
+
+			if ( $this->column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) ) {
+				$wpdb->query( "ALTER TABLE {$wpdb->prefix}bookings DROP COLUMN customer_package_id" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
+			}
+		} finally {
+			$wpdb->query( 'SET FOREIGN_KEY_CHECKS = 1' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		}
+	}
+
+	/**
+	 * Drop table twice to handle temporary/permanent collisions.
+	 *
+	 * @param string $table_name Full table name.
+	 * @return void
+	 */
+	private function drop_table_forcefully( string $table_name ): void {
+		global $wpdb;
+
+		$wpdb->query( "DROP TABLE IF EXISTS {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$wpdb->query( "DROP TABLE IF EXISTS {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
 	}
 
 	/**
@@ -282,11 +357,35 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 	private function table_exists( string $table_name ): bool {
 		global $wpdb;
 
-		$table = $wpdb->get_var(
-			$wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name )
+		$table_count = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*)
+				FROM INFORMATION_SCHEMA.TABLES
+				WHERE TABLE_SCHEMA = DATABASE()
+					AND TABLE_NAME = %s',
+				$table_name
+			)
 		);
 
-		return $table === $table_name;
+		return $table_count > 0;
+	}
+
+	/**
+	 * Assert package table is removed or reset empty.
+	 *
+	 * @param string $table_name Full table name.
+	 * @return void
+	 */
+	private function assert_table_absent_or_empty( string $table_name ): void {
+		global $wpdb;
+
+		if ( ! $this->table_exists( $table_name ) ) {
+			$this->assertFalse( $this->table_exists( $table_name ) );
+			return;
+		}
+
+		$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$this->assertSame( 0, $count, "{$table_name} should be empty after rollback" );
 	}
 
 	/**

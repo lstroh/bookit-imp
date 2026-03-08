@@ -104,6 +104,51 @@ require $_tests_dir . '/includes/bootstrap.php';
 // Ensure plugin is activated
 activate_plugin( 'bookit-booking-system/bookit-booking-system.php' );
 
+/**
+ * Check whether a test database table exists.
+ *
+ * @param string $full_table_name Full table name with prefix.
+ * @return bool
+ */
+function bookit_test_table_exists( string $full_table_name ): bool {
+	global $wpdb;
+
+	$table = $wpdb->get_var(
+		$wpdb->prepare(
+			'SHOW TABLES LIKE %s',
+			$full_table_name
+		)
+	);
+
+	return $table === $full_table_name;
+}
+
+/**
+ * Truncate tables in a FK-safe block for tests.
+ *
+ * @param array<int, string> $table_suffixes Table suffixes without prefix.
+ * @return void
+ */
+function bookit_test_truncate_tables( array $table_suffixes ): void {
+	global $wpdb;
+
+	$unique_suffixes = array_values( array_unique( $table_suffixes ) );
+
+	$wpdb->query( 'SET FOREIGN_KEY_CHECKS = 0' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+	try {
+		foreach ( $unique_suffixes as $table_suffix ) {
+			$full_table = $wpdb->prefix . $table_suffix;
+			if ( ! bookit_test_table_exists( $full_table ) ) {
+				continue;
+			}
+
+			$wpdb->query( "TRUNCATE TABLE {$full_table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
+		}
+	} finally {
+		$wpdb->query( 'SET FOREIGN_KEY_CHECKS = 1' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+	}
+}
+
 // Strip the known deliberate wpdb HTML block from one audit logger test.
 ob_start(
 	static function ( $buffer ) {
