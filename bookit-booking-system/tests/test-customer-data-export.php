@@ -107,7 +107,7 @@ class Test_Customer_Data_Export extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'customer', $data );
 		$this->assertArrayHasKey( 'bookings', $data );
 		$this->assertArrayHasKey( 'payments', $data );
-		$this->assertArrayHasKey( 'audit_log', $data );
+		$this->assertArrayNotHasKey( 'audit_log', $data );
 		$this->assertArrayHasKey( 'export_date', $data );
 	}
 
@@ -199,6 +199,7 @@ class Test_Customer_Data_Export extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'application/zip', (string) $this->get_response_header( $response, 'Content-Type' ) );
 		$this->assertStringContainsString( '.zip', (string) $this->get_response_header( $response, 'Content-Disposition' ) );
 		$this->assertStringStartsWith( 'PK', $content );
+		$this->assertStringNotContainsString( 'audit-log.csv', $content );
 	}
 
 	/**

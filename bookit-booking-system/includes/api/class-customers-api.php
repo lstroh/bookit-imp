@@ -881,9 +881,19 @@ class Bookit_Customers_API {
 		$payments              = array();
 
 		if ( $payments_table_exists ) {
+			$has_currency_column = $this->column_exists( $wpdb->prefix . 'bookings_payments', 'currency' );
+			$currency_sql        = $has_currency_column ? 'p.currency AS currency' : "'GBP' AS currency";
+
 			$payments = $wpdb->get_results(
 				$wpdb->prepare(
-					"SELECT p.*
+					"SELECT
+						p.booking_id,
+						p.amount,
+						{$currency_sql},
+						p.payment_status,
+						p.payment_method,
+						p.payment_type,
+						p.transaction_date
 					FROM {$wpdb->prefix}bookings_payments p
 					INNER JOIN {$wpdb->prefix}bookings b ON b.id = p.booking_id
 					WHERE b.customer_id = %d
@@ -896,47 +906,14 @@ class Bookit_Customers_API {
 			foreach ( $bookings as $booking ) {
 				$payments[] = array(
 					'booking_id'      => isset( $booking['id'] ) ? (int) $booking['id'] : 0,
+					'amount'          => isset( $booking['deposit_paid'] ) ? (float) $booking['deposit_paid'] : 0.0,
+					'currency'        => 'GBP',
+					'payment_status'  => '',
 					'payment_method'  => $booking['payment_method'] ?? '',
-					'deposit_paid'    => isset( $booking['deposit_paid'] ) ? (float) $booking['deposit_paid'] : 0.0,
-					'balance_due'     => isset( $booking['balance_due'] ) ? (float) $booking['balance_due'] : 0.0,
-					'total_price'     => isset( $booking['total_price'] ) ? (float) $booking['total_price'] : 0.0,
-					'booking_date'    => $booking['booking_date'] ?? '',
-					'booking_status'  => $booking['status'] ?? '',
+					'payment_type'    => isset( $booking['deposit_paid'] ) && (float) $booking['deposit_paid'] > 0 ? 'deposit' : 'full_payment',
+					'transaction_date' => $booking['booking_date'] ?? '',
 				);
 			}
-		}
-
-		$audit_log = array();
-		if ( $this->table_exists( $wpdb->prefix . 'bookings_audit_log' ) ) {
-			$audit_rows = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT id, action, actor_id, actor_type, actor_ip, created_at, old_value, new_value, notes
-					FROM {$wpdb->prefix}bookings_audit_log
-					WHERE object_type = 'customer' AND object_id = %d
-					ORDER BY created_at DESC, id DESC",
-					$customer_id
-				),
-				ARRAY_A
-			);
-
-			$audit_log = array_map(
-				function ( $row ) {
-					return array(
-						'id'         => (int) $row['id'],
-						'action'     => (string) $row['action'],
-						'actor_id'   => (int) $row['actor_id'],
-						'created_at' => (string) $row['created_at'],
-						'context'    => array(
-							'actor_type' => isset( $row['actor_type'] ) ? (string) $row['actor_type'] : '',
-							'actor_ip'   => isset( $row['actor_ip'] ) ? (string) $row['actor_ip'] : '',
-							'old_value'  => $row['old_value'] ?? null,
-							'new_value'  => $row['new_value'] ?? null,
-							'notes'      => $row['notes'] ?? null,
-						),
-					);
-				},
-				$audit_rows
-			);
 		}
 
 		return array(
@@ -953,7 +930,6 @@ class Bookit_Customers_API {
 			),
 			'bookings'    => $bookings,
 			'payments'    => $payments,
-			'audit_log'   => $audit_log,
 		);
 	}
 
@@ -974,10 +950,6 @@ class Bookit_Customers_API {
 				array( 'id', 'booking_reference', 'booking_date', 'start_time', 'end_time', 'status', 'total_price', 'deposit_paid', 'balance_due', 'payment_method', 'special_requests', 'waiver_at', 'service_name', 'staff_first_name', 'staff_last_name' )
 			),
 			'payments.csv'         => $this->rows_to_csv( $export_data['payments'] ),
-			'audit-log.csv'        => $this->rows_to_csv(
-				$export_data['audit_log'],
-				array( 'id', 'action', 'actor_id', 'created_at', 'context' )
-			),
 		);
 
 		$temp_zip_path = wp_tempnam( 'bookit-customer-export.zip' );
