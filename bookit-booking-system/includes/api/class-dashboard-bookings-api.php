@@ -3052,15 +3052,6 @@ class Bookit_Dashboard_Bookings_API {
 			);
 		}
 
-		$nonce = sanitize_text_field( (string) $request->get_param( '_wpnonce' ) );
-		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
-			return new WP_Error(
-				'invalid_nonce',
-				__( 'Invalid security token.', 'bookit-booking-system' ),
-				array( 'status' => 403 )
-			);
-		}
-
 		$action        = sanitize_key( (string) $request->get_param( 'action' ) );
 		$valid_actions = array( 'cancel', 'complete', 'no_show' );
 		if ( ! in_array( $action, $valid_actions, true ) ) {
