@@ -79,7 +79,13 @@
 
         <div>
           <label for="branding-primary-colour" class="block text-sm font-medium text-gray-700 mb-1">
-            Primary Colour
+            <span class="inline-flex items-center gap-1">
+              Primary Colour
+              <BookitTooltip
+                content="Sets the main accent colour used in buttons and highlights throughout the booking widget."
+                position="top"
+              />
+            </span>
           </label>
           <div class="flex items-center gap-3">
             <input
@@ -107,7 +113,13 @@
 
         <div class="flex items-start justify-between gap-4">
           <div>
-            <p class="text-sm font-medium text-gray-900">Show 'Powered by Bookit'</p>
+            <p class="text-sm font-medium text-gray-900 inline-flex items-center gap-1">
+              Show 'Powered by Bookit'
+              <BookitTooltip
+                content="Shows or hides the 'Powered by Bookit' attribution in the customer-facing booking widget."
+                position="top"
+              />
+            </p>
             <p class="text-sm text-gray-500 mt-1">
               Uncheck to hide the Bookit branding in the dashboard footer.
             </p>

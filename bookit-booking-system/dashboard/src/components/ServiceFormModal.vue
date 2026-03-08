@@ -112,7 +112,13 @@
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">
-              Buffer Before (minutes)
+              <span class="inline-flex items-center gap-1">
+                Buffer Before (minutes)
+                <BookitTooltip
+                  content="Adds padding before and/or after each appointment of this service. Useful for setup, cleanup, or travel time."
+                  position="top"
+                />
+              </span>
             </label>
             <input
               v-model.number="formData.buffer_before"

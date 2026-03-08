@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 import App from './App.vue'
+import BookitTooltip from './components/BookitTooltip.vue'
 import routes from './router'
 import './assets/main.css'
 
@@ -35,5 +36,6 @@ router.afterEach(() => {
 
 // Create and mount app.
 const app = createApp(App)
+app.component('BookitTooltip', BookitTooltip)
 app.use(router)
 app.mount('#app')

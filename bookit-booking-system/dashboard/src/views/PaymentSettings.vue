@@ -28,7 +28,13 @@
           <div class="px-4 sm:px-6 py-6 space-y-5">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
-                Publishable key (pk_...)
+                <span class="inline-flex items-center gap-1">
+                  Publishable key (pk_...)
+                  <BookitTooltip
+                    content="Your Stripe publishable key. Safe to expose in frontend code. Starts with pk_test_ or pk_live_."
+                    position="top"
+                  />
+                </span>
               </label>
               <input
                 v-model="settings.stripe_publishable_key"
@@ -43,7 +49,13 @@
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
-                Secret key (sk_...)
+                <span class="inline-flex items-center gap-1">
+                  Secret key (sk_...)
+                  <BookitTooltip
+                    content="Your Stripe secret key. Never share this. Keep it server-side only. Starts with sk_test_ or sk_live_."
+                    position="top"
+                  />
+                </span>
               </label>
               <div class="relative">
                 <input
@@ -93,7 +105,13 @@
 
             <div class="flex items-start justify-between gap-4">
               <div>
-                <p class="text-sm font-medium text-gray-900">Test mode</p>
+                <p class="text-sm font-medium text-gray-900 inline-flex items-center gap-1">
+                  Test mode
+                  <BookitTooltip
+                    content="When enabled, no real payments are processed. Use test card numbers to simulate transactions. Disable before going live."
+                    position="top"
+                  />
+                </p>
                 <p class="text-sm text-gray-500 mt-1">
                   Use Stripe test keys for development. Disable for live payments.
                 </p>

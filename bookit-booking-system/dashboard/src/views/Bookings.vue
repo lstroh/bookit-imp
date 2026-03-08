@@ -266,7 +266,13 @@
                 />
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Reference
+                <span class="inline-flex items-center gap-1">
+                  Reference
+                  <BookitTooltip
+                    content="Unique booking identifier in format BK[YYMM]-XXXX. Use this to look up or reference a specific appointment."
+                    position="top"
+                  />
+                </span>
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Date &amp; Time
@@ -281,7 +287,13 @@
                 Staff
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
+                <span class="inline-flex items-center gap-1">
+                  Status
+                  <BookitTooltip
+                    content="Pending: awaiting confirmation. Confirmed: appointment set. Completed: attended. Cancelled: booking cancelled. No-show: customer did not attend."
+                    position="top"
+                  />
+                </span>
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Amount

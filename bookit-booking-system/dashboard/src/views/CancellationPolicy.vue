@@ -18,7 +18,13 @@
           <form @submit.prevent="savePolicy" class="px-4 sm:px-6 py-6 space-y-6">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
-                Free cancellation period
+                <span class="inline-flex items-center gap-1">
+                  Free cancellation period
+                  <BookitTooltip
+                    content="The number of hours before an appointment during which customers can cancel. Cancellations after this window follow the refund policy below."
+                    position="top"
+                  />
+                </span>
               </label>
               <p class="text-xs text-gray-500 mb-2">
                 How much notice must customers give to cancel for free?
@@ -35,7 +41,13 @@
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
-                Refund if cancelled within the free period
+                <span class="inline-flex items-center gap-1">
+                  Refund if cancelled within the free period
+                  <BookitTooltip
+                    content="Cancellations made this many hours or more before the appointment receive a full refund."
+                    position="top"
+                  />
+                </span>
               </label>
               <p class="text-xs text-gray-500 mb-2">
                 Customer cancels with enough notice — what do they receive?
@@ -56,7 +68,13 @@
               </div>
               <div v-if="settings.within_window_refund_type === 'partial'" class="mt-3">
                 <label class="block text-xs text-gray-600 mb-1">
-                  Customer receives {{ settings.within_window_refund_percent }}%
+                  <span class="inline-flex items-center gap-1">
+                    Customer receives {{ settings.within_window_refund_percent }}%
+                    <BookitTooltip
+                      content="The percentage of the booking total refunded for cancellations within the cancellation window but before the no-refund threshold."
+                      position="top"
+                    />
+                  </span>
                 </label>
                 <input
                   v-model.number="settings.within_window_refund_percent"
@@ -107,7 +125,13 @@
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
-                Refund if customer doesn't show up
+                <span class="inline-flex items-center gap-1">
+                  Refund if customer doesn't show up
+                  <BookitTooltip
+                    content="Applied when a customer does not attend their appointment without cancelling. Choose whether to retain the full amount or apply a partial charge."
+                    position="top"
+                  />
+                </span>
               </label>
               <p class="text-xs text-gray-500 mb-2">
                 Applied when a booking is marked as No Show.

@@ -43,11 +43,10 @@
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <span
-            class="hidden sm:inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-xs cursor-help font-bold"
-            @mouseenter="showTooltip($event, 'Saves the weekly recurring schedule. Date exceptions are saved immediately when added and do not require clicking this button.')"
-            @mouseleave="hideTooltip"
-          >?</span>
+          <BookitTooltip
+            content="Saves the weekly recurring schedule. Date exceptions are saved immediately when added and do not require clicking this button."
+            position="top"
+          />
           <button
             @click="saveSchedule"
             :disabled="saving"
@@ -120,11 +119,15 @@
               <div v-if="schedule[day.number]?.is_working" class="mt-4 space-y-4">
                 <!-- Working Hours -->
                 <div>
-                  <label
-                    class="block text-xs font-medium text-gray-600 mb-2 cursor-help"
-                    @mouseenter="showTooltip($event, 'The time range this staff member accepts bookings.')"
-                    @mouseleave="hideTooltip"
-                  >Working Hours</label>
+                  <label class="block text-xs font-medium text-gray-600 mb-2">
+                    <span class="inline-flex items-center gap-1">
+                      Working Hours
+                      <BookitTooltip
+                        content="The time range this staff member accepts bookings."
+                        position="top"
+                      />
+                    </span>
+                  </label>
                   <div class="grid grid-cols-2 gap-3">
                     <div>
                       <label class="block text-xs text-gray-500 mb-1">From</label>
@@ -155,11 +158,10 @@
                     />
                     <span class="ml-1.5 text-xs text-gray-600 flex items-center gap-1">
                       Break
-                      <span
-                        class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-300 text-gray-600 text-xs cursor-help font-bold leading-none"
-                        @mouseenter="showTooltip($event, 'A break is a non-bookable period during the working day. For example, a lunch break from 12:00\u201313:00. No bookings can start during this time.')"
-                        @mouseleave="hideTooltip"
-                      >?</span>
+                      <BookitTooltip
+                        content="Allows a staff member to work two separate blocks in one day, e.g. 9am-1pm and 3pm-6pm, with a gap in between."
+                        position="top"
+                      />
                     </span>
                   </label>
                   <div v-if="schedule[day.number]?.has_break" class="mt-2 grid grid-cols-2 gap-3">
@@ -192,20 +194,23 @@
                     />
                     <span class="ml-1.5 text-xs text-gray-600 flex items-center gap-1">
                       Seasonal
-                      <span
-                        class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-300 text-gray-600 text-xs cursor-help font-bold leading-none"
-                        @mouseenter="showTooltip($event, 'Seasonal schedules are only active between two dates. Useful for summer hours, holiday periods, or temporary schedule changes. Outside these dates, this day follows no schedule (treated as day off).')"
-                        @mouseleave="hideTooltip"
-                      >?</span>
+                      <BookitTooltip
+                        content="Seasonal schedules are only active between two dates. Useful for summer hours, holiday periods, or temporary schedule changes. Outside these dates, this day follows no schedule (treated as day off)."
+                        position="top"
+                      />
                     </span>
                   </label>
                   <div v-if="schedule[day.number]?.has_seasonal" class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label
-                        class="block text-xs text-gray-500 mb-1 cursor-help"
-                        @mouseenter="showTooltip($event, 'The first date this schedule is active. Before this date, this day is treated as a day off.')"
-                        @mouseleave="hideTooltip"
-                      >Valid from</label>
+                      <label class="block text-xs text-gray-500 mb-1">
+                        <span class="inline-flex items-center gap-1">
+                          Valid from
+                          <BookitTooltip
+                            content="The first date this schedule is active. Before this date, this day is treated as a day off."
+                            position="top"
+                          />
+                        </span>
+                      </label>
                       <input
                         type="date"
                         v-model="schedule[day.number].valid_from"
@@ -213,11 +218,15 @@
                       />
                     </div>
                     <div>
-                      <label
-                        class="block text-xs text-gray-500 mb-1 cursor-help"
-                        @mouseenter="showTooltip($event, 'The last date this schedule is active. After this date, this day is treated as a day off.')"
-                        @mouseleave="hideTooltip"
-                      >Valid until</label>
+                      <label class="block text-xs text-gray-500 mb-1">
+                        <span class="inline-flex items-center gap-1">
+                          Valid until
+                          <BookitTooltip
+                            content="The last date this schedule is active. After this date, this day is treated as a day off."
+                            position="top"
+                          />
+                        </span>
+                      </label>
                       <input
                         type="date"
                         v-model="schedule[day.number].valid_until"
@@ -261,11 +270,10 @@
             <div>
               <div class="flex items-center gap-2">
                 <h2 class="text-base sm:text-lg font-semibold text-gray-900">Date Exceptions</h2>
-                <span
-                  class="hidden sm:inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-300 text-gray-600 text-xs cursor-help font-bold"
-                  @mouseenter="showTooltip($event, 'Date exceptions override the weekly schedule for a specific date. Use them for bank holidays, staff holidays, training days, or any day with different hours. Exceptions always take priority over the weekly schedule.')"
-                  @mouseleave="hideTooltip"
-                >?</span>
+                <BookitTooltip
+                  content="Date exceptions override the weekly schedule for a specific date. Use them for bank holidays, staff holidays, training days, or any day with different hours. Exceptions always take priority over the weekly schedule."
+                  position="top"
+                />
               </div>
               <p class="text-xs sm:text-sm text-gray-500 mt-1">
                 Override working hours for specific dates. Exceptions always take priority over the weekly schedule.
@@ -298,11 +306,10 @@
               <div>
                 <label class="flex items-center gap-1 text-xs text-gray-600 mb-1">
                   Type *
-                  <span
-                    class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-300 text-gray-600 text-xs cursor-help font-bold leading-none"
-                    @mouseenter="showTooltip($event, 'Day Off: Staff member is completely unavailable. No bookings possible.\n\nSpecial Hours: Staff works different hours than usual \u2014 set a custom start and end time.')"
-                    @mouseleave="hideTooltip"
-                  >?</span>
+                  <BookitTooltip
+                    content="Day Off: Staff member is completely unavailable. No bookings possible.\n\nSpecial Hours: Staff works different hours than usual - set a custom start and end time."
+                    position="top"
+                  />
                 </label>
                 <select
                   v-model="newException.is_working"
@@ -358,11 +365,10 @@
             <div>
               <label class="flex items-center gap-1 text-xs text-gray-600 mb-1">
                 Notes
-                <span
-                  class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-300 text-gray-600 text-xs cursor-help font-bold leading-none"
-                  @mouseenter="showTooltip($event, 'Optional internal note for this exception. Only visible to admins \u2014 not shown to customers. Example: \'Annual leave\', \'Bank holiday\', \'Team training day\'.')"
-                  @mouseleave="hideTooltip"
-                >?</span>
+                <BookitTooltip
+                  content="Optional internal note for this exception. Only visible to admins - not shown to customers. Example: 'Annual leave', 'Bank holiday', 'Team training day'."
+                  position="top"
+                />
               </label>
               <input
                 type="text"
@@ -453,20 +459,6 @@
       </div>
     </div>
 
-    <!-- Tooltip Component (inline) -->
-    <teleport to="body">
-      <div
-        v-if="tooltip.visible"
-        :style="{ top: tooltip.y + 'px', left: tooltip.x + 'px' }"
-        class="fixed z-50 max-w-xs bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg pointer-events-none whitespace-pre-line"
-        style="transform: translateX(-50%)"
-      >
-        {{ tooltip.text }}
-        <div
-          class="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-gray-900 rotate-45"
-        ></div>
-      </div>
-    </teleport>
   </div>
 </template>
 
@@ -485,33 +477,6 @@ const days = [
   { number: 6, name: 'Saturday' },
   { number: 7, name: 'Sunday' },
 ]
-
-// Tooltip state.
-const tooltip = ref({
-  visible: false,
-  text: '',
-  x: 0,
-  y: 0
-})
-
-let tooltipTimeout = null
-
-const showTooltip = (event, text) => {
-  clearTimeout(tooltipTimeout)
-  const rect = event.currentTarget.getBoundingClientRect()
-  tooltip.value = {
-    visible: true,
-    text,
-    x: rect.left + rect.width / 2,
-    y: rect.top - 12
-  }
-}
-
-const hideTooltip = () => {
-  tooltipTimeout = setTimeout(() => {
-    tooltip.value.visible = false
-  }, 100)
-}
 
 const route  = useRoute()
 const router = useRouter()

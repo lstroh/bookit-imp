@@ -34,7 +34,13 @@
 
               <div v-if="settings.deposit_required_default" class="space-y-5">
                 <div>
-                  <p class="text-sm font-medium text-gray-700 mb-2">Default deposit type</p>
+                  <p class="text-sm font-medium text-gray-700 mb-2 inline-flex items-center gap-1">
+                    Default deposit type
+                    <BookitTooltip
+                      content="Whether deposits are calculated as a fixed amount or a percentage of the service price."
+                      position="top"
+                    />
+                  </p>
                   <div class="space-y-2">
                     <label class="flex items-center gap-2 text-sm text-gray-700">
                       <input v-model="settings.deposit_type_default" type="radio" value="percentage" class="text-primary-600" />
@@ -83,7 +89,15 @@
 
             <div class="px-4 sm:px-6 py-6 space-y-6">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Minimum deposit percentage</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  <span class="inline-flex items-center gap-1">
+                    Minimum deposit percentage
+                    <BookitTooltip
+                      content="The lowest deposit amount that can be required, regardless of percentage calculation."
+                      position="top"
+                    />
+                  </span>
+                </label>
                 <input
                   v-model.number="settings.deposit_minimum_percent"
                   type="number"
@@ -157,7 +171,13 @@
 
               <div class="flex items-start justify-between gap-4">
                 <div>
-                  <p class="text-sm font-medium text-gray-900">Refund deposit for on-time cancellations</p>
+                  <p class="text-sm font-medium text-gray-900 inline-flex items-center gap-1">
+                    Refund deposit for on-time cancellations
+                    <BookitTooltip
+                      content="Controls whether the deposit is returned if a customer cancels within the allowed cancellation window."
+                      position="top"
+                    />
+                  </p>
                   <p class="text-sm text-gray-500 mt-1">
                     If the customer cancels within your free cancellation window, refund their deposit automatically.
                   </p>
