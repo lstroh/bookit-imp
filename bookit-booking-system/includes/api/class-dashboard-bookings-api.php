@@ -88,7 +88,7 @@ class Bookit_Dashboard_Bookings_API {
 		// Bulk booking actions (admin only).
 		register_rest_route(
 			self::NAMESPACE,
-			'/bookings/bulk-action',
+			'/dashboard/bookings/bulk-action',
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'bulk_action' ),

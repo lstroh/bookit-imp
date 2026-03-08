@@ -313,7 +313,7 @@ class Test_Bulk_Booking_Actions extends WP_UnitTestCase {
 	 * @return WP_REST_Response
 	 */
 	private function dispatch_bulk_request( $action, $booking_ids ) {
-		$request = new WP_REST_Request( 'POST', '/' . $this->namespace . '/bookings/bulk-action' );
+		$request = new WP_REST_Request( 'POST', '/' . $this->namespace . '/dashboard/bookings/bulk-action' );
 		$request->set_body_params(
 			array(
 				'action'      => $action,
