@@ -12,37 +12,43 @@
 class Test_Package_Migrations extends WP_UnitTestCase {
 
 	/**
-	 * Ordered migration instances.
+	 * Ordered migration instances shared across all tests.
 	 *
 	 * @var array<int, Bookit_Migration_Base>
 	 */
-	private array $migrations = array();
+	private static array $static_migrations = array();
+
+	/**
+	 * Set up once before the class test suite runs.
+	 */
+	public static function setUpBeforeClass(): void {
+		parent::setUpBeforeClass();
+
+		static::load_package_migration_classes();
+		static::$static_migrations = array(
+			new Bookit_Migration_0005_Create_Package_Types_Table(),
+			new Bookit_Migration_0006_Create_Customer_Packages_Table(),
+			new Bookit_Migration_0007_Create_Package_Redemptions_Table(),
+			new Bookit_Migration_0008_Add_Customer_Package_Id_To_Bookings(),
+		);
+		static::rollback_package_migrations();
+		static::force_remove_package_schema_artifacts();
+	}
+
+	/**
+	 * Tear down once after the class test suite completes.
+	 */
+	public static function tearDownAfterClass(): void {
+		static::rollback_package_migrations();
+		parent::tearDownAfterClass();
+	}
 
 	/**
 	 * Set up each test.
 	 */
 	public function setUp(): void {
 		parent::setUp();
-
-		$this->load_package_migration_classes();
-		$this->migrations = array(
-			new Bookit_Migration_0005_Create_Package_Types_Table(),
-			new Bookit_Migration_0006_Create_Customer_Packages_Table(),
-			new Bookit_Migration_0007_Create_Package_Redemptions_Table(),
-			new Bookit_Migration_0008_Add_Customer_Package_Id_To_Bookings(),
-		);
-
-		$this->rollback_package_migrations();
-		$this->force_remove_package_schema_artifacts();
 		require_once BOOKIT_PLUGIN_DIR . 'includes/config/error-codes.php';
-	}
-
-	/**
-	 * Tear down each test.
-	 */
-	public function tearDown(): void {
-		$this->rollback_package_migrations();
-		parent::tearDown();
 	}
 
 	/**
@@ -54,9 +60,9 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 		$this->run_package_migrations();
 
 		$table_name = $wpdb->prefix . 'bookings_package_types';
-		$this->assertTrue( $this->table_exists( $table_name ) );
+		$this->assertTrue( static::table_exists( $table_name ) );
 
-		$columns = $this->get_column_names( $table_name );
+		$columns = static::get_column_names( $table_name );
 		$expected = array(
 			'id',
 			'name',
@@ -76,6 +82,9 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 		foreach ( $expected as $column_name ) {
 			$this->assertContains( $column_name, $columns );
 		}
+
+		static::rollback_package_migrations();
+		static::force_remove_package_schema_artifacts();
 	}
 
 	/**
@@ -87,9 +96,9 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 		$this->run_package_migrations();
 
 		$table_name = $wpdb->prefix . 'bookings_customer_packages';
-		$this->assertTrue( $this->table_exists( $table_name ) );
+		$this->assertTrue( static::table_exists( $table_name ) );
 
-		$columns = $this->get_column_names( $table_name );
+		$columns = static::get_column_names( $table_name );
 		$expected = array(
 			'id',
 			'customer_id',
@@ -111,8 +120,11 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 			$this->assertContains( $column_name, $columns );
 		}
 
-		$status_enum = $this->get_enum_type( $table_name, 'status' );
+		$status_enum = static::get_enum_type( $table_name, 'status' );
 		$this->assertSame( "enum('active','exhausted','expired','cancelled')", strtolower( (string) $status_enum ) );
+
+		static::rollback_package_migrations();
+		static::force_remove_package_schema_artifacts();
 	}
 
 	/**
@@ -124,9 +136,9 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 		$this->run_package_migrations();
 
 		$table_name = $wpdb->prefix . 'bookings_package_redemptions';
-		$this->assertTrue( $this->table_exists( $table_name ) );
+		$this->assertTrue( static::table_exists( $table_name ) );
 
-		$columns = $this->get_column_names( $table_name );
+		$columns = static::get_column_names( $table_name );
 		$expected = array(
 			'id',
 			'customer_package_id',
@@ -140,6 +152,9 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 		foreach ( $expected as $column_name ) {
 			$this->assertContains( $column_name, $columns );
 		}
+
+		static::rollback_package_migrations();
+		static::force_remove_package_schema_artifacts();
 	}
 
 	/**
@@ -161,6 +176,9 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 
 		$this->assertNotEmpty( $column );
 		$this->assertSame( 'YES', $column['Null'] );
+
+		static::rollback_package_migrations();
+		static::force_remove_package_schema_artifacts();
 	}
 
 	/**
@@ -174,17 +192,18 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 
 		$this->run_package_migrations();
 
-		$this->assertTrue( $this->table_exists( $wpdb->prefix . 'bookings_package_redemptions' ) );
-		$this->assertTrue( $this->table_exists( $wpdb->prefix . 'bookings_customer_packages' ) );
-		$this->assertTrue( $this->table_exists( $wpdb->prefix . 'bookings_package_types' ) );
-		$this->assertTrue( $this->column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) );
+		$this->assertTrue( static::table_exists( $wpdb->prefix . 'bookings_package_redemptions' ) );
+		$this->assertTrue( static::table_exists( $wpdb->prefix . 'bookings_customer_packages' ) );
+		$this->assertTrue( static::table_exists( $wpdb->prefix . 'bookings_package_types' ) );
+		$this->assertTrue( static::column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) );
 
-		$this->rollback_package_migrations();
+		static::rollback_package_migrations();
 
-		$this->assert_table_absent_or_empty( $wpdb->prefix . 'bookings_package_redemptions' );
-		$this->assert_table_absent_or_empty( $wpdb->prefix . 'bookings_customer_packages' );
-		$this->assert_table_absent_or_empty( $wpdb->prefix . 'bookings_package_types' );
-		$this->assertFalse( $this->column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) );
+		static::assert_table_absent_or_empty( $wpdb->prefix . 'bookings_package_redemptions' );
+		static::assert_table_absent_or_empty( $wpdb->prefix . 'bookings_customer_packages' );
+		static::assert_table_absent_or_empty( $wpdb->prefix . 'bookings_package_types' );
+		$this->assertFalse( static::column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) );
+		static::force_remove_package_schema_artifacts();
 	}
 
 	/**
@@ -198,18 +217,18 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 
 		$this->run_package_migrations();
 
-		$this->rollback_package_migrations();
+		static::rollback_package_migrations();
 		$this->assertEmpty( $wpdb->last_error, 'First rollback should not error' );
 
 		$wpdb->last_error = '';
-		$this->rollback_package_migrations();
-		$this->force_remove_package_schema_artifacts();
+		static::rollback_package_migrations();
+		static::force_remove_package_schema_artifacts();
 		$this->assertEmpty( $wpdb->last_error, 'Second rollback should not error' );
 
-		$this->assert_table_absent_or_empty( $wpdb->prefix . 'bookings_package_redemptions' );
-		$this->assert_table_absent_or_empty( $wpdb->prefix . 'bookings_customer_packages' );
-		$this->assert_table_absent_or_empty( $wpdb->prefix . 'bookings_package_types' );
-		$this->assertFalse( $this->column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) );
+		static::assert_table_absent_or_empty( $wpdb->prefix . 'bookings_package_redemptions' );
+		static::assert_table_absent_or_empty( $wpdb->prefix . 'bookings_customer_packages' );
+		static::assert_table_absent_or_empty( $wpdb->prefix . 'bookings_package_types' );
+		$this->assertFalse( static::column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) );
 	}
 
 	/**
@@ -255,7 +274,7 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 	 *
 	 * @return void
 	 */
-	private function load_package_migration_classes(): void {
+	private static function load_package_migration_classes(): void {
 		require_once BOOKIT_PLUGIN_DIR . 'database/migrations/0005-create-package-types-table.php';
 		require_once BOOKIT_PLUGIN_DIR . 'database/migrations/0006-create-customer-packages-table.php';
 		require_once BOOKIT_PLUGIN_DIR . 'database/migrations/0007-create-package-redemptions-table.php';
@@ -268,7 +287,7 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 	 * @return void
 	 */
 	private function run_package_migrations(): void {
-		foreach ( $this->migrations as $migration ) {
+		foreach ( static::$static_migrations as $migration ) {
 			$migration->up();
 		}
 	}
@@ -278,11 +297,11 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 	 *
 	 * @return void
 	 */
-	private function rollback_package_migrations(): void {
+	private static function rollback_package_migrations(): void {
 		global $wpdb;
 
 		$lookup = array();
-		foreach ( $this->migrations as $migration ) {
+		foreach ( static::$static_migrations as $migration ) {
 			$lookup[ $migration->migration_id() ] = $migration;
 		}
 
@@ -301,11 +320,11 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 				}
 			}
 
-			$this->drop_table_forcefully( $wpdb->prefix . 'bookings_package_redemptions' );
-			$this->drop_table_forcefully( $wpdb->prefix . 'bookings_customer_packages' );
-			$this->drop_table_forcefully( $wpdb->prefix . 'bookings_package_types' );
+			static::drop_table_forcefully( $wpdb->prefix . 'bookings_package_redemptions' );
+			static::drop_table_forcefully( $wpdb->prefix . 'bookings_customer_packages' );
+			static::drop_table_forcefully( $wpdb->prefix . 'bookings_package_types' );
 
-			if ( $this->column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) ) {
+			if ( static::column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) ) {
 				$wpdb->query( "ALTER TABLE {$wpdb->prefix}bookings DROP COLUMN customer_package_id" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
 			}
 		} finally {
@@ -318,16 +337,16 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 	 *
 	 * @return void
 	 */
-	private function force_remove_package_schema_artifacts(): void {
+	private static function force_remove_package_schema_artifacts(): void {
 		global $wpdb;
 
 		$wpdb->query( 'SET FOREIGN_KEY_CHECKS = 0' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		try {
-			$this->drop_table_forcefully( $wpdb->prefix . 'bookings_package_redemptions' );
-			$this->drop_table_forcefully( $wpdb->prefix . 'bookings_customer_packages' );
-			$this->drop_table_forcefully( $wpdb->prefix . 'bookings_package_types' );
+			static::drop_table_forcefully( $wpdb->prefix . 'bookings_package_redemptions' );
+			static::drop_table_forcefully( $wpdb->prefix . 'bookings_customer_packages' );
+			static::drop_table_forcefully( $wpdb->prefix . 'bookings_package_types' );
 
-			if ( $this->column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) ) {
+			if ( static::column_exists( $wpdb->prefix . 'bookings', 'customer_package_id' ) ) {
 				$wpdb->query( "ALTER TABLE {$wpdb->prefix}bookings DROP COLUMN customer_package_id" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
 			}
 		} finally {
@@ -341,7 +360,7 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 	 * @param string $table_name Full table name.
 	 * @return void
 	 */
-	private function drop_table_forcefully( string $table_name ): void {
+	private static function drop_table_forcefully( string $table_name ): void {
 		global $wpdb;
 
 		$wpdb->query( "DROP TABLE IF EXISTS {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
@@ -354,7 +373,7 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 	 * @param string $table_name Full table name.
 	 * @return bool
 	 */
-	private function table_exists( string $table_name ): bool {
+	private static function table_exists( string $table_name ): bool {
 		global $wpdb;
 
 		$table_count = (int) $wpdb->get_var(
@@ -376,16 +395,16 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 	 * @param string $table_name Full table name.
 	 * @return void
 	 */
-	private function assert_table_absent_or_empty( string $table_name ): void {
+	private static function assert_table_absent_or_empty( string $table_name ): void {
 		global $wpdb;
 
-		if ( ! $this->table_exists( $table_name ) ) {
-			$this->assertFalse( $this->table_exists( $table_name ) );
+		if ( ! static::table_exists( $table_name ) ) {
+			self::assertFalse( static::table_exists( $table_name ) );
 			return;
 		}
 
 		$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$this->assertSame( 0, $count, "{$table_name} should be empty after rollback" );
+		self::assertSame( 0, $count, "{$table_name} should be empty after rollback" );
 	}
 
 	/**
@@ -394,7 +413,7 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 	 * @param string $table_name Full table name.
 	 * @return string[]
 	 */
-	private function get_column_names( string $table_name ): array {
+	private static function get_column_names( string $table_name ): array {
 		global $wpdb;
 
 		$rows = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}", ARRAY_A );
@@ -412,7 +431,7 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 	 * @param string $column     Column name.
 	 * @return bool
 	 */
-	private function column_exists( string $table_name, string $column ): bool {
+	private static function column_exists( string $table_name, string $column ): bool {
 		global $wpdb;
 
 		$row = $wpdb->get_var(
@@ -432,7 +451,7 @@ class Test_Package_Migrations extends WP_UnitTestCase {
 	 * @param string $column     Column name.
 	 * @return string|null
 	 */
-	private function get_enum_type( string $table_name, string $column ): ?string {
+	private static function get_enum_type( string $table_name, string $column ): ?string {
 		global $wpdb;
 
 		$column_type = $wpdb->get_var(

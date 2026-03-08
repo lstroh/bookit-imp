@@ -180,13 +180,4 @@ function bookit_test_truncate_tables( array $table_suffixes ): void {
 	}
 }
 
-// Strip the known deliberate wpdb HTML block from one audit logger test.
-ob_start(
-	static function ( $buffer ) {
-		return (string) preg_replace(
-			'/<div id="error"><p class="wpdberror">.*?nonexistent_prefix_bookings_audit_log.*?<\/p><\/div>/s',
-			'',
-			$buffer
-		);
-	}
-);
+
