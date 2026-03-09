@@ -101,39 +101,29 @@ tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 // Start up the WP testing environment
 require $_tests_dir . '/includes/bootstrap.php';
 
-/**
- * Prevent package table CREATE statements from being rewritten to
- * CREATE TEMPORARY TABLE in the WP test framework.
- *
- * InnoDB temporary tables do not support foreign key constraints, which
- * causes noisy wpdb errors for package migration tests.
- */
-add_filter(
-	'query',
-	static function ( string $query ): string {
-		if ( preg_match(
-			'/^\s*CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?(wp_bookings_package_types|wp_bookings_customer_packages|wp_bookings_package_redemptions)`?/i',
-			$query
-		) ) {
-			remove_filter( 'query', '_create_temporary_tables', 10 );
-			remove_filter( 'query', '_drop_temporary_tables', 10 );
-
-			global $wpdb;
-			$wpdb->query( $query ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.NotPrepared
-
-			add_filter( 'query', '_create_temporary_tables', 10 );
-			add_filter( 'query', '_drop_temporary_tables', 10 );
-
-			return '';
-		}
-
-		return $query;
-	},
-	9
-);
-
 // Ensure plugin is activated
 activate_plugin( 'bookit-booking-system/bookit-booking-system.php' );
+
+/**
+ * Ensure package migration tables exist for the test suite.
+ * The WP test framework bypasses the migration runner for temporary tables,
+ * so we explicitly run package migrations after plugin activation.
+ */
+add_action(
+	'init',
+	static function (): void {
+		if ( ! class_exists( 'Bookit_Migration_Runner' ) ) {
+			return;
+		}
+		Bookit_Migration_Runner::run_pending();
+	},
+	1
+);
+
+// In the test bootstrap lifecycle, init may have already fired.
+if ( did_action( 'init' ) && class_exists( 'Bookit_Migration_Runner' ) ) {
+	Bookit_Migration_Runner::run_pending();
+}
 
 /**
  * Check whether a test database table exists.

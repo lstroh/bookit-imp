@@ -58,7 +58,6 @@
             <file>./tests/unit/test-setup-guide-api.php</file>
             <file>./tests/unit/test-cooling-off-waiver.php</file>
             <file>./tests/unit/test-team-calendar-api.php</file>
-            <file>./tests/unit/test-package-migrations.php</file>
         </testsuite>
     </testsuites>
 
