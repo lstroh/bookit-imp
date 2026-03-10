@@ -35,12 +35,36 @@ class Test_Stripe_Webhook extends WP_UnitTestCase {
 	 */
 	private $webhook_route = '/bookit/v1/stripe/webhook';
 
+	/**
+	 * Test service ID.
+	 *
+	 * @var int
+	 */
+	private int $test_service_id = 0;
+
+	/**
+	 * Test staff ID.
+	 *
+	 * @var int
+	 */
+	private int $test_staff_id = 0;
 
 	/**
 	 * Set up each test.
 	 */
 	public function setUp(): void {
 		parent::setUp();
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_redemptions',
+				'bookings_customer_packages',
+				'bookings',
+				'bookings_payments',
+				'bookings_customers',
+				'bookings_staff',
+				'bookings_services',
+			)
+		);
 
 		$plugin_dir = dirname( __DIR__ );
 		$webhook_file = $plugin_dir . '/includes/api/class-stripe-webhook.php';
@@ -86,7 +110,6 @@ class Test_Stripe_Webhook extends WP_UnitTestCase {
 		$wpdb->insert(
 			$prefix . 'bookings_services',
 			array(
-				'id'            => 1,
 				'name'          => 'Test Haircut',
 				'duration'      => 60,
 				'price'         => 50.00,
@@ -94,18 +117,19 @@ class Test_Stripe_Webhook extends WP_UnitTestCase {
 				'deposit_amount' => 100,
 			)
 		);
+		$this->test_service_id = (int) $wpdb->insert_id;
 
 		// Create test staff (password_hash required).
 		$wpdb->insert(
 			$prefix . 'bookings_staff',
 			array(
-				'id'            => 2,
 				'first_name'    => 'Emma',
 				'last_name'     => 'Thompson',
 				'email'         => 'emma@salon.com',
 				'password_hash' => wp_hash_password( 'test' ),
 			)
 		);
+		$this->test_staff_id = (int) $wpdb->insert_id;
 
 		// Build test webhook payload (Stripe checkout.session.completed event).
 		$this->test_webhook_payload = array(
@@ -121,8 +145,8 @@ class Test_Stripe_Webhook extends WP_UnitTestCase {
 					'payment_status'  => 'paid',
 					'metadata'        => array(
 						'booking_temp_id'     => 'temp-uuid-12345',
-						'service_id'          => '1',
-						'staff_id'            => '2',
+						'service_id'          => (string) $this->test_service_id,
+						'staff_id'            => (string) $this->test_staff_id,
 						'booking_date'        => '2026-02-15',
 						'booking_time'        => '14:00:00',
 						'customer_first_name' => 'John',
@@ -146,8 +170,8 @@ class Test_Stripe_Webhook extends WP_UnitTestCase {
 		$wpdb->query( "DELETE FROM {$prefix}bookings WHERE id > 0" );
 		$wpdb->query( "DELETE FROM {$prefix}bookings_payments WHERE id > 0" );
 		$wpdb->query( "DELETE FROM {$prefix}bookings_customers WHERE id > 0" );
-		$wpdb->query( "DELETE FROM {$prefix}bookings_services WHERE id = 1" );
-		$wpdb->query( "DELETE FROM {$prefix}bookings_staff WHERE id = 2" );
+		$wpdb->delete( $prefix . 'bookings_staff', array( 'id' => $this->test_staff_id ), array( '%d' ) );
+		$wpdb->delete( $prefix . 'bookings_services', array( 'id' => $this->test_service_id ), array( '%d' ) );
 
 		delete_option( 'bookit_stripe_test_mode' );
 		delete_option( 'bookit_stripe_test_webhook_secret' );
@@ -471,8 +495,8 @@ class Test_Stripe_Webhook extends WP_UnitTestCase {
 		$this->assertNotNull( $booking );
 		$this->assertNotEmpty( $booking->id );
 		$this->assertEquals( $customer->id, $booking->customer_id );
-		$this->assertEquals( 1, (int) $booking->service_id );
-		$this->assertEquals( 2, (int) $booking->staff_id );
+		$this->assertEquals( $this->test_service_id, (int) $booking->service_id );
+		$this->assertEquals( $this->test_staff_id, (int) $booking->staff_id );
 		$this->assertEquals( '2026-02-15', $booking->booking_date );
 		$this->assertEquals( '14:00:00', $booking->start_time );
 		$this->assertEquals( '15:00:00', $booking->end_time );

@@ -52,10 +52,35 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 	private $mock_filter_callbacks = array();
 
 	/**
+	 * Test service ID.
+	 *
+	 * @var int
+	 */
+	private int $test_service_id = 0;
+
+	/**
+	 * Test staff ID.
+	 *
+	 * @var int
+	 */
+	private int $test_staff_id = 0;
+
+	/**
 	 * Set up each test.
 	 */
 	public function setUp(): void {
 		parent::setUp();
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_redemptions',
+				'bookings_customer_packages',
+				'bookings',
+				'bookings_payments',
+				'bookings_customers',
+				'bookings_staff',
+				'bookings_services',
+			)
+		);
 
 		// Load Stripe SDK (bootstrap may already load vendor; ensure class path is available).
 		$autoload = dirname( __DIR__ ) . '/vendor/autoload.php';
@@ -77,12 +102,13 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 		}
 
 		$this->stripe_checkout = new Booking_System_Stripe_Checkout();
+		$this->create_test_service_and_staff();
 
 		// Create test session data (CORRECT Sprint 1 structure).
 		$this->test_session_data = array(
 			'current_step'               => 4,
-			'service_id'                 => 1,
-			'staff_id'                   => 2,
+			'service_id'                 => $this->test_service_id,
+			'staff_id'                   => $this->test_staff_id,
 			'date'                       => '2026-02-15',
 			'time'                       => '14:00:00',
 			'customer_first_name'        => 'John',
@@ -96,7 +122,6 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 			'last_activity'              => time(),
 		);
 
-		$this->create_test_service_and_staff();
 		$this->set_stripe_test_options();
 		$this->add_mock_filters();
 
@@ -123,7 +148,6 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 		$wpdb->insert(
 			$services_table,
 			array(
-				'id'              => 1,
 				'name'            => 'Test Haircut',
 				'description'     => null,
 				'duration'        => 60,
@@ -138,14 +162,14 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 				'updated_at'      => current_time( 'mysql' ),
 				'deleted_at'      => null,
 			),
-			array( '%d', '%s', '%s', '%d', '%f', '%s', '%f', '%d', '%d', '%d', '%d', '%s', '%s', '%s' )
+			array( '%s', '%s', '%d', '%f', '%s', '%f', '%d', '%d', '%d', '%d', '%s', '%s', '%s' )
 		);
+		$this->test_service_id = (int) $wpdb->insert_id;
 
 		// Insert test staff (password_hash required).
 		$wpdb->insert(
 			$staff_table,
 			array(
-				'id'                => 2,
 				'first_name'        => 'Emma',
 				'last_name'         => 'Thompson',
 				'email'             => 'emma@salon.com',
@@ -162,8 +186,9 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 				'updated_at'        => current_time( 'mysql' ),
 				'deleted_at'        => null,
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s' )
+			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s' )
 		);
+		$this->test_staff_id = (int) $wpdb->insert_id;
 	}
 
 	/**
@@ -256,8 +281,9 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 	public function tearDown(): void {
 		global $wpdb;
 		$p = $wpdb->prefix;
-		$wpdb->query( "DELETE FROM {$p}bookings_services WHERE id IN (1, 94, 95, 96, 97, 98, 99)" );
-		$wpdb->query( "DELETE FROM {$p}bookings_staff WHERE id = 2" );
+		$wpdb->delete( $p . 'bookings_staff', array( 'id' => $this->test_staff_id ), array( '%d' ) );
+		$wpdb->delete( $p . 'bookings_services', array( 'id' => $this->test_service_id ), array( '%d' ) );
+		$wpdb->query( "DELETE FROM {$p}bookings_services WHERE id IN (94, 95, 96, 97, 98, 99)" );
 
 		if ( isset( $this->mock_filter_callbacks['mode'] ) ) {
 			remove_filter( 'bookit_stripe_api_mode', $this->mock_filter_callbacks['mode'], $this->mock_filter_priority );
@@ -438,9 +464,9 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 		$meta = $this->last_mock_session->metadata;
 
 		$this->assertArrayHasKey( 'service_id', $meta );
-		$this->assertEquals( '1', $meta['service_id'] );
+		$this->assertEquals( (string) $this->test_service_id, $meta['service_id'] );
 		$this->assertArrayHasKey( 'staff_id', $meta );
-		$this->assertEquals( '2', $meta['staff_id'] );
+		$this->assertEquals( (string) $this->test_staff_id, $meta['staff_id'] );
 		$this->assertArrayHasKey( 'booking_date', $meta );
 		$this->assertEquals( '2026-02-15', $meta['booking_date'] );
 		$this->assertArrayHasKey( 'booking_time', $meta );

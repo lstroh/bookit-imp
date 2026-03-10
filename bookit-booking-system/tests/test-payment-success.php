@@ -45,6 +45,20 @@ class Test_Payment_Success extends WP_UnitTestCase {
 	private $test_customer_id;
 
 	/**
+	 * Test service ID.
+	 *
+	 * @var int
+	 */
+	private int $test_service_id = 0;
+
+	/**
+	 * Test staff ID.
+	 *
+	 * @var int
+	 */
+	private int $test_staff_id = 0;
+
+	/**
 	 * Whether required classes (retriever, email sender) are available.
 	 *
 	 * @var bool
@@ -56,6 +70,17 @@ class Test_Payment_Success extends WP_UnitTestCase {
 	 */
 	public function setUp(): void {
 		parent::setUp();
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_redemptions',
+				'bookings_customer_packages',
+				'bookings',
+				'bookings_payments',
+				'bookings_customers',
+				'bookings_staff',
+				'bookings_services',
+			)
+		);
 
 		$plugin_dir = dirname( __DIR__ );
 		$retriever_file = $plugin_dir . '/includes/booking/class-booking-retriever.php';
@@ -80,7 +105,6 @@ class Test_Payment_Success extends WP_UnitTestCase {
 		$wpdb->insert(
 			$prefix . 'bookings_services',
 			array(
-				'id'             => 1,
 				'name'           => 'Test Haircut',
 				'duration'       => 60,
 				'price'          => 50.00,
@@ -88,18 +112,19 @@ class Test_Payment_Success extends WP_UnitTestCase {
 				'deposit_amount' => 100,
 			)
 		);
+		$this->test_service_id = (int) $wpdb->insert_id;
 
 		// Create test staff (password_hash required by schema).
 		$wpdb->insert(
 			$prefix . 'bookings_staff',
 			array(
-				'id'            => 2,
 				'first_name'    => 'Emma',
 				'last_name'     => 'Thompson',
 				'email'         => 'emma@salon.com',
 				'password_hash' => wp_hash_password( 'test' ),
 			)
 		);
+		$this->test_staff_id = (int) $wpdb->insert_id;
 
 		// Create test customer (get-or-create to avoid duplicate key across tests).
 		$existing = $wpdb->get_row(
@@ -159,8 +184,8 @@ class Test_Payment_Success extends WP_UnitTestCase {
 			$prefix . 'bookings',
 			array(
 				'customer_id'       => $this->test_customer_id,
-				'service_id'        => 1,
-				'staff_id'          => 2,
+				'service_id'        => $this->test_service_id,
+				'staff_id'          => $this->test_staff_id,
 				'booking_date'      => '2026-02-15',
 				'start_time'        => '14:00:00',
 				'end_time'          => '15:00:00',
@@ -202,8 +227,8 @@ class Test_Payment_Success extends WP_UnitTestCase {
 		if ( $this->test_customer_id > 0 ) {
 			$wpdb->query( "DELETE FROM {$prefix}bookings_customers WHERE id = " . $this->test_customer_id );
 		}
-		$wpdb->query( "DELETE FROM {$prefix}bookings_services WHERE id = 1" );
-		$wpdb->query( "DELETE FROM {$prefix}bookings_staff WHERE id = 2" );
+		$wpdb->delete( $prefix . 'bookings_staff', array( 'id' => $this->test_staff_id ), array( '%d' ) );
+		$wpdb->delete( $prefix . 'bookings_services', array( 'id' => $this->test_service_id ), array( '%d' ) );
 
 		// Reset session for next test.
 		if ( isset( $_SESSION[ Bookit_Session_Manager::SESSION_KEY ] ) ) {
@@ -523,8 +548,8 @@ class Test_Payment_Success extends WP_UnitTestCase {
 	public function test_clears_booking_wizard_session() {
 		Bookit_Session_Manager::init();
 		Bookit_Session_Manager::set_data( array(
-			'service_id' => 1,
-			'staff_id'   => 2,
+			'service_id' => $this->test_service_id,
+			'staff_id'   => $this->test_staff_id,
 			'date'       => '2026-02-15',
 			'time'       => '14:00:00',
 			'customer'   => array( 'email' => 'john@example.com' ),
@@ -557,7 +582,7 @@ class Test_Payment_Success extends WP_UnitTestCase {
 	public function test_preserves_other_session_data() {
 		Bookit_Session_Manager::init();
 		$_SESSION['other_data'] = 'preserve_me';
-		Bookit_Session_Manager::set_data( array( 'service_id' => 1 ) );
+		Bookit_Session_Manager::set_data( array( 'service_id' => $this->test_service_id ) );
 
 		if ( $this->classes_available && $this->booking_retriever && method_exists( $this->booking_retriever, 'clear_booking_session' ) ) {
 			$this->booking_retriever->clear_booking_session();
