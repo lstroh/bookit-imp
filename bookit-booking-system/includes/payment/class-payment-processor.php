@@ -49,10 +49,17 @@ class Booking_System_Payment_Processor {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
 		Bookit_Session_Manager::init();
 		$session_data = Bookit_Session_Manager::get_data();
+		$selected_package_id = isset( $_POST['bookit_selected_package_id'] ) ? absint( wp_unslash( $_POST['bookit_selected_package_id'] ) ) : 0;
 
 		if ( empty( $session_data ) ) {
 			wp_safe_redirect( home_url( '/book?step=1&error=session_expired' ) );
 			exit;
+		}
+
+		// Persist optional package selection for later payment-flow wiring.
+		if ( $selected_package_id > 0 ) {
+			$session_data['package_type_id'] = $selected_package_id;
+			Bookit_Session_Manager::set_data( $session_data );
 		}
 
 		switch ( $payment_method ) {

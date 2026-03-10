@@ -89,6 +89,43 @@ if ( null === $cancellation_policy_text || '' === trim( (string) $cancellation_p
 if ( '' === trim( (string) $cancellation_policy_text ) ) {
 	$cancellation_policy_text = $default_cancellation_policy_text;
 }
+
+// Package options (feature-gated).
+$packages_enabled   = function_exists( 'bookit_get_setting' ) ? (string) bookit_get_setting( 'packages_enabled' ) : '';
+$available_packages = array();
+
+if ( '' === $packages_enabled ) {
+	$packages_enabled = (string) $wpdb->get_var(
+		$wpdb->prepare(
+			"SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s LIMIT 1",
+			'packages_enabled'
+		)
+	);
+}
+
+if ( '1' === $packages_enabled ) {
+	$package_rows = $wpdb->get_results(
+		"SELECT id, name, sessions_count, price_mode, fixed_price, expiry_enabled, expiry_days, applicable_service_ids
+		FROM {$wpdb->prefix}bookings_package_types
+		WHERE is_active = 1",
+		ARRAY_A
+	);
+	$service_id   = isset( $session_data['service_id'] ) ? (int) $session_data['service_id'] : 0;
+
+	foreach ( (array) $package_rows as $row ) {
+		$service_ids = null;
+		if ( ! empty( $row['applicable_service_ids'] ) ) {
+			$decoded = json_decode( (string) $row['applicable_service_ids'], true );
+			if ( is_array( $decoded ) ) {
+				$service_ids = array_values( array_map( 'absint', $decoded ) );
+			}
+		}
+
+		if ( null === $service_ids || in_array( $service_id, (array) $service_ids, true ) ) {
+			$available_packages[] = $row;
+		}
+	}
+}
 ?>
 
 <div class="bookit-payment-step bookit-step bookit-step-5">
@@ -282,6 +319,48 @@ if ( '' === trim( (string) $cancellation_policy_text ) ) {
 				</div>
 			<?php endif; ?>
 
+			<?php if ( '1' === $packages_enabled && ! empty( $available_packages ) ) : ?>
+				<div class="bookit-package-options" id="bookit-package-options">
+					<h3><?php esc_html_e( 'Or buy a session package', 'bookit-booking-system' ); ?></h3>
+					<p class="bookit-package-note">
+						<?php esc_html_e( 'Purchase a bundle of sessions at a discounted rate. One session will be applied to today\'s booking.', 'bookit-booking-system' ); ?>
+					</p>
+
+					<div class="bookit-package-list" role="radiogroup" aria-label="<?php esc_attr_e( 'Available packages', 'bookit-booking-system' ); ?>">
+						<?php foreach ( $available_packages as $pkg ) : ?>
+							<label class="bookit-package-item">
+								<input
+									type="radio"
+									name="bookit_package_selection"
+									class="bookit-package-radio"
+									value="<?php echo esc_attr( $pkg['id'] ); ?>"
+									data-package-id="<?php echo esc_attr( $pkg['id'] ); ?>"
+									data-package-name="<?php echo esc_attr( $pkg['name'] ); ?>"
+								>
+								<span class="bookit-package-label">
+									<strong><?php echo esc_html( $pkg['name'] ); ?></strong>
+									&mdash; <?php echo esc_html( (string) $pkg['sessions_count'] ); ?> <?php esc_html_e( 'sessions', 'bookit-booking-system' ); ?>
+									<?php if ( 'fixed' === $pkg['price_mode'] && ! empty( $pkg['fixed_price'] ) ) : ?>
+										&mdash; <?php echo esc_html( sprintf( '£%s', number_format( (float) $pkg['fixed_price'], 2 ) ) ); ?>
+									<?php endif; ?>
+									<?php if ( ! empty( $pkg['expiry_enabled'] ) && ! empty( $pkg['expiry_days'] ) ) : ?>
+										<span class="bookit-package-expiry">
+											(<?php echo esc_html( sprintf( __( 'Valid for %d days', 'bookit-booking-system' ), (int) $pkg['expiry_days'] ) ); ?>)
+										</span>
+									<?php endif; ?>
+								</span>
+							</label>
+						<?php endforeach; ?>
+					</div>
+
+					<input type="hidden" name="bookit_selected_package_id" id="bookit-selected-package-id" value="">
+
+					<div class="bookit-package-payment-notice" id="bookit-package-payment-notice" style="display:none;">
+						<p><?php esc_html_e( 'Package payment will be collected when you proceed. Your booking slot is held for you.', 'bookit-booking-system' ); ?></p>
+					</div>
+				</div>
+			<?php endif; ?>
+
 			<div class="bookit-form-actions">
 				<a href="<?php echo esc_url( home_url( '/book?step=4' ) ); ?>" class="bookit-btn-secondary">
 					<?php esc_html_e( '← Back', 'bookit-booking-system' ); ?>
@@ -307,6 +386,9 @@ if ( '' === trim( (string) $cancellation_policy_text ) ) {
 		var depositRow        = document.querySelector( '.price-row.deposit' );
 		var balanceRow        = document.querySelector( '.price-row.balance' );
 		var submitBtn         = document.querySelector( '#bookit-payment-form .bookit-btn-primary' );
+		var packageRadios     = document.querySelectorAll( '.bookit-package-radio' );
+		var selectedPackageId = document.getElementById( 'bookit-selected-package-id' );
+		var packageNotice     = document.getElementById( 'bookit-package-payment-notice' );
 
 		function updatePaymentUI( value ) {
 			/* Show/hide the info panel */
@@ -327,11 +409,44 @@ if ( '' === trim( (string) $cancellation_policy_text ) ) {
 			}
 		}
 
+		function clearPackageSelection() {
+			packageRadios.forEach( function( packageOption ) {
+				packageOption.checked = false;
+			} );
+			if ( selectedPackageId ) {
+				selectedPackageId.value = '';
+			}
+			if ( packageNotice ) {
+				packageNotice.style.display = 'none';
+			}
+		}
+
+		function clearPaymentSelection() {
+			paymentOptions.forEach( function( option ) {
+				option.checked = false;
+			} );
+		}
+
 		paymentOptions.forEach( function( option ) {
 			option.addEventListener( 'change', function() {
+				clearPackageSelection();
 				updatePaymentUI( this.value );
 			});
 		});
+
+		packageRadios.forEach( function( packageOption ) {
+			packageOption.addEventListener( 'change', function() {
+				if ( this.checked ) {
+					if ( selectedPackageId ) {
+						selectedPackageId.value = this.getAttribute( 'data-package-id' ) || '';
+					}
+					if ( packageNotice ) {
+						packageNotice.style.display = 'block';
+					}
+					clearPaymentSelection();
+				}
+			} );
+		} );
 
 		/* Initialise for the pre-selected option */
 		var checked = document.querySelector( 'input[name="payment_method"]:checked' );
