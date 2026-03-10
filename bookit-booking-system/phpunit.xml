@@ -59,6 +59,7 @@
             <file>./tests/unit/test-cooling-off-waiver.php</file>
             <file>./tests/unit/test-team-calendar-api.php</file>
             <file>./tests/unit/test-package-types-api.php</file>
+            <file>./tests/unit/test-customer-packages-api.php</file>
         </testsuite>
     </testsuites>
 
