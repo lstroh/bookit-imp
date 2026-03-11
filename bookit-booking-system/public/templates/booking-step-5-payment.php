@@ -126,6 +126,44 @@ if ( '1' === $packages_enabled ) {
 		}
 	}
 }
+
+$existing_packages = array();
+if ( '1' === $packages_enabled && ! empty( $session_data['customer_email'] ) ) {
+	$customer = $wpdb->get_row(
+		$wpdb->prepare(
+			"SELECT id FROM {$wpdb->prefix}bookings_customers WHERE email = %s LIMIT 1",
+			$session_data['customer_email']
+		)
+	);
+
+	if ( $customer ) {
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT cp.id, cp.sessions_remaining, cp.sessions_total, cp.expires_at,
+					pt.name AS package_type_name, pt.applicable_service_ids
+				FROM {$wpdb->prefix}bookings_customer_packages cp
+				JOIN {$wpdb->prefix}bookings_package_types pt ON pt.id = cp.package_type_id
+				WHERE cp.customer_id = %d
+					AND cp.status = 'active'
+					AND cp.sessions_remaining > 0
+					AND (cp.expires_at IS NULL OR cp.expires_at > NOW())",
+				$customer->id
+			),
+			ARRAY_A
+		);
+
+		$current_service_id = isset( $session_data['service_id'] ) ? (int) $session_data['service_id'] : 0;
+		foreach ( (array) $rows as $row ) {
+			$applicable = null;
+			if ( ! empty( $row['applicable_service_ids'] ) ) {
+				$applicable = json_decode( (string) $row['applicable_service_ids'], true );
+			}
+			if ( null === $applicable || in_array( $current_service_id, (array) $applicable, true ) ) {
+				$existing_packages[] = $row;
+			}
+		}
+	}
+}
 ?>
 
 <div class="bookit-payment-step bookit-step bookit-step-5">
@@ -204,10 +242,11 @@ if ( '1' === $packages_enabled ) {
 		<form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="bookit-payment-form">
 			<?php wp_nonce_field( 'bookit_booking_action', 'bookit_nonce' ); ?>
 			<input type="hidden" name="action" value="bookit_process_payment" />
+			<input type="hidden" name="payment_method" id="bookit-payment-method" value="stripe" />
 
 			<div class="bookit-payment-option">
 				<input type="radio"
-					name="payment_method"
+					name="bookit_payment_method_choice"
 					id="payment-stripe"
 					value="stripe"
 					checked
@@ -220,7 +259,7 @@ if ( '1' === $packages_enabled ) {
 
 			<div class="bookit-payment-option" style="opacity: 0.5;">
 				<input type="radio"
-					name="payment_method"
+					name="bookit_payment_method_choice"
 					id="payment-paypal"
 					value="paypal"
 					disabled
@@ -233,7 +272,7 @@ if ( '1' === $packages_enabled ) {
 
 			<div class="bookit-payment-option">
 				<input type="radio"
-					name="payment_method"
+					name="bookit_payment_method_choice"
 					id="payment-arrival"
 					value="pay_on_arrival"
 				/>
@@ -319,6 +358,45 @@ if ( '1' === $packages_enabled ) {
 				</div>
 			<?php endif; ?>
 
+			<?php if ( '1' === $packages_enabled && ! empty( $existing_packages ) ) : ?>
+				<div class="bookit-existing-packages" id="bookit-existing-packages">
+					<h3><?php esc_html_e( 'Use one of your packages', 'bookit-booking-system' ); ?></h3>
+
+					<div class="bookit-existing-package-list" role="radiogroup" aria-label="<?php esc_attr_e( 'Your packages', 'bookit-booking-system' ); ?>">
+						<?php foreach ( $existing_packages as $pkg ) : ?>
+							<label class="bookit-existing-package-item">
+								<input
+									type="radio"
+									name="bookit_existing_package_selection"
+									class="bookit-existing-package-radio"
+									value="<?php echo esc_attr( $pkg['id'] ); ?>"
+									data-package-id="<?php echo esc_attr( $pkg['id'] ); ?>"
+								>
+								<span class="bookit-existing-package-label">
+									<strong><?php echo esc_html( $pkg['package_type_name'] ); ?></strong>
+									&mdash; <?php echo esc_html( (string) $pkg['sessions_remaining'] ); ?>/<?php echo esc_html( (string) $pkg['sessions_total'] ); ?> <?php esc_html_e( 'sessions remaining', 'bookit-booking-system' ); ?>
+									<?php if ( ! empty( $pkg['expires_at'] ) ) : ?>
+										<span class="bookit-package-expiry">
+											(<?php
+											echo esc_html(
+												sprintf(
+													/* translators: %s: expiry date */
+													__( 'Expires %s', 'bookit-booking-system' ),
+													date_i18n( get_option( 'date_format' ), strtotime( (string) $pkg['expires_at'] ) )
+												)
+											);
+											?>)
+										</span>
+									<?php endif; ?>
+								</span>
+							</label>
+						<?php endforeach; ?>
+					</div>
+
+					<input type="hidden" name="bookit_selected_existing_package_id" id="bookit-selected-existing-package-id" value="">
+				</div>
+			<?php endif; ?>
+
 			<?php if ( '1' === $packages_enabled && ! empty( $available_packages ) ) : ?>
 				<div class="bookit-package-options" id="bookit-package-options">
 					<h3><?php esc_html_e( 'Or buy a session package', 'bookit-booking-system' ); ?></h3>
@@ -379,16 +457,19 @@ if ( '1' === $packages_enabled ) {
 
 	document.addEventListener( 'DOMContentLoaded', function() {
 		var hasDeposit       = <?php echo wp_json_encode( $has_deposit ); ?>;
-		var paymentOptions    = document.querySelectorAll( 'input[name="payment_method"]' );
+		var paymentOptions    = document.querySelectorAll( 'input[name="bookit_payment_method_choice"]' );
 		var paymentInfo       = document.getElementById( 'bookit-payment-info' );
 		var stripeInfo        = document.getElementById( 'bookit-stripe-info' );
 		var poaInfo           = document.getElementById( 'bookit-poa-info' );
 		var depositRow        = document.querySelector( '.price-row.deposit' );
 		var balanceRow        = document.querySelector( '.price-row.balance' );
 		var submitBtn         = document.querySelector( '#bookit-payment-form .bookit-btn-primary' );
+		var paymentMethodInput = document.getElementById( 'bookit-payment-method' );
 		var packageRadios     = document.querySelectorAll( '.bookit-package-radio' );
 		var selectedPackageId = document.getElementById( 'bookit-selected-package-id' );
 		var packageNotice     = document.getElementById( 'bookit-package-payment-notice' );
+		var existingPackageRadios = document.querySelectorAll( '.bookit-existing-package-radio' );
+		var selectedExistingPackageId = document.getElementById( 'bookit-selected-existing-package-id' );
 
 		function updatePaymentUI( value ) {
 			/* Show/hide the info panel */
@@ -421,6 +502,15 @@ if ( '1' === $packages_enabled ) {
 			}
 		}
 
+		function clearExistingPackageSelection() {
+			existingPackageRadios.forEach( function( packageOption ) {
+				packageOption.checked = false;
+			} );
+			if ( selectedExistingPackageId ) {
+				selectedExistingPackageId.value = '';
+			}
+		}
+
 		function clearPaymentSelection() {
 			paymentOptions.forEach( function( option ) {
 				option.checked = false;
@@ -429,7 +519,11 @@ if ( '1' === $packages_enabled ) {
 
 		paymentOptions.forEach( function( option ) {
 			option.addEventListener( 'change', function() {
+				if ( paymentMethodInput ) {
+					paymentMethodInput.value = this.value;
+				}
 				clearPackageSelection();
+				clearExistingPackageSelection();
 				updatePaymentUI( this.value );
 			});
 		});
@@ -437,20 +531,42 @@ if ( '1' === $packages_enabled ) {
 		packageRadios.forEach( function( packageOption ) {
 			packageOption.addEventListener( 'change', function() {
 				if ( this.checked ) {
+					if ( paymentMethodInput ) {
+						paymentMethodInput.value = 'stripe';
+					}
 					if ( selectedPackageId ) {
 						selectedPackageId.value = this.getAttribute( 'data-package-id' ) || '';
 					}
 					if ( packageNotice ) {
 						packageNotice.style.display = 'block';
 					}
+					clearExistingPackageSelection();
 					clearPaymentSelection();
 				}
 			} );
 		} );
 
+		existingPackageRadios.forEach( function( packageOption ) {
+			packageOption.addEventListener( 'change', function() {
+				if ( this.checked ) {
+					if ( selectedExistingPackageId ) {
+						selectedExistingPackageId.value = this.getAttribute( 'data-package-id' ) || '';
+					}
+					if ( paymentMethodInput ) {
+						paymentMethodInput.value = 'use_package';
+					}
+					clearPaymentSelection();
+					clearPackageSelection();
+				}
+			} );
+		} );
+
 		/* Initialise for the pre-selected option */
-		var checked = document.querySelector( 'input[name="payment_method"]:checked' );
+		var checked = document.querySelector( 'input[name="bookit_payment_method_choice"]:checked' );
 		if ( checked ) {
+			if ( paymentMethodInput ) {
+				paymentMethodInput.value = checked.value;
+			}
 			updatePaymentUI( checked.value );
 		}
 	});

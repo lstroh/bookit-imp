@@ -120,6 +120,7 @@ class Booking_System_Booking_Creator {
 			'payment_method'    => $data['payment_method'],
 			'payment_intent_id' => isset( $data['payment_intent_id'] ) ? $data['payment_intent_id'] : null,
 			'stripe_session_id' => isset( $data['stripe_session_id'] ) ? $data['stripe_session_id'] : null,
+			'customer_package_id' => ! empty( $data['customer_package_id'] ) ? absint( $data['customer_package_id'] ) : null,
 			'special_requests'  => isset( $data['special_requests'] ) ? $data['special_requests'] : '',
 			'cooling_off_waiver_given' => $waiver_given,
 			'cooling_off_waiver_at' => $waiver_at,
@@ -143,12 +144,19 @@ class Booking_System_Booking_Creator {
 			'%s', // payment_method
 			'%s', // payment_intent_id
 			'%s', // stripe_session_id
+			'%d', // customer_package_id
 			'%s', // special_requests
 			'%d', // cooling_off_waiver_given
 			'%s', // cooling_off_waiver_at
 			'%s', // created_at
 			'%s', // updated_at
 		);
+
+		if ( ! $this->bookings_table_has_customer_package_id() ) {
+			unset( $booking_data['customer_package_id'] );
+			unset( $format[15] );
+			$format = array_values( $format );
+		}
 		$inserted = $wpdb->insert(
 			$wpdb->prefix . 'bookings',
 			$booking_data,
@@ -451,5 +459,18 @@ class Booking_System_Booking_Creator {
 	private function normalize_time( $time ) {
 		$ts = strtotime( $time );
 		return $ts !== false ? gmdate( 'H:i:s', $ts ) : $time;
+	}
+
+	/**
+	 * Check if bookings table has customer_package_id column.
+	 *
+	 * @return bool
+	 */
+	private function bookings_table_has_customer_package_id() {
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'bookings';
+		$column     = $wpdb->get_var( "SHOW COLUMNS FROM {$table_name} LIKE 'customer_package_id'" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+
+		return ! empty( $column );
 	}
 }

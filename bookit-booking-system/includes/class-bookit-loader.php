@@ -158,6 +158,8 @@ class Bookit_Loader {
 		new Bookit_Customer_Packages_API();
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-available-packages-api.php';
 		new Bookit_Available_Packages_API();
+		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-customer-package-lookup-api.php';
+		new Bookit_Customer_Package_Lookup_API();
 
 		// Booking retrieval and email (confirmation page).
 		require_once BOOKIT_PLUGIN_DIR . 'includes/booking/class-booking-retriever.php';
