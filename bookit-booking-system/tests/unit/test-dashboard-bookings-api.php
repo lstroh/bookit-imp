@@ -393,6 +393,189 @@ class Test_Dashboard_Bookings_API extends WP_UnitTestCase {
 		$this->assertEquals( (int) $staff_a, $data['bookings'][0]['staff_id'] );
 	}
 
+	/**
+	 * Test filter bookings by customer ID for admin users.
+	 *
+	 * @covers Bookit_Dashboard_Bookings_API::get_all_bookings
+	 */
+	public function test_get_all_bookings_filters_by_customer_id() {
+		$staff      = $this->create_test_staff( array( 'role' => 'staff' ) );
+		$service    = $this->create_test_service();
+		$customer_a = $this->create_test_customer( array( 'first_name' => 'Alice' ) );
+		$customer_b = $this->create_test_customer( array( 'first_name' => 'Bob' ) );
+
+		$booking_a = $this->create_test_booking( array(
+			'staff_id'     => $staff,
+			'service_id'   => $service,
+			'customer_id'  => $customer_a,
+			'booking_date' => '2026-06-10',
+			'start_time'   => '09:00:00',
+			'end_time'     => '10:00:00',
+		) );
+
+		$this->create_test_booking( array(
+			'staff_id'     => $staff,
+			'service_id'   => $service,
+			'customer_id'  => $customer_b,
+			'booking_date' => '2026-06-11',
+			'start_time'   => '11:00:00',
+			'end_time'     => '12:00:00',
+		) );
+
+		$admin = $this->create_test_staff( array( 'role' => 'admin' ) );
+		$this->login_as( $admin, 'admin' );
+
+		$request = new WP_REST_Request( 'GET', '/' . $this->namespace . '/dashboard/bookings' );
+		$request->set_param( 'customer_id', $customer_a );
+
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertTrue( $data['success'] );
+		$this->assertCount( 1, $data['bookings'] );
+		$this->assertEquals( $booking_a, $data['bookings'][0]['id'] );
+		$this->assertEquals( (int) $customer_a, $data['bookings'][0]['customer_id'] );
+	}
+
+	/**
+	 * Test customer_id filter is ignored for staff role.
+	 *
+	 * @covers Bookit_Dashboard_Bookings_API::get_all_bookings
+	 */
+	public function test_get_all_bookings_customer_id_filter_ignored_for_staff_role() {
+		$staff_a    = $this->create_test_staff( array( 'first_name' => 'Alice', 'role' => 'staff' ) );
+		$staff_b    = $this->create_test_staff( array( 'first_name' => 'Bob', 'role' => 'staff' ) );
+		$service    = $this->create_test_service();
+		$customer_a = $this->create_test_customer( array( 'first_name' => 'AliceCustomer' ) );
+		$customer_b = $this->create_test_customer( array( 'first_name' => 'BobCustomer' ) );
+
+		$staff_a_booking = $this->create_test_booking( array(
+			'staff_id'     => $staff_a,
+			'service_id'   => $service,
+			'customer_id'  => $customer_a,
+			'booking_date' => '2026-06-12',
+			'start_time'   => '09:00:00',
+			'end_time'     => '10:00:00',
+		) );
+
+		$this->create_test_booking( array(
+			'staff_id'     => $staff_b,
+			'service_id'   => $service,
+			'customer_id'  => $customer_b,
+			'booking_date' => '2026-06-12',
+			'start_time'   => '11:00:00',
+			'end_time'     => '12:00:00',
+		) );
+
+		$this->login_as( $staff_a, 'staff' );
+
+		$request = new WP_REST_Request( 'GET', '/' . $this->namespace . '/dashboard/bookings' );
+		$request->set_param( 'customer_id', $customer_b );
+
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertCount( 1, $data['bookings'] );
+		$this->assertEquals( $staff_a_booking, $data['bookings'][0]['id'] );
+		$this->assertEquals( (int) $staff_a, $data['bookings'][0]['staff_id'] );
+		$this->assertEquals( (int) $customer_a, $data['bookings'][0]['customer_id'] );
+	}
+
+	/**
+	 * Test booking response includes customer_id field as integer.
+	 *
+	 * @covers Bookit_Dashboard_Bookings_API::get_all_bookings
+	 */
+	public function test_format_booking_includes_customer_id() {
+		$staff    = $this->create_test_staff( array( 'role' => 'staff' ) );
+		$service  = $this->create_test_service();
+		$customer = $this->create_test_customer();
+
+		$this->create_test_booking( array(
+			'staff_id'     => $staff,
+			'service_id'   => $service,
+			'customer_id'  => $customer,
+			'booking_date' => '2026-06-15',
+			'start_time'   => '10:00:00',
+			'end_time'     => '11:00:00',
+		) );
+
+		$admin = $this->create_test_staff( array( 'role' => 'admin' ) );
+		$this->login_as( $admin, 'admin' );
+
+		$request  = new WP_REST_Request( 'GET', '/' . $this->namespace . '/dashboard/bookings' );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertArrayHasKey( 'customer_id', $data['bookings'][0] );
+		$this->assertIsInt( $data['bookings'][0]['customer_id'] );
+		$this->assertEquals( (int) $customer, $data['bookings'][0]['customer_id'] );
+	}
+
+	/**
+	 * Test booking response includes null customer_package_id when unlinked.
+	 *
+	 * @covers Bookit_Dashboard_Bookings_API::get_all_bookings
+	 */
+	public function test_format_booking_includes_customer_package_id_null_when_unlinked() {
+		$staff    = $this->create_test_staff( array( 'role' => 'staff' ) );
+		$service  = $this->create_test_service();
+		$customer = $this->create_test_customer();
+
+		$this->create_test_booking( array(
+			'staff_id'     => $staff,
+			'service_id'   => $service,
+			'customer_id'  => $customer,
+			'booking_date' => '2026-06-16',
+			'start_time'   => '10:00:00',
+			'end_time'     => '11:00:00',
+		) );
+
+		$admin = $this->create_test_staff( array( 'role' => 'admin' ) );
+		$this->login_as( $admin, 'admin' );
+
+		$request  = new WP_REST_Request( 'GET', '/' . $this->namespace . '/dashboard/bookings' );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertArrayHasKey( 'customer_package_id', $data['bookings'][0] );
+		$this->assertNull( $data['bookings'][0]['customer_package_id'] );
+	}
+
+	/**
+	 * Test booking response includes customer_package_id when linked.
+	 *
+	 * @covers Bookit_Dashboard_Bookings_API::get_all_bookings
+	 */
+	public function test_format_booking_includes_customer_package_id_when_linked() {
+		$staff    = $this->create_test_staff( array( 'role' => 'staff' ) );
+		$service  = $this->create_test_service();
+		$customer = $this->create_test_customer();
+
+		$this->create_test_booking( array(
+			'staff_id'             => $staff,
+			'service_id'           => $service,
+			'customer_id'          => $customer,
+			'customer_package_id'  => 123,
+			'booking_date'         => '2026-06-17',
+			'start_time'           => '10:00:00',
+			'end_time'             => '11:00:00',
+		) );
+
+		$admin = $this->create_test_staff( array( 'role' => 'admin' ) );
+		$this->login_as( $admin, 'admin' );
+
+		$request  = new WP_REST_Request( 'GET', '/' . $this->namespace . '/dashboard/bookings' );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertArrayHasKey( 'customer_package_id', $data['bookings'][0] );
+		$this->assertIsInt( $data['bookings'][0]['customer_package_id'] );
+		$this->assertEquals( 123, $data['bookings'][0]['customer_package_id'] );
+	}
+
 	// ========== TESTS FOR: POST /dashboard/bookings/create ==========
 
 	/**

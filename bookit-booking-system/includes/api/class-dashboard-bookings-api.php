@@ -270,6 +270,12 @@ class Bookit_Dashboard_Bookings_API {
 							return empty( $param ) || is_numeric( $param );
 						},
 					),
+					'customer_id' => array(
+						'required'          => false,
+						'type'              => 'integer',
+						'minimum'           => 1,
+						'sanitize_callback' => 'absint',
+					),
 					'status'     => array(
 						'validate_callback' => function ( $param ) {
 							$valid_statuses = array( 'pending', 'pending_payment', 'confirmed', 'completed', 'cancelled', 'no_show' );
@@ -1697,6 +1703,8 @@ class Bookit_Dashboard_Bookings_API {
 		$query = "
 			SELECT
 				b.id,
+				b.customer_id,
+				b.customer_package_id,
 				b.booking_reference,
 				b.booking_date,
 				b.start_time,
@@ -1754,6 +1762,12 @@ class Bookit_Dashboard_Bookings_API {
 		if ( ! empty( $service_id ) ) {
 			$query   .= ' AND b.service_id = %d';
 			$params[] = (int) $service_id;
+		}
+
+		// Customer filter (admin only).
+		if ( ! empty( $request->get_param( 'customer_id' ) ) && 'admin' === $current_staff['role'] ) {
+			$query   .= ' AND b.customer_id = %d';
+			$params[] = absint( $request->get_param( 'customer_id' ) );
 		}
 
 		// Status filter.
@@ -2824,8 +2838,10 @@ class Bookit_Dashboard_Bookings_API {
 			'special_requests' => $booking['special_requests'],
 			'staff_notes'      => $booking['staff_notes'],
 			'customer_name'    => $customer_name,
+			'customer_id'         => (int) ( $booking['customer_id'] ?? 0 ),
 			'customer_email'   => $booking['customer_email'] ?? '',
 			'customer_phone'   => $booking['customer_phone'] ?? '',
+			'customer_package_id' => ! empty( $booking['customer_package_id'] ) ? (int) $booking['customer_package_id'] : null,
 			'service_name'     => $booking['service_name'],
 			'staff_name'       => $booking['staff_first_name'] . ' ' . $booking['staff_last_name'],
 			'is_starting_soon' => $is_starting_soon,
