@@ -200,6 +200,13 @@
           >
             Payment History
           </button>
+          <button
+            class="px-3 py-1.5 text-sm font-medium rounded-lg"
+            :class="activeTab === 'packages' ? 'bg-primary-600 text-white' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'"
+            @click="activeTab = 'packages'"
+          >
+            Packages
+          </button>
         </div>
 
         <div v-if="activeTab === 'bookings'" class="p-4 sm:p-6">
@@ -224,7 +231,7 @@
           </div>
         </div>
 
-        <div v-else class="p-4 sm:p-6">
+        <div v-else-if="activeTab === 'payments'" class="p-4 sm:p-6">
           <div v-if="!customer.payments?.length" class="text-sm text-gray-600">No payment records.</div>
           <div v-else class="space-y-2">
             <div
@@ -242,6 +249,40 @@
                   {{ formatPaymentStatus(payment.payment_status) }}
                 </span>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else-if="activeTab === 'packages'" class="p-4 sm:p-6">
+          <div v-if="packagesLoading" class="text-sm text-gray-500">Loading packages...</div>
+          <div v-else-if="packagesError" class="text-sm text-red-600">{{ packagesError }}</div>
+          <div v-else-if="!customerPackages.length" class="text-sm text-gray-600">
+            No packages found for this customer.
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="pkg in customerPackages"
+              :key="pkg.id"
+              class="rounded-lg border border-gray-200 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+            >
+              <div class="text-sm text-gray-700">
+                <div class="font-medium text-gray-900">{{ pkg.package_type_name }}</div>
+                <div>{{ pkg.sessions_remaining }} / {{ pkg.sessions_total }} sessions remaining</div>
+                <div v-if="pkg.expires_at" class="text-xs text-gray-500">
+                  Expires {{ formatDate(pkg.expires_at) }}
+                </div>
+              </div>
+              <span
+                class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full"
+                :class="{
+                  'bg-green-100 text-green-800': pkg.status === 'active',
+                  'bg-gray-100 text-gray-600': pkg.status === 'exhausted',
+                  'bg-amber-100 text-amber-800': pkg.status === 'expired',
+                  'bg-red-100 text-red-700': pkg.status === 'cancelled',
+                }"
+              >
+                {{ pkg.status.charAt(0).toUpperCase() + pkg.status.slice(1) }}
+              </span>
             </div>
           </div>
         </div>
@@ -280,7 +321,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useToast } from '../composables/useToast'
@@ -304,6 +345,9 @@ const deleting = ref(false)
 const showDeleteModal = ref(false)
 const deleteError = ref('')
 const activeTab = ref('bookings')
+const customerPackages = ref([])
+const packagesLoading = ref(false)
+const packagesError = ref('')
 
 const editForm = ref({
   first_name: '',
@@ -467,6 +511,19 @@ async function loadCustomer() {
   }
 }
 
+async function loadCustomerPackages() {
+  packagesLoading.value = true
+  packagesError.value = ''
+  try {
+    const response = await api.get(`/customer-packages?customer_id=${route.params.id}&per_page=50`)
+    customerPackages.value = response.data?.packages || response.data || []
+  } catch {
+    packagesError.value = 'Failed to load packages.'
+  } finally {
+    packagesLoading.value = false
+  }
+}
+
 async function saveCustomer() {
   if (!customer.value) return
   saving.value = true
@@ -532,5 +589,11 @@ function exportCustomerData(format) {
 
 onMounted(() => {
   loadCustomer()
+})
+
+watch(activeTab, (tab) => {
+  if (tab === 'packages' && customerPackages.value.length === 0 && !packagesError.value) {
+    loadCustomerPackages()
+  }
 })
 </script>

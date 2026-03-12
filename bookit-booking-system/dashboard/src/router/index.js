@@ -110,6 +110,12 @@ export default [
     meta: { title: 'Customer Profile', requiresAdmin: true }
   },
   {
+    path: '/packages',
+    name: 'Packages',
+    component: () => import('../views/Packages.vue'),
+    meta: { title: 'Packages', requiresAdmin: true }
+  },
+  {
     path: '/settings/email',
     name: 'EmailSettings',
     component: () => import('../views/EmailSettings.vue'),
