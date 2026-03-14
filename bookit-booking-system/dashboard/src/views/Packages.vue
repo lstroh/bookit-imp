@@ -559,7 +559,7 @@ async function openRedeemModal(row) {
     // Read the bookings API controller to confirm the correct param names
     // before implementing — do NOT assume param names.
     const response = await api.get(
-      `/dashboard/bookings?customer_id=${row.customer_id}&per_page=100`
+      `/bookings?customer_id=${row.customer_id}&per_page=100`
     )
     const allBookings = response.data?.bookings || response.data || []
 
