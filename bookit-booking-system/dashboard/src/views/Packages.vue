@@ -97,7 +97,8 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="pkg in pagedPackages" :key="pkg.id" class="hover:bg-gray-50 transition-colors">
+              <template v-for="pkg in pagedPackages" :key="pkg.id">
+              <tr class="hover:bg-gray-50 transition-colors">
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                   <router-link :to="`/customers/${pkg.customer_id}`" class="text-primary-600 hover:text-primary-700 font-medium">
                     {{ getCustomerDisplayName(pkg) }}
@@ -119,6 +120,12 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ pkg.expires_at ? formatDate(pkg.expires_at) : 'Never' }}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button
+                    class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 mr-2"
+                    @click="toggleRedemptions(pkg)"
+                  >
+                    {{ expandedPackageId === pkg.id ? 'Hide History' : 'History' }}
+                  </button>
+                  <button
                     v-if="pkg.status === 'active' && Number(pkg.sessions_remaining || 0) > 0"
                     class="px-3 py-1.5 text-xs font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
                     :disabled="redeemingId === pkg.id"
@@ -128,6 +135,52 @@
                   </button>
                 </td>
               </tr>
+              <tr v-if="expandedPackageId === pkg.id" :key="`redemptions-${pkg.id}`">
+                <td colspan="7" class="px-6 py-0 bg-gray-50">
+                  <div class="py-4">
+                    <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                      Redemption History
+                    </h4>
+
+                    <div v-if="redemptionsLoading && !redemptionsCache[pkg.id]" class="text-sm text-gray-500">
+                      Loading...
+                    </div>
+
+                    <div v-else-if="redemptionsError[pkg.id]" class="text-sm text-red-600">
+                      {{ redemptionsError[pkg.id] }}
+                    </div>
+
+                    <div v-else-if="!redemptionsCache[pkg.id]?.length" class="text-sm text-gray-500 italic">
+                      No sessions redeemed yet.
+                    </div>
+
+                    <table v-else class="min-w-full text-sm">
+                      <thead>
+                        <tr class="text-xs text-gray-400 uppercase">
+                          <th class="pb-2 text-left font-medium">Date</th>
+                          <th class="pb-2 text-left font-medium">Booking</th>
+                          <th class="pb-2 text-left font-medium">Service</th>
+                          <th class="pb-2 text-left font-medium">Staff</th>
+                          <th class="pb-2 text-left font-medium">Redeemed By</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-100">
+                        <tr v-for="r in redemptionsCache[pkg.id]" :key="r.id" class="text-gray-700">
+                          <td class="py-2 pr-4">{{ formatDate(r.redeemed_at) }}</td>
+                          <td class="py-2 pr-4">
+                            <span class="text-xs text-gray-500">#{{ r.booking_id }}</span>
+                            <span v-if="r.booking_reference" class="ml-1 text-xs text-gray-400">({{ r.booking_reference }})</span>
+                          </td>
+                          <td class="py-2 pr-4">{{ r.service_name || '—' }}</td>
+                          <td class="py-2 pr-4">{{ r.staff_name || '—' }}</td>
+                          <td class="py-2">{{ r.redeemed_by_name }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </td>
+              </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -341,6 +394,10 @@ const redeemingId = ref(null)
 const redeemError = ref('')
 const redeemSuccess = ref('')
 const customerNames = ref({})
+const expandedPackageId = ref(null)
+const redemptionsCache = ref({})
+const redemptionsLoading = ref(false)
+const redemptionsError = ref({})
 // Redeem modal state
 const redeemModalOpen = ref(false)
 const redeemModalPackage = ref(null)       // the package row being redeemed
@@ -468,6 +525,28 @@ function getStatusClass(status) {
     cancelled: 'bg-red-100 text-red-700'
   }
   return map[status] || 'bg-gray-100 text-gray-700'
+}
+
+async function toggleRedemptions(pkg) {
+  if (expandedPackageId.value === pkg.id) {
+    expandedPackageId.value = null
+    return
+  }
+
+  expandedPackageId.value = pkg.id
+  if (redemptionsCache.value[pkg.id]) return
+
+  redemptionsLoading.value = true
+  redemptionsError.value[pkg.id] = ''
+
+  try {
+    const response = await api.get(`/customer-packages/${pkg.id}/redemptions`)
+    redemptionsCache.value[pkg.id] = response.data?.redemptions || []
+  } catch (err) {
+    redemptionsError.value[pkg.id] = err.message || 'Failed to load redemption history.'
+  } finally {
+    redemptionsLoading.value = false
+  }
 }
 
 async function loadPackages(page = 1) {

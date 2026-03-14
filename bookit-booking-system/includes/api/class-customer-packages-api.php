@@ -131,6 +131,24 @@ class Bookit_Customer_Packages_API {
 				'permission_callback' => array( $this, 'check_admin_permission' ),
 			)
 		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/customer-packages/(?P<id>\d+)/redemptions',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'get_redemptions' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'id' => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param ) && (int) $param > 0;
+						},
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -408,6 +426,89 @@ class Bookit_Customer_Packages_API {
 		}
 
 		return new WP_REST_Response( $row, 200 );
+	}
+
+	/**
+	 * GET /dashboard/customer-packages/{id}/redemptions
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_redemptions( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		global $wpdb;
+
+		$package_id = absint( $request->get_param( 'id' ) );
+
+		$package = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_customer_packages WHERE id = %d LIMIT 1",
+				$package_id
+			)
+		);
+
+		if ( ! $package ) {
+			return Bookit_Error_Registry::to_wp_error( 'E5001' );
+		}
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					r.id,
+					r.booking_id,
+					r.redeemed_at,
+					r.redeemed_by,
+					r.notes,
+					b.booking_date,
+					b.start_time,
+					b.booking_reference,
+					s.name AS service_name,
+					CONCAT(st.first_name, ' ', st.last_name) AS staff_name,
+					CONCAT(rb.first_name, ' ', rb.last_name) AS redeemed_by_name
+				FROM {$wpdb->prefix}bookings_package_redemptions r
+				LEFT JOIN {$wpdb->prefix}bookings b
+					ON b.id = r.booking_id
+				LEFT JOIN {$wpdb->prefix}bookings_services s
+					ON s.id = b.service_id
+				LEFT JOIN {$wpdb->prefix}bookings_staff st
+					ON st.id = b.staff_id
+				LEFT JOIN {$wpdb->prefix}bookings_staff rb
+					ON rb.id = r.redeemed_by
+				WHERE r.customer_package_id = %d
+				ORDER BY r.redeemed_at DESC",
+				$package_id
+			),
+			ARRAY_A
+		);
+
+		$redemptions = array_map(
+			function ( $row ) {
+				return array(
+					'id'                => (int) $row['id'],
+					'booking_id'        => (int) $row['booking_id'],
+					'booking_reference' => $row['booking_reference'] ?? '',
+					'booking_date'      => $row['booking_date'] ?? '',
+					'start_time'        => $row['start_time'] ?? '',
+					'service_name'      => $row['service_name'] ?? '',
+					'staff_name'        => trim( $row['staff_name'] ?? '' ),
+					'redeemed_at'       => $row['redeemed_at'] ?? '',
+					'redeemed_by'       => (int) $row['redeemed_by'],
+					'redeemed_by_name'  => 0 === (int) $row['redeemed_by']
+						? 'Customer'
+						: trim( $row['redeemed_by_name'] ?? 'Admin' ),
+					'notes'             => $row['notes'] ?? '',
+				);
+			},
+			(array) $rows
+		);
+
+		return new WP_REST_Response(
+			array(
+				'success'     => true,
+				'redemptions' => $redemptions,
+				'total'       => count( $redemptions ),
+			),
+			200
+		);
 	}
 
 	/**

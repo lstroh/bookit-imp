@@ -272,17 +272,46 @@
                   Expires {{ formatDate(pkg.expires_at) }}
                 </div>
               </div>
-              <span
-                class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full"
-                :class="{
-                  'bg-green-100 text-green-800': pkg.status === 'active',
-                  'bg-gray-100 text-gray-600': pkg.status === 'exhausted',
-                  'bg-amber-100 text-amber-800': pkg.status === 'expired',
-                  'bg-red-100 text-red-700': pkg.status === 'cancelled',
-                }"
-              >
-                {{ pkg.status.charAt(0).toUpperCase() + pkg.status.slice(1) }}
-              </span>
+              <div class="flex flex-col items-start sm:items-end">
+                <span
+                  class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full"
+                  :class="{
+                    'bg-green-100 text-green-800': pkg.status === 'active',
+                    'bg-gray-100 text-gray-600': pkg.status === 'exhausted',
+                    'bg-amber-100 text-amber-800': pkg.status === 'expired',
+                    'bg-red-100 text-red-700': pkg.status === 'cancelled',
+                  }"
+                >
+                  {{ pkg.status.charAt(0).toUpperCase() + pkg.status.slice(1) }}
+                </span>
+                <button
+                  class="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium"
+                  @click="togglePackageRedemptions(pkg)"
+                >
+                  {{ expandedPackageId === pkg.id ? 'Hide history' : 'View history' }}
+                </button>
+                <div v-if="expandedPackageId === pkg.id" class="mt-3 pt-3 border-t border-gray-100 w-full">
+                  <div v-if="redemptionsLoading && !redemptionsCache[pkg.id]" class="text-xs text-gray-500">
+                    Loading...
+                  </div>
+                  <div v-else-if="redemptionsError[pkg.id]" class="text-xs text-red-600">
+                    {{ redemptionsError[pkg.id] }}
+                  </div>
+                  <div v-else-if="!redemptionsCache[pkg.id]?.length" class="text-xs text-gray-500 italic">
+                    No sessions redeemed yet.
+                  </div>
+                  <div v-else class="space-y-1">
+                    <div
+                      v-for="r in redemptionsCache[pkg.id]"
+                      :key="r.id"
+                      class="text-xs text-gray-600 flex justify-between"
+                    >
+                      <span>{{ r.booking_date }} {{ r.start_time?.slice(0,5) }} · {{ r.service_name || '—' }}</span>
+                      <span class="text-gray-400">{{ r.redeemed_by_name }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -348,6 +377,10 @@ const activeTab = ref('bookings')
 const customerPackages = ref([])
 const packagesLoading = ref(false)
 const packagesError = ref('')
+const expandedPackageId = ref(null)
+const redemptionsCache = ref({})
+const redemptionsLoading = ref(false)
+const redemptionsError = ref({})
 
 const editForm = ref({
   first_name: '',
@@ -521,6 +554,28 @@ async function loadCustomerPackages() {
     packagesError.value = 'Failed to load packages.'
   } finally {
     packagesLoading.value = false
+  }
+}
+
+async function togglePackageRedemptions(pkg) {
+  if (expandedPackageId.value === pkg.id) {
+    expandedPackageId.value = null
+    return
+  }
+
+  expandedPackageId.value = pkg.id
+  if (redemptionsCache.value[pkg.id]) return
+
+  redemptionsLoading.value = true
+  redemptionsError.value[pkg.id] = ''
+
+  try {
+    const response = await api.get(`/customer-packages/${pkg.id}/redemptions`)
+    redemptionsCache.value[pkg.id] = response.data?.redemptions || []
+  } catch (err) {
+    redemptionsError.value[pkg.id] = err.message || 'Failed to load redemption history.'
+  } finally {
+    redemptionsLoading.value = false
   }
 }
 
