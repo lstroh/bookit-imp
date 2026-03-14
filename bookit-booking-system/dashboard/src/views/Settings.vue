@@ -31,6 +31,38 @@
       </div>
     </div>
 
+    <!-- Packages Settings -->
+    <div v-if="isAdmin" class="bg-white rounded-xl border border-gray-200 p-6">
+      <h2 class="text-base font-semibold text-gray-900 mb-1">Session Packages</h2>
+      <p class="text-sm text-gray-500 mb-4">
+        Allow customers to purchase prepaid session bundles and redeem them at booking.
+      </p>
+
+      <div class="flex items-center justify-between py-3 border-b border-gray-100">
+        <div>
+          <p class="text-sm font-medium text-gray-900">Enable Session Packages</p>
+          <p class="text-xs text-gray-500 mt-0.5">
+            Shows package options at checkout and enables the Packages dashboard section.
+          </p>
+        </div>
+        <label class="flex items-center cursor-pointer">
+          <input v-model="packagesEnabled" type="checkbox" class="sr-only peer" />
+          <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+        </label>
+      </div>
+
+      <div class="flex justify-end pt-4">
+        <button
+          type="button"
+          :disabled="savingPackages"
+          class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+          @click="savePackagesEnabled"
+        >
+          {{ savingPackages ? 'Saving...' : 'Save Package Settings' }}
+        </button>
+      </div>
+    </div>
+
     <div v-if="isAdmin" class="bg-white rounded-lg shadow-sm border border-gray-200">
       <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
         <h2 class="text-lg font-semibold text-gray-900">Branding</h2>
@@ -163,7 +195,9 @@ const currentUserRole = window.BOOKIT_DASHBOARD?.staff?.role || ''
 const isAdmin = computed(() => currentUserRole === 'admin' || currentUserRole === 'bookit_admin')
 
 const showStaffEarnings = ref(false)
+const packagesEnabled = ref(false)
 const savingGeneral = ref(false)
+const savingPackages = ref(false)
 const savingBranding = ref(false)
 const brandingHexInput = ref('#4F46E5')
 const brandingHexError = ref('')
@@ -206,6 +240,19 @@ const loadBranding = async () => {
   }
 }
 
+const loadPackagesEnabled = async () => {
+  try {
+    const response = await api.get('settings?keys=packages_enabled')
+    if (response.data.success && response.data.settings) {
+      packagesEnabled.value = response.data.settings.packages_enabled === '1' ||
+                              response.data.settings.packages_enabled === true ||
+                              response.data.settings.packages_enabled === 1
+    }
+  } catch {
+    // Fall back to false
+  }
+}
+
 const saveShowStaffEarnings = async () => {
   savingGeneral.value = true
 
@@ -225,6 +272,24 @@ const saveShowStaffEarnings = async () => {
     toastError(err.message || 'Failed to save settings.')
   } finally {
     savingGeneral.value = false
+  }
+}
+
+const savePackagesEnabled = async () => {
+  savingPackages.value = true
+  try {
+    const response = await api.post('settings', {
+      settings: { packages_enabled: packagesEnabled.value ? '1' : '0' }
+    })
+    if (response.data.success) {
+      toastSuccess('Package settings saved.')
+    } else {
+      toastError(response.data.message || 'Failed to save package settings.')
+    }
+  } catch (err) {
+    toastError(err.message || 'Failed to save package settings.')
+  } finally {
+    savingPackages.value = false
   }
 }
 
@@ -312,6 +377,7 @@ const saveBranding = async () => {
 
 onMounted(async () => {
   await loadShowStaffEarnings()
+  await loadPackagesEnabled()
   await loadBranding()
 })
 </script>

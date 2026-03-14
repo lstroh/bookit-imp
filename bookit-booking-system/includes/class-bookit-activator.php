@@ -110,6 +110,9 @@ class Bookit_Activator {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-audit-retention.php';
 		Bookit_Audit_Retention::register_cron();
 
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-package-expiry.php';
+		Bookit_Package_Expiry::register_cron();
+
 		// Initialize logger (creates log directory in best location)
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-logger.php';
 		Bookit_Logger::init();

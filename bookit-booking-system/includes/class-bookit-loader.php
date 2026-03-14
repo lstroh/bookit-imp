@@ -336,6 +336,9 @@ class Bookit_Loader {
 
 		// Audit retention cleanup cron.
 		add_action( 'bookit_audit_retention', array( 'Bookit_Audit_Retention', 'run' ) );
+
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-package-expiry.php';
+		Bookit_Package_Expiry::init();
 	}
 
 	/**

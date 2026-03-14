@@ -40,6 +40,9 @@ class Bookit_Deactivator {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-idempotency-cleanup.php';
 		Bookit_Idempotency_Cleanup::unregister_cron();
 
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-package-expiry.php';
+		Bookit_Package_Expiry::unregister_cron();
+
 		// Flush rewrite rules.
 		flush_rewrite_rules();
 

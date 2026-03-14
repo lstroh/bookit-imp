@@ -7114,6 +7114,13 @@ class Bookit_Dashboard_Bookings_API {
 				$value = $this->sanitize_cancellation_setting_value( $key, $value );
 			}
 
+			if ( 'packages_enabled' === $key ) {
+				$value = sanitize_text_field( (string) $value );
+				if ( ! in_array( $value, array( '0', '1' ), true ) ) {
+					continue;
+				}
+			}
+
 			$type = 'string';
 			if ( is_int( $value ) ) {
 				$type = 'integer';
@@ -7412,6 +7419,7 @@ class Bookit_Dashboard_Bookings_API {
 			'business_address',
 			'timezone',
 			'show_staff_earnings',
+			'packages_enabled',
 			'smtp_enabled',
 			'smtp_host',
 			'smtp_port',
