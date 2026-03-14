@@ -122,7 +122,7 @@
                     v-if="pkg.status === 'active' && Number(pkg.sessions_remaining || 0) > 0"
                     class="px-3 py-1.5 text-xs font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
                     :disabled="redeemingId === pkg.id"
-                    @click="redeemPackage(pkg)"
+                    @click="openRedeemModal(pkg)"
                   >
                     {{ redeemingId === pkg.id ? 'Redeeming...' : 'Redeem Session' }}
                   </button>
@@ -197,11 +197,128 @@
         </nav>
       </div>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="redeemModalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="redeem-modal-title"
+      >
+        <!-- Backdrop -->
+        <div
+          class="absolute inset-0 bg-black/50"
+          @click="closeRedeemModal"
+          aria-hidden="true"
+        />
+
+        <!-- Panel -->
+        <div
+          ref="redeemModalRef"
+          tabindex="-1"
+          class="relative z-10 w-full max-w-lg mx-4 bg-white rounded-xl shadow-xl focus:outline-none"
+        >
+          <!-- Header -->
+          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <h2 id="redeem-modal-title" class="text-base font-semibold text-gray-900">
+              Redeem Session
+            </h2>
+            <button
+              class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
+              aria-label="Close"
+              @click="closeRedeemModal"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Body -->
+          <div class="px-6 py-4">
+            <!-- Package summary -->
+            <div v-if="redeemModalPackage" class="mb-4 rounded-lg bg-gray-50 border border-gray-200 px-4 py-3 text-sm text-gray-700">
+              <div class="font-medium text-gray-900">{{ redeemModalPackage.package_type_name }}</div>
+              <div class="mt-0.5">
+                {{ Number(redeemModalPackage.sessions_remaining) }} session{{ Number(redeemModalPackage.sessions_remaining) !== 1 ? 's' : '' }} remaining
+              </div>
+            </div>
+
+            <!-- Loading state -->
+            <div v-if="redeemModalLoading" class="py-6 text-center text-sm text-gray-500">
+              Loading bookings...
+            </div>
+
+            <!-- Error state -->
+            <div
+              v-else-if="redeemModalError && redeemModalBookings.length === 0"
+              class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700"
+            >
+              {{ redeemModalError }}
+            </div>
+
+            <!-- Booking list -->
+            <div v-else>
+              <p class="text-sm text-gray-600 mb-3">Select the booking to redeem this session against:</p>
+              <div class="space-y-2 max-h-64 overflow-y-auto">
+                <label
+                  v-for="booking in redeemModalBookings"
+                  :key="booking.id"
+                  class="flex items-start gap-3 rounded-lg border border-gray-200 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                  :class="{ 'border-primary-500 bg-primary-50': redeemModalSelectedBookingId === booking.id }"
+                >
+                  <input
+                    type="radio"
+                    :value="booking.id"
+                    v-model="redeemModalSelectedBookingId"
+                    class="mt-0.5 text-primary-600 focus:ring-primary-500"
+                  />
+                  <div class="text-sm text-gray-700">
+                    <div class="font-medium text-gray-900">
+                      #{{ booking.id }} · {{ booking.booking_date }} {{ booking.start_time }}
+                    </div>
+                    <div>{{ booking.service_name }} · {{ booking.staff_name }}</div>
+                    <div class="text-xs text-gray-500 capitalize">{{ booking.status }}</div>
+                  </div>
+                </label>
+              </div>
+
+              <!-- Inline error after submit attempt -->
+              <div
+                v-if="redeemModalError && redeemModalBookings.length > 0"
+                class="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              >
+                {{ redeemModalError }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
+            <button
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              @click="closeRedeemModal"
+              :disabled="redeemModalSubmitting"
+            >
+              Cancel
+            </button>
+            <button
+              class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+              :disabled="!redeemModalSelectedBookingId || redeemModalSubmitting || redeemModalLoading"
+              @click="submitRedemption"
+            >
+              {{ redeemModalSubmitting ? 'Redeeming...' : 'Confirm Redemption' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import ErrorState from '../components/ErrorState.vue'
@@ -224,6 +341,16 @@ const redeemingId = ref(null)
 const redeemError = ref('')
 const redeemSuccess = ref('')
 const customerNames = ref({})
+// Redeem modal state
+const redeemModalOpen = ref(false)
+const redeemModalPackage = ref(null)       // the package row being redeemed
+const redeemModalBookings = ref([])        // unlinked bookings for this customer
+const redeemModalLoading = ref(false)
+const redeemModalError = ref('')
+const redeemModalSelectedBookingId = ref(null)
+const redeemModalSubmitting = ref(false)
+const redeemModalRef = ref(null)           // template ref for focus trap
+const redeemPreviousActive = ref(null)     // element to restore focus to on close
 
 let searchTimeout = null
 
@@ -375,34 +502,119 @@ async function loadPackages(page = 1) {
   }
 }
 
-async function redeemPackage(row) {
+const getRedeemFocusableElements = () => {
+  if (!redeemModalRef.value) return []
+  return Array.from(
+    redeemModalRef.value.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  )
+}
+
+const trapFocusHandler = (e) => {
+  if (!redeemModalRef.value) return
+
+  const focusable = getRedeemFocusableElements()
+  if (focusable.length === 0) return
+
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+
+  if (e.key === 'Tab') {
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        last.focus()
+        e.preventDefault()
+      }
+    } else {
+      if (document.activeElement === last) {
+        first.focus()
+        e.preventDefault()
+      }
+    }
+  }
+
+  if (e.key === 'Escape') {
+    closeRedeemModal()
+  }
+}
+
+async function openRedeemModal(row) {
   redeemError.value = ''
   redeemSuccess.value = ''
+  redeemModalPackage.value = row
+  redeemModalBookings.value = []
+  redeemModalSelectedBookingId.value = null
+  redeemModalError.value = ''
+  redeemModalSubmitting.value = false
+  redeemModalLoading.value = true
+  redeemModalOpen.value = true
 
-  const input = window.prompt('Redeem one session from this package against booking ID:')
-  if (input === null) {
-    return
+  // Save focus so we can restore it when the modal closes
+  redeemPreviousActive.value = document.activeElement
+
+  try {
+    // Fetch this customer's bookings that are not yet linked to a package.
+    // Uses customer_id filter + per_page=100 to get a full list.
+    // Read the bookings API controller to confirm the correct param names
+    // before implementing — do NOT assume param names.
+    const response = await api.get(
+      `/dashboard/bookings?customer_id=${row.customer_id}&per_page=100`
+    )
+    const allBookings = response.data?.bookings || response.data || []
+
+    // Filter client-side to only unlinked bookings (customer_package_id is null/0)
+    // and non-cancelled/non-no-show statuses
+    redeemModalBookings.value = allBookings.filter(b =>
+      !b.customer_package_id &&
+      b.status !== 'cancelled' &&
+      b.status !== 'no_show'
+    )
+
+    if (redeemModalBookings.value.length === 0) {
+      redeemModalError.value = 'No eligible bookings found for this customer. A booking must exist and not already be linked to a package.'
+    }
+  } catch (err) {
+    redeemModalError.value = err.message || 'Failed to load bookings.'
+  } finally {
+    redeemModalLoading.value = false
+    // Focus the modal after data loads
+    await nextTick()
+    redeemModalRef.value?.focus()
   }
+}
 
-  const bookingId = Number.parseInt(String(input).trim(), 10)
-  if (!Number.isInteger(bookingId) || bookingId <= 0) {
-    return
-  }
+function closeRedeemModal() {
+  redeemModalOpen.value = false
+  redeemModalPackage.value = null
+  redeemModalBookings.value = []
+  redeemModalSelectedBookingId.value = null
+  redeemModalError.value = ''
+  redeemModalSubmitting.value = false
+  // Restore focus to the button that triggered the modal
+  nextTick(() => redeemPreviousActive.value?.focus())
+}
 
-  redeemingId.value = row.id
+async function submitRedemption() {
+  if (!redeemModalSelectedBookingId.value || !redeemModalPackage.value) return
+
+  redeemModalSubmitting.value = true
+  redeemModalError.value = ''
+
   try {
     await api.post('/package-redemptions', {
-      customer_package_id: row.id,
-      booking_id: bookingId,
+      customer_package_id: redeemModalPackage.value.id,
+      booking_id: redeemModalSelectedBookingId.value,
       notes: ''
     })
     redeemSuccess.value = 'Session redeemed successfully.'
+    closeRedeemModal()
     await loadPackages(pagination.value.current_page)
   } catch (err) {
     const code = err.code ? `${err.code}: ` : ''
-    redeemError.value = `${code}${err.message || 'Failed to redeem session.'}`
+    redeemModalError.value = `${code}${err.message || 'Failed to redeem session.'}`
   } finally {
-    redeemingId.value = null
+    redeemModalSubmitting.value = false
   }
 }
 
@@ -436,6 +648,22 @@ watch(
   }
 )
 
+watch(redeemModalOpen, async (isOpen) => {
+  if (isOpen) {
+    document.addEventListener('keydown', trapFocusHandler)
+
+    await nextTick()
+    const focusable = getRedeemFocusableElements()
+    if (focusable.length > 0) {
+      focusable[0].focus()
+    } else {
+      redeemModalRef.value?.focus()
+    }
+  } else {
+    document.removeEventListener('keydown', trapFocusHandler)
+  }
+})
+
 onMounted(() => {
   if (!isAdmin.value) {
     router.push('/')
@@ -447,5 +675,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearTimeout(searchTimeout)
+  document.removeEventListener('keydown', trapFocusHandler)
 })
 </script>
