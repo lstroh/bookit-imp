@@ -254,8 +254,8 @@
         </div>
 
         <div v-else-if="activeTab === 'packages'" class="p-4 sm:p-6">
-          <div v-if="packagesLoading" class="text-sm text-gray-500">Loading packages...</div>
-          <div v-else-if="packagesError" class="text-sm text-red-600">{{ packagesError }}</div>
+          <div v-if="packagesLoading" role="status" aria-live="polite" class="text-sm text-gray-500">Loading packages...</div>
+          <div v-else-if="packagesError" role="alert" class="text-sm text-red-600">{{ packagesError }}</div>
           <div v-else-if="!customerPackages.length" class="text-sm text-gray-600">
             No packages found for this customer.
           </div>
@@ -282,19 +282,28 @@
                     'bg-red-100 text-red-700': pkg.status === 'cancelled',
                   }"
                 >
+                  <!-- A11y audit: status is conveyed with explicit text (not colour alone). -->
                   {{ pkg.status.charAt(0).toUpperCase() + pkg.status.slice(1) }}
                 </span>
                 <button
+                  type="button"
                   class="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium"
+                  :aria-expanded="expandedPackageId === pkg.id ? 'true' : 'false'"
+                  :aria-controls="`customer-package-redemptions-${pkg.id}`"
                   @click="togglePackageRedemptions(pkg)"
                 >
                   {{ expandedPackageId === pkg.id ? 'Hide history' : 'View history' }}
                 </button>
-                <div v-if="expandedPackageId === pkg.id" class="mt-3 pt-3 border-t border-gray-100 w-full">
-                  <div v-if="redemptionsLoading && !redemptionsCache[pkg.id]" class="text-xs text-gray-500">
+                <div
+                  v-if="expandedPackageId === pkg.id"
+                  :id="`customer-package-redemptions-${pkg.id}`"
+                  class="mt-3 pt-3 border-t border-gray-100 w-full"
+                  aria-live="polite"
+                >
+                  <div v-if="redemptionsLoading && !redemptionsCache[pkg.id]" role="status" aria-live="polite" class="text-xs text-gray-500">
                     Loading...
                   </div>
-                  <div v-else-if="redemptionsError[pkg.id]" class="text-xs text-red-600">
+                  <div v-else-if="redemptionsError[pkg.id]" role="alert" class="text-xs text-red-600">
                     {{ redemptionsError[pkg.id] }}
                   </div>
                   <div v-else-if="!redemptionsCache[pkg.id]?.length" class="text-xs text-gray-500 italic">

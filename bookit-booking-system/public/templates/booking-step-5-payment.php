@@ -90,6 +90,9 @@ if ( '' === trim( (string) $cancellation_policy_text ) ) {
 	$cancellation_policy_text = $default_cancellation_policy_text;
 }
 
+// Accessibility audit note: lang must be applied on the document-level <html> element,
+// which is controlled by WordPress/theme templates outside this plugin template scope.
+
 // Package options (feature-gated).
 $packages_enabled   = function_exists( 'bookit_get_setting' ) ? (string) bookit_get_setting( 'packages_enabled' ) : '';
 $available_packages = array();
@@ -362,16 +365,20 @@ if ( '1' === $packages_enabled && ! empty( $session_data['customer_email'] ) ) {
 				<div class="bookit-existing-packages" id="bookit-existing-packages">
 					<h3><?php esc_html_e( 'Use one of your packages', 'bookit-booking-system' ); ?></h3>
 
-					<div class="bookit-existing-package-list" role="radiogroup" aria-label="<?php esc_attr_e( 'Your packages', 'bookit-booking-system' ); ?>">
+					<fieldset class="bookit-existing-package-list">
+						<legend><?php esc_html_e( 'Select a package to use for this booking', 'bookit-booking-system' ); ?></legend>
 						<?php foreach ( $existing_packages as $pkg ) : ?>
-							<label class="bookit-existing-package-item">
+							<?php $existing_package_input_id = 'bookit-existing-package-' . (int) $pkg['id']; ?>
+							<label class="bookit-existing-package-item" for="<?php echo esc_attr( $existing_package_input_id ); ?>">
 								<input
 									type="radio"
 									name="bookit_existing_package_selection"
+									id="<?php echo esc_attr( $existing_package_input_id ); ?>"
 									class="bookit-existing-package-radio"
 									value="<?php echo esc_attr( $pkg['id'] ); ?>"
 									data-package-id="<?php echo esc_attr( $pkg['id'] ); ?>"
 								>
+								<?php // A11y audit: package sessions and expiry are rendered as visible text in each option. ?>
 								<span class="bookit-existing-package-label">
 									<strong><?php echo esc_html( $pkg['package_type_name'] ); ?></strong>
 									&mdash; <?php echo esc_html( (string) $pkg['sessions_remaining'] ); ?>/<?php echo esc_html( (string) $pkg['sessions_total'] ); ?> <?php esc_html_e( 'sessions remaining', 'bookit-booking-system' ); ?>
@@ -391,7 +398,7 @@ if ( '1' === $packages_enabled && ! empty( $session_data['customer_email'] ) ) {
 								</span>
 							</label>
 						<?php endforeach; ?>
-					</div>
+					</fieldset>
 
 					<input type="hidden" name="bookit_selected_existing_package_id" id="bookit-selected-existing-package-id" value="">
 				</div>

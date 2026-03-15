@@ -60,12 +60,13 @@
       {{ redeemSuccess }}
     </div>
 
-    <div v-if="redeemError" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    <div v-if="redeemError" role="alert" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
       {{ redeemError }}
     </div>
 
     <div class="bg-white rounded-lg shadow-sm border border-gray-200">
       <div v-if="loading">
+        <span role="status" aria-live="polite" class="sr-only">Loading packages...</span>
         <TableSkeleton :rows="8" :columns="7" />
       </div>
 
@@ -109,6 +110,7 @@
                   {{ Number(pkg.sessions_remaining || 0) }} / {{ Number(pkg.sessions_total || 0) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
+                  <!-- A11y audit: status is conveyed with explicit text (not colour alone). -->
                   <span
                     class="px-2 py-1 text-xs font-medium rounded-full"
                     :class="getStatusClass(pkg.status)"
@@ -120,7 +122,10 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ pkg.expires_at ? formatDate(pkg.expires_at) : 'Never' }}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button
+                    type="button"
                     class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 mr-2"
+                    :aria-expanded="expandedPackageId === pkg.id ? 'true' : 'false'"
+                    :aria-controls="`redemptions-panel-${pkg.id}`"
                     @click="toggleRedemptions(pkg)"
                   >
                     {{ expandedPackageId === pkg.id ? 'Hide History' : 'History' }}
@@ -137,16 +142,16 @@
               </tr>
               <tr v-if="expandedPackageId === pkg.id" :key="`redemptions-${pkg.id}`">
                 <td colspan="7" class="px-6 py-0 bg-gray-50">
-                  <div class="py-4">
+                  <div :id="`redemptions-panel-${pkg.id}`" class="py-4" aria-live="polite">
                     <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                       Redemption History
                     </h4>
 
-                    <div v-if="redemptionsLoading && !redemptionsCache[pkg.id]" class="text-sm text-gray-500">
+                    <div v-if="redemptionsLoading && !redemptionsCache[pkg.id]" role="status" aria-live="polite" class="text-sm text-gray-500">
                       Loading...
                     </div>
 
-                    <div v-else-if="redemptionsError[pkg.id]" class="text-sm text-red-600">
+                    <div v-else-if="redemptionsError[pkg.id]" role="alert" class="text-sm text-red-600">
                       {{ redemptionsError[pkg.id] }}
                     </div>
 
@@ -306,6 +311,7 @@
             <!-- Error state -->
             <div
               v-else-if="redeemModalError && redeemModalBookings.length === 0"
+              role="alert"
               class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700"
             >
               {{ redeemModalError }}
@@ -340,6 +346,7 @@
               <!-- Inline error after submit attempt -->
               <div
                 v-if="redeemModalError && redeemModalBookings.length > 0"
+                role="alert"
                 class="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
               >
                 {{ redeemModalError }}

@@ -40,13 +40,19 @@
 
       <div class="flex items-center justify-between py-3 border-b border-gray-100">
         <div>
-          <p class="text-sm font-medium text-gray-900">Enable Session Packages</p>
+          <p id="packages-enabled-label" class="text-sm font-medium text-gray-900">Enable Session Packages</p>
           <p class="text-xs text-gray-500 mt-0.5">
             Shows package options at checkout and enables the Packages dashboard section.
           </p>
         </div>
         <label class="flex items-center cursor-pointer">
-          <input v-model="packagesEnabled" type="checkbox" class="sr-only peer" />
+          <input
+            id="packages-enabled-toggle"
+            v-model="packagesEnabled"
+            type="checkbox"
+            class="sr-only peer"
+            aria-labelledby="packages-enabled-label"
+          />
           <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
         </label>
       </div>
