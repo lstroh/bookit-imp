@@ -32,7 +32,13 @@ class Test_Available_Packages_API extends WP_UnitTestCase {
 		parent::setUp();
 		$this->ensure_package_types_table_exists();
 
-		bookit_test_truncate_tables( array( 'bookings_package_types' ) );
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_types',
+				'bookings_settings',
+			)
+		);
+		$this->set_packages_enabled( '1' );
 		do_action( 'rest_api_init' );
 	}
 
@@ -42,7 +48,12 @@ class Test_Available_Packages_API extends WP_UnitTestCase {
 	public function tearDown(): void {
 		global $wpdb;
 
-		bookit_test_truncate_tables( array( 'bookings_package_types' ) );
+		bookit_test_truncate_tables(
+			array(
+				'bookings_package_types',
+				'bookings_settings',
+			)
+		);
 
 		foreach ( array_unique( $this->created_staff_ids ) as $staff_id ) {
 			$wpdb->delete( $wpdb->prefix . 'bookings_staff', array( 'id' => (int) $staff_id ), array( '%d' ) );
@@ -192,6 +203,25 @@ class Test_Available_Packages_API extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'expiry_days', $data[0] );
 	}
 
+	public function test_returns_empty_when_packages_disabled() {
+		$this->set_packages_enabled( '0' );
+		$this->insert_package_type(
+			array(
+				'name'      => 'Disabled by Settings',
+				'is_active' => 1,
+			)
+		);
+
+		$request = new WP_REST_Request( 'GET', '/' . $this->namespace . '/wizard/available-packages' );
+		$request->set_param( 'service_id', 1 );
+
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertSame( array(), $data );
+	}
+
 	/**
 	 * Simulate dashboard login via session.
 	 *
@@ -292,6 +322,48 @@ class Test_Available_Packages_API extends WP_UnitTestCase {
 		);
 
 		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Set packages_enabled setting value.
+	 *
+	 * @param string $value Setting value.
+	 * @return void
+	 */
+	private function set_packages_enabled( $value ) {
+		global $wpdb;
+
+		$settings_table = $wpdb->prefix . 'bookings_settings';
+		$existing_id    = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$settings_table} WHERE setting_key = %s LIMIT 1",
+				'packages_enabled'
+			)
+		);
+
+		if ( $existing_id ) {
+			$wpdb->update(
+				$settings_table,
+				array(
+					'setting_value' => (string) $value,
+					'setting_type'  => 'boolean',
+				),
+				array( 'id' => (int) $existing_id ),
+				array( '%s', '%s' ),
+				array( '%d' )
+			);
+			return;
+		}
+
+		$wpdb->insert(
+			$settings_table,
+			array(
+				'setting_key'   => 'packages_enabled',
+				'setting_value' => (string) $value,
+				'setting_type'  => 'boolean',
+			),
+			array( '%s', '%s', '%s' )
+		);
 	}
 
 	/**
