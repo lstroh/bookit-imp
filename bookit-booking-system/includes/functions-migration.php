@@ -21,3 +21,8 @@ if ( ! defined( 'WPINC' ) ) {
 function bookit_register_migration_path( string $plugin_slug, string $path ): void {
 	Bookit_Migration_Runner::register_migration_path( $plugin_slug, $path );
 }
+
+// Register the core plugin migration path so new numbered migrations (including 0009) are discoverable.
+if ( defined( 'BOOKIT_PLUGIN_DIR' ) ) {
+	bookit_register_migration_path( 'bookit-booking-system', BOOKIT_PLUGIN_DIR . 'database/migrations/' );
+}

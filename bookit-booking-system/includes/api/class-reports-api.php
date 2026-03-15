@@ -246,13 +246,26 @@ class Bookit_Reports_API {
 			ARRAY_A
 		);
 
+		$period_metrics_by_staff  = $this->get_staff_period_metrics_bulk( $date_from, $date_to );
+		$all_time_totals_by_staff = $this->get_staff_all_time_totals_bulk();
+
 		$staff_rows = array();
 
 		foreach ( $staff_list as $staff ) {
 			$staff_id = (int) $staff['id'];
 
-			$period_metrics  = $this->get_staff_period_metrics( $staff_id, $date_from, $date_to );
-			$all_time_totals = $this->get_staff_all_time_totals( $staff_id );
+			$period_metrics  = isset( $period_metrics_by_staff[ $staff_id ] ) ? $period_metrics_by_staff[ $staff_id ] : array(
+				'bookings'          => 0,
+				'completed'         => 0,
+				'no_shows'          => 0,
+				'no_show_rate'      => 0.0,
+				'revenue'           => 0.0,
+				'avg_booking_value' => 0.0,
+			);
+			$all_time_totals = isset( $all_time_totals_by_staff[ $staff_id ] ) ? $all_time_totals_by_staff[ $staff_id ] : array(
+				'total_bookings_alltime' => 0,
+				'total_revenue_alltime'  => 0.0,
+			);
 
 			$staff_rows[] = array(
 				'id'                     => $staff_id,
@@ -279,6 +292,148 @@ class Bookit_Reports_API {
 				'staff'     => $staff_rows,
 			)
 		);
+	}
+
+	/**
+	 * Get period metrics for all staff in one pass.
+	 *
+	 * @param string $date_from Start date.
+	 * @param string $date_to End date.
+	 * @return array<int, array<string, int|float>>
+	 */
+	private function get_staff_period_metrics_bulk( $date_from, $date_to ) {
+		global $wpdb;
+
+		$counts_rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					staff_id,
+					SUM(CASE WHEN status != 'cancelled' THEN 1 ELSE 0 END) AS bookings,
+					SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+					SUM(CASE WHEN status = 'no_show' THEN 1 ELSE 0 END) AS no_shows
+				FROM {$wpdb->prefix}bookings
+				WHERE booking_date BETWEEN %s AND %s
+					AND deleted_at IS NULL
+				GROUP BY staff_id",
+				$date_from,
+				$date_to
+			),
+			ARRAY_A
+		);
+
+		$revenue_rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					b.staff_id,
+					COALESCE(SUM(p.amount), 0) AS revenue
+				FROM {$wpdb->prefix}bookings_payments p
+				INNER JOIN {$wpdb->prefix}bookings b ON b.id = p.booking_id
+				WHERE p.payment_status = 'completed'
+					AND p.payment_type != 'refund'
+					AND b.booking_date BETWEEN %s AND %s
+					AND b.deleted_at IS NULL
+				GROUP BY b.staff_id",
+				$date_from,
+				$date_to
+			),
+			ARRAY_A
+		);
+
+		$metrics_by_staff = array();
+
+		foreach ( $counts_rows as $row ) {
+			$staff_id                    = (int) $row['staff_id'];
+			$bookings                    = (int) $row['bookings'];
+			$completed                   = (int) $row['completed'];
+			$no_shows                    = (int) $row['no_shows'];
+			$metrics_by_staff[ $staff_id ] = array(
+				'bookings'          => $bookings,
+				'completed'         => $completed,
+				'no_shows'          => $no_shows,
+				'no_show_rate'      => $bookings > 0 ? round( ( $no_shows / $bookings ) * 100, 1 ) : 0.0,
+				'revenue'           => 0.0,
+				'avg_booking_value' => 0.0,
+			);
+		}
+
+		foreach ( $revenue_rows as $row ) {
+			$staff_id = (int) $row['staff_id'];
+			$revenue  = (float) $row['revenue'];
+
+			if ( ! isset( $metrics_by_staff[ $staff_id ] ) ) {
+				$metrics_by_staff[ $staff_id ] = array(
+					'bookings'          => 0,
+					'completed'         => 0,
+					'no_shows'          => 0,
+					'no_show_rate'      => 0.0,
+					'revenue'           => 0.0,
+					'avg_booking_value' => 0.0,
+				);
+			}
+
+			$metrics_by_staff[ $staff_id ]['revenue'] = $revenue;
+			$completed                                = (int) $metrics_by_staff[ $staff_id ]['completed'];
+			$metrics_by_staff[ $staff_id ]['avg_booking_value'] = $completed > 0 ? round( $revenue / $completed, 2 ) : 0.0;
+		}
+
+		return $metrics_by_staff;
+	}
+
+	/**
+	 * Get all-time totals for all staff in one pass.
+	 *
+	 * @return array<int, array<string, int|float>>
+	 */
+	private function get_staff_all_time_totals_bulk() {
+		global $wpdb;
+
+		$bookings_rows = $wpdb->get_results(
+			"SELECT
+				staff_id,
+				COUNT(*) AS total_bookings_alltime
+			FROM {$wpdb->prefix}bookings
+			WHERE deleted_at IS NULL
+				AND status != 'cancelled'
+			GROUP BY staff_id",
+			ARRAY_A
+		);
+
+		$revenue_rows = $wpdb->get_results(
+			"SELECT
+				b.staff_id,
+				COALESCE(SUM(p.amount), 0) AS total_revenue_alltime
+			FROM {$wpdb->prefix}bookings_payments p
+			INNER JOIN {$wpdb->prefix}bookings b ON b.id = p.booking_id
+			WHERE p.payment_status = 'completed'
+				AND p.payment_type != 'refund'
+				AND b.deleted_at IS NULL
+			GROUP BY b.staff_id",
+			ARRAY_A
+		);
+
+		$totals_by_staff = array();
+
+		foreach ( $bookings_rows as $row ) {
+			$staff_id                   = (int) $row['staff_id'];
+			$totals_by_staff[ $staff_id ] = array(
+				'total_bookings_alltime' => (int) $row['total_bookings_alltime'],
+				'total_revenue_alltime'  => 0.0,
+			);
+		}
+
+		foreach ( $revenue_rows as $row ) {
+			$staff_id = (int) $row['staff_id'];
+			if ( ! isset( $totals_by_staff[ $staff_id ] ) ) {
+				$totals_by_staff[ $staff_id ] = array(
+					'total_bookings_alltime' => 0,
+					'total_revenue_alltime'  => 0.0,
+				);
+			}
+
+			$totals_by_staff[ $staff_id ]['total_revenue_alltime'] = (float) $row['total_revenue_alltime'];
+		}
+
+		return $totals_by_staff;
 	}
 
 	/**

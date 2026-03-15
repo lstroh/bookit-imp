@@ -212,6 +212,7 @@ class Bookit_Customers_API {
 		$per_page = max( 1, absint( $request->get_param( 'per_page' ) ) );
 		$offset   = ( $page - 1 ) * $per_page;
 
+		// Performance audit: customer list metrics are aggregated in SQL (no per-customer N+1 queries).
 		$base_query = "
 			SELECT
 				c.id,

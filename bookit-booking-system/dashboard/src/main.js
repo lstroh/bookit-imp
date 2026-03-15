@@ -7,6 +7,7 @@ import BookitTooltip from './components/BookitTooltip.vue'
 import routes from './router'
 import './assets/main.css'
 
+// Performance audit: Chart.js is imported only inside report views, not globally in the app bootstrap.
 NProgress.configure({ showSpinner: false })
 
 // Create router with base path.

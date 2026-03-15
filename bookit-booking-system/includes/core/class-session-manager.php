@@ -15,6 +15,7 @@ if ( ! defined( 'WPINC' ) ) {
  * Session manager class for booking wizard.
  */
 class Bookit_Session_Manager {
+	// Performance audit: wizard state is kept in PHP session memory, so no per-step settings DB re-queries in this class.
 
 	/**
 	 * Session key for wizard data.

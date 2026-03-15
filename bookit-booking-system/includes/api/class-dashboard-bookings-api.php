@@ -1700,6 +1700,7 @@ class Bookit_Dashboard_Bookings_API {
 		$order      = strtoupper( $request->get_param( 'order' ) );
 
 		// Build base query.
+		// Performance audit: bookings list already resolves customer/service/staff fields via JOINs (no N+1 per-row lookups).
 		$query = "
 			SELECT
 				b.id,

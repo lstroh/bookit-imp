@@ -482,6 +482,7 @@ class Bookit_Customer_Packages_API {
 			return Bookit_Error_Registry::to_wp_error( 'E5001' );
 		}
 
+		// Performance audit: redemption history joins booking/service/staff data in one query (no N+1 lookups).
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT
