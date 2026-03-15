@@ -328,6 +328,82 @@ class Test_Customer_Data_Export extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @covers Bookit_Customers_API::export_customer_data
+	 */
+	public function test_json_export_payments_exclude_gateway_ids() {
+		global $wpdb;
+
+		$admin_id    = $this->create_test_staff( array( 'role' => 'admin' ) );
+		$service_id  = $this->create_test_service();
+		$staff_id    = $this->create_test_staff( array( 'role' => 'staff' ) );
+		$customer_id = $this->create_test_customer();
+		$this->login_as( $admin_id, 'admin' );
+
+		$booking_id = $this->create_test_booking(
+			array(
+				'customer_id' => $customer_id,
+				'service_id'  => $service_id,
+				'staff_id'    => $staff_id,
+				'status'      => 'confirmed',
+			)
+		);
+
+		$gateway_columns = array(
+			'stripe_payment_intent_id',
+			'stripe_charge_id',
+			'paypal_order_id',
+			'paypal_capture_id',
+		);
+
+		$existing_columns = $wpdb->get_col( "SHOW COLUMNS FROM {$wpdb->prefix}bookings_payments" );
+		$existing_columns = is_array( $existing_columns ) ? $existing_columns : array();
+		$present_gateway_columns = array_values( array_intersect( $gateway_columns, $existing_columns ) );
+
+		if ( empty( $present_gateway_columns ) ) {
+			$this->markTestSkipped( 'No gateway ID columns exist on bookings_payments table in this environment.' );
+		}
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_payments',
+			array(
+				'booking_id'                => $booking_id,
+				'customer_id'               => $customer_id,
+				'amount'                    => 15.50,
+				'payment_type'              => 'deposit',
+				'payment_method'            => 'stripe',
+				'payment_status'            => 'completed',
+				'stripe_payment_intent_id'  => 'pi_test_gateway_id',
+				'stripe_charge_id'          => 'ch_test_gateway_id',
+				'paypal_order_id'           => null,
+				'paypal_capture_id'         => null,
+				'refund_amount'             => null,
+				'refund_reason'             => null,
+				'refunded_at'               => null,
+				'transaction_date'          => current_time( 'mysql' ),
+				'created_at'                => current_time( 'mysql' ),
+				'updated_at'                => current_time( 'mysql' ),
+			),
+			array( '%d', '%d', '%f', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%s', '%s', '%s', '%s', '%s' )
+		);
+
+		$response = $this->dispatch_export_request( $customer_id, 'json' );
+		$data     = json_decode( (string) $response->get_data(), true );
+
+		if ( ! isset( $data['payments'] ) || ! is_array( $data['payments'] ) ) {
+			$this->markTestSkipped( 'Export response does not include a payments array in this environment.' );
+		}
+
+		foreach ( $data['payments'] as $payment_row ) {
+			if ( ! is_array( $payment_row ) ) {
+				continue;
+			}
+			foreach ( $present_gateway_columns as $gateway_column ) {
+				$this->assertArrayNotHasKey( $gateway_column, $payment_row );
+			}
+		}
+	}
+
+	/**
 	 * @covers Bookit_Customers_API::export_customers_csv
 	 */
 	public function test_existing_bulk_export_still_works() {

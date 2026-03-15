@@ -258,6 +258,26 @@ class Test_Deposit_Settings extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test percentage deposit calculation at booking step.
+	 *
+	 * @covers Booking_System_Stripe_Checkout::calculate_deposit
+	 */
+	public function test_percentage_deposit_calculates_correctly() {
+		require_once BOOKIT_PLUGIN_DIR . 'includes/payment/class-stripe-checkout.php';
+
+		$stripe_checkout = new Booking_System_Stripe_Checkout();
+		$deposit_amount  = $stripe_checkout->calculate_deposit(
+			array(
+				'price'          => 80.00,
+				'deposit_type'   => 'percentage',
+				'deposit_amount' => 25,
+			)
+		);
+
+		$this->assertEquals( 20.0, $deposit_amount );
+	}
+
+	/**
 	 * Save settings helper.
 	 *
 	 * @param array $settings Settings payload.
