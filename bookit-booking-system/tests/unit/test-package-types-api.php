@@ -425,6 +425,45 @@ class Test_Package_Types_API extends WP_UnitTestCase {
 		$this->assertSame( 'package_type.deactivated', $audit_row['action'] );
 	}
 
+	public function test_deactivating_package_type_does_not_affect_active_customer_packages() {
+		global $wpdb;
+
+		$this->ensure_customer_packages_table_exists();
+		bookit_test_truncate_tables(
+			array(
+				'bookings_customer_packages',
+				'bookings_customers',
+			)
+		);
+
+		$customer_id         = $this->insert_customer();
+		$package_type_id     = $this->insert_package_type( array( 'is_active' => 1 ) );
+		$customer_package_id = $this->insert_customer_package(
+			array(
+				'customer_id'        => $customer_id,
+				'package_type_id'    => $package_type_id,
+				'status'             => 'active',
+				'sessions_total'     => 8,
+				'sessions_remaining' => 8,
+			)
+		);
+
+		$request  = new WP_REST_Request( 'POST', '/' . $this->namespace . '/dashboard/package-types/' . $package_type_id . '/deactivate' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT status, sessions_remaining FROM {$wpdb->prefix}bookings_customer_packages WHERE id = %d",
+				$customer_package_id
+			),
+			ARRAY_A
+		);
+
+		$this->assertEquals( 200, $response->get_status() );
+		$this->assertSame( 'active', $row['status'] );
+		$this->assertSame( 8, (int) $row['sessions_remaining'] );
+	}
+
 	/**
 	 * Insert package type test row.
 	 *
@@ -455,6 +494,71 @@ class Test_Package_Types_API extends WP_UnitTestCase {
 			$wpdb->prefix . 'bookings_package_types',
 			$data,
 			array( '%s', '%s', '%d', '%s', '%f', '%f', '%d', '%d', '%s', '%d', '%s', '%s' )
+		);
+
+		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Insert customer test row.
+	 *
+	 * @param array $overrides Field overrides.
+	 * @return int
+	 */
+	private function insert_customer( $overrides = array() ) {
+		global $wpdb;
+
+		$defaults = array(
+			'email'      => 'customer-' . wp_generate_password( 6, false ) . '@test.com',
+			'first_name' => 'Test',
+			'last_name'  => 'Customer',
+			'phone'      => '07700900000',
+			'created_at' => current_time( 'mysql' ),
+			'updated_at' => current_time( 'mysql' ),
+		);
+
+		$data = wp_parse_args( $overrides, $defaults );
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_customers',
+			$data,
+			array( '%s', '%s', '%s', '%s', '%s', '%s' )
+		);
+
+		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Insert customer package test row.
+	 *
+	 * @param array $overrides Field overrides.
+	 * @return int
+	 */
+	private function insert_customer_package( $overrides = array() ) {
+		global $wpdb;
+
+		$defaults = array(
+			'customer_id'        => 0,
+			'package_type_id'    => 0,
+			'sessions_total'     => 10,
+			'sessions_remaining' => 10,
+			'purchase_price'     => 120.00,
+			'purchased_at'       => current_time( 'mysql' ),
+			'expires_at'         => null,
+			'status'             => 'active',
+			'payment_method'     => 'manual',
+			'payment_reference'  => null,
+			'notes'              => null,
+			'created_at'         => current_time( 'mysql' ),
+			'updated_at'         => current_time( 'mysql' ),
+		);
+
+		$data = wp_parse_args( $overrides, $defaults );
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_customer_packages',
+			$data,
+			array( '%d', '%d', '%d', '%d', '%f', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 
 		return (int) $wpdb->insert_id;
@@ -566,5 +670,47 @@ class Test_Package_Types_API extends WP_UnitTestCase {
 			$migration = new Bookit_Migration_0005_Create_Package_Types_Table();
 			$migration->up();
 		}
+	}
+
+	/**
+	 * Ensure customer packages table exists for this test class.
+	 *
+	 * Uses a FK-free definition because WP tests can create TEMPORARY tables,
+	 * and MySQL does not allow foreign keys on temporary tables.
+	 *
+	 * @return void
+	 */
+	private function ensure_customer_packages_table_exists() {
+		global $wpdb;
+
+		$table_name = $wpdb->prefix . 'bookings_customer_packages';
+		if ( function_exists( 'bookit_test_table_exists' ) && bookit_test_table_exists( $table_name ) ) {
+			return;
+		}
+
+		$charset_collate = $wpdb->get_charset_collate();
+		$wpdb->query(
+			"CREATE TABLE IF NOT EXISTS {$table_name} (
+				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				customer_id BIGINT UNSIGNED NOT NULL,
+				package_type_id BIGINT UNSIGNED NOT NULL,
+				sessions_total INT UNSIGNED NOT NULL,
+				sessions_remaining INT UNSIGNED NOT NULL,
+				purchase_price DECIMAL(10,2) NULL,
+				purchased_at DATETIME NULL,
+				expires_at DATETIME NULL,
+				status ENUM('active','exhausted','expired','cancelled') NOT NULL DEFAULT 'active',
+				payment_method VARCHAR(50) NULL,
+				payment_reference VARCHAR(255) NULL,
+				notes TEXT NULL,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+				PRIMARY KEY (id),
+				KEY idx_customer_id (customer_id),
+				KEY idx_package_type_id (package_type_id),
+				KEY idx_status (status),
+				KEY idx_expires_at (expires_at)
+			) ENGINE=InnoDB {$charset_collate};"
+		); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
 	}
 }
