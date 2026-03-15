@@ -164,6 +164,95 @@ class Test_Bookit_Migration_Runner extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @covers Bookit_Migration_Runner::register_migration_path
+	 * @covers Bookit_Migration_Runner::run_pending
+	 * @covers Bookit_Migration_Runner::has_run
+	 */
+	public function test_get_pending_returns_unrun_migrations() {
+		global $wpdb;
+
+		$suffix               = strtolower( wp_generate_password( 8, false, false ) );
+		$first_migration_id   = '0001-temp-first-' . $suffix;
+		$second_migration_id  = '0002-temp-second-' . $suffix;
+		$first_table_name     = $wpdb->prefix . 'bookings_temp_migration_first_' . $suffix;
+		$second_table_name    = $wpdb->prefix . 'bookings_temp_migration_second_' . $suffix;
+		$first_class_name     = 'Bookit_Migration_' . str_replace( '-', '_', ucwords( $first_migration_id, '-' ) );
+		$second_class_name    = 'Bookit_Migration_' . str_replace( '-', '_', ucwords( $second_migration_id, '-' ) );
+		$base_tmp             = trailingslashit( sys_get_temp_dir() ) . 'bookit-tests-migrations';
+		$dir                  = trailingslashit( $base_tmp ) . $suffix;
+
+		if ( ! is_dir( $base_tmp ) ) {
+			wp_mkdir_p( $base_tmp );
+		}
+		wp_mkdir_p( $dir );
+
+		$first_migration_php = <<<PHP
+<?php
+class {$first_class_name} extends Bookit_Migration_Base {
+	public function migration_id(): string {
+		return '{$first_migration_id}';
+	}
+
+	public function plugin_slug(): string {
+		return 'bookit-test';
+	}
+
+	public function up(): void {
+		global \$wpdb;
+		\$wpdb->query( "CREATE TABLE IF NOT EXISTS {$first_table_name} (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci" );
+	}
+
+	public function down(): void {
+		global \$wpdb;
+		\$wpdb->query( "DROP TABLE IF EXISTS {$first_table_name}" );
+	}
+}
+PHP;
+
+		$second_migration_php = <<<PHP
+<?php
+class {$second_class_name} extends Bookit_Migration_Base {
+	public function migration_id(): string {
+		return '{$second_migration_id}';
+	}
+
+	public function plugin_slug(): string {
+		return 'bookit-test';
+	}
+
+	public function up(): void {
+		global \$wpdb;
+		\$wpdb->query( "CREATE TABLE IF NOT EXISTS {$second_table_name} (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci" );
+	}
+
+	public function down(): void {
+		global \$wpdb;
+		\$wpdb->query( "DROP TABLE IF EXISTS {$second_table_name}" );
+	}
+}
+PHP;
+
+		file_put_contents( trailingslashit( $dir ) . $first_migration_id . '.php', $first_migration_php );
+		$this->temp_dirs[]   = $dir;
+		$this->temp_tables[] = $first_table_name;
+		$this->temp_tables[] = $second_table_name;
+
+		Bookit_Migration_Runner::register_migration_path( 'bookit-test', $dir );
+
+		$first_run_ran = Bookit_Migration_Runner::run_pending( 'bookit-test' );
+		$this->assertContains( $first_migration_id, $first_run_ran );
+		$this->assertNotContains( $second_migration_id, $first_run_ran );
+		$this->assertTrue( Bookit_Migration_Runner::has_run( $first_migration_id, 'bookit-test' ) );
+		$this->assertFalse( Bookit_Migration_Runner::has_run( $second_migration_id, 'bookit-test' ) );
+
+		file_put_contents( trailingslashit( $dir ) . $second_migration_id . '.php', $second_migration_php );
+
+		$second_run_ran = Bookit_Migration_Runner::run_pending( 'bookit-test' );
+		$this->assertSame( array( $second_migration_id ), $second_run_ran );
+		$this->assertTrue( Bookit_Migration_Runner::has_run( $second_migration_id, 'bookit-test' ) );
+	}
+
+	/**
 	 * Create temporary migration file and table metadata.
 	 *
 	 * @return array<string,string>

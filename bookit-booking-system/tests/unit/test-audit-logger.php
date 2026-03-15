@@ -177,4 +177,26 @@ class Test_Bookit_Audit_Logger extends WP_UnitTestCase {
 		$this->assertSame( 'system', $row['actor_type'] );
 		$this->assertSame( 0, (int) $row['actor_id'] );
 	}
+
+	/**
+	 * @covers Bookit_Audit_Logger::log
+	 */
+	public function test_log_stores_null_object_id_when_zero_passed() {
+		global $wpdb;
+
+		$action = 'test.null.object.' . wp_generate_password( 6, false, false );
+
+		Bookit_Audit_Logger::log( $action, 'system', 0 );
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT object_id FROM {$wpdb->prefix}bookings_audit_log WHERE action = %s ORDER BY id DESC LIMIT 1",
+				$action
+			),
+			ARRAY_A
+		);
+
+		$this->assertNotEmpty( $row );
+		$this->assertNull( $row['object_id'] );
+	}
 }
