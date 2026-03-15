@@ -62,6 +62,11 @@ class Bookit_Customer_Package_Lookup_API {
 	public function get_my_packages( $request ) {
 		global $wpdb;
 
+		$ip = Bookit_Rate_Limiter::get_client_ip();
+		if ( ! Bookit_Rate_Limiter::check( 'wizard_my_pkgs', $ip, 60, HOUR_IN_SECONDS ) ) {
+			return Bookit_Rate_Limiter::handle_exceeded( 'wizard_my_pkgs', $ip );
+		}
+
 		$customer_email = sanitize_email( (string) $request->get_param( 'customer_email' ) );
 		$service_id     = absint( $request->get_param( 'service_id' ) );
 

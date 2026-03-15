@@ -261,6 +261,16 @@ Bookit_Error_Registry::register(
 Bookit_Error_Registry::register_package_errors();
 
 Bookit_Error_Registry::register(
+	'E6001',
+	array(
+		'user_message' => __( 'Too many requests. Please wait before trying again.', 'bookit-booking-system' ),
+		'log_message'  => 'Rate limit exceeded for action: {action}',
+		'http_status'  => 429,
+		'category'     => 'system',
+	)
+);
+
+Bookit_Error_Registry::register(
 	'E9001',
 	array(
 		'user_message' => __( 'A database error occurred. Please try again.', 'bookit-booking-system' ),

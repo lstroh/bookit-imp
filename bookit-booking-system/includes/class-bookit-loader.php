@@ -79,6 +79,7 @@ class Bookit_Loader {
 
 		// CSRF protection.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-csrf-protection.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-rate-limiter.php';
 
 		// Admin-specific functionality.
 		require_once BOOKIT_PLUGIN_DIR . 'admin/class-bookit-admin.php';

@@ -61,6 +61,11 @@ class Bookit_Available_Packages_API {
 	public function get_available_packages( $request ) {
 		global $wpdb;
 
+		$ip = Bookit_Rate_Limiter::get_client_ip();
+		if ( ! Bookit_Rate_Limiter::check( 'wizard_pkgs', $ip, 60, HOUR_IN_SECONDS ) ) {
+			return Bookit_Rate_Limiter::handle_exceeded( 'wizard_pkgs', $ip );
+		}
+
 		$service_id = absint( $request->get_param( 'service_id' ) );
 		$table      = $wpdb->prefix . 'bookings_package_types';
 

@@ -40,6 +40,16 @@ class Booking_System_Payment_Processor {
 	 * @return void
 	 */
 	public function process_payment() {
+		$ip = Bookit_Rate_Limiter::get_client_ip();
+		if ( ! Bookit_Rate_Limiter::check( 'wizard_book', $ip, 10, HOUR_IN_SECONDS ) ) {
+			Bookit_Rate_Limiter::handle_exceeded( 'wizard_book', $ip );
+			wp_die(
+				esc_html__( 'Too many requests. Please wait before trying again.', 'bookit-booking-system' ),
+				esc_html__( 'Too Many Requests', 'bookit-booking-system' ),
+				array( 'response' => 429 )
+			);
+		}
+
 		if ( ! isset( $_POST['bookit_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bookit_nonce'] ) ), 'bookit_booking_action' ) ) {
 			wp_die( esc_html__( 'Security check failed', 'bookit-booking-system' ) );
 		}

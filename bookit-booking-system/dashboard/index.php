@@ -28,33 +28,42 @@ if ( Bookit_Auth::is_logged_in() ) {
 $error_message = '';
 
 if ( 'POST' === $_SERVER['REQUEST_METHOD'] && isset( $_POST['booking_login_submit'] ) ) {
-	// Verify nonce.
-	if (
-		! isset( $_POST['booking_login_nonce'] )
-		|| ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['booking_login_nonce'] ) ), 'booking_login' )
-	) {
-		$error_message = 'Security check failed. Please try again.';
-	} else {
-		$email    = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
-		$password = isset( $_POST['password'] ) ? (string) wp_unslash( $_POST['password'] ) : '';
+	$ip = Bookit_Rate_Limiter::get_client_ip();
+	if ( ! Bookit_Rate_Limiter::check( 'dashboard_login', $ip, 5, 15 * MINUTE_IN_SECONDS ) ) {
+		Bookit_Rate_Limiter::handle_exceeded( 'dashboard_login', $ip );
+		status_header( 429 );
+		$error_message = Bookit_Error_Registry::to_wp_error( 'E6001' )->get_error_message();
+	}
 
-		if ( empty( $email ) || empty( $password ) ) {
-			$error_message = 'Please enter both email and password.';
+	if ( empty( $error_message ) ) {
+		// Verify nonce.
+		if (
+			! isset( $_POST['booking_login_nonce'] )
+			|| ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['booking_login_nonce'] ) ), 'booking_login' )
+		) {
+			$error_message = 'Security check failed. Please try again.';
 		} else {
-			$staff = Bookit_Auth::authenticate( $email, $password );
+			$email    = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
+			$password = isset( $_POST['password'] ) ? (string) wp_unslash( $_POST['password'] ) : '';
 
-			if ( $staff ) {
-				Bookit_Auth::login( $staff );
-
-				$redirect_to = isset( $_GET['redirect_to'] ) ? (string) wp_unslash( $_GET['redirect_to'] ) : '';
-				if ( empty( $redirect_to ) ) {
-					$redirect_to = home_url( '/bookit-dashboard/app/' );
-				}
-
-				wp_redirect( $redirect_to );
-				exit;
+			if ( empty( $email ) || empty( $password ) ) {
+				$error_message = 'Please enter both email and password.';
 			} else {
-				$error_message = 'Invalid email or password.';
+				$staff = Bookit_Auth::authenticate( $email, $password );
+
+				if ( $staff ) {
+					Bookit_Auth::login( $staff );
+
+					$redirect_to = isset( $_GET['redirect_to'] ) ? (string) wp_unslash( $_GET['redirect_to'] ) : '';
+					if ( empty( $redirect_to ) ) {
+						$redirect_to = home_url( '/bookit-dashboard/app/' );
+					}
+
+					wp_redirect( $redirect_to );
+					exit;
+				} else {
+					$error_message = 'Invalid email or password.';
+				}
 			}
 		}
 	}
