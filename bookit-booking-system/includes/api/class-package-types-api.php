@@ -413,7 +413,6 @@ class Bookit_Package_Types_API {
 			),
 			'applicable_service_ids' => array(
 				'required'          => false,
-				'type'              => 'array',
 				'validate_callback' => array( $this, 'validate_service_ids' ),
 			),
 		);
@@ -441,6 +440,14 @@ class Bookit_Package_Types_API {
 	public function validate_service_ids( $value ) {
 		if ( null === $value ) {
 			return true;
+		}
+
+		if ( '' === $value ) {
+			return true;
+		}
+
+		if ( is_string( $value ) ) {
+			$value = json_decode( $value, true );
 		}
 
 		if ( ! is_array( $value ) ) {
@@ -609,10 +616,14 @@ class Bookit_Package_Types_API {
 		if ( null === $service_ids || array() === $service_ids || '' === $service_ids ) {
 			$data['applicable_service_ids'] = null;
 		} else {
+			if ( is_string( $service_ids ) ) {
+				$service_ids = json_decode( $service_ids, true );
+			}
+
 			if ( ! is_array( $service_ids ) || ! $this->validate_service_ids( $service_ids ) ) {
 				return new WP_Error(
 					'invalid_package_type_payload',
-					__( 'applicable_service_ids must be an array of positive integers.', 'bookit-booking-system' ),
+					__( 'applicable_service_ids must be a JSON array of positive integers.', 'bookit-booking-system' ),
 					array( 'status' => 400 )
 				);
 			}

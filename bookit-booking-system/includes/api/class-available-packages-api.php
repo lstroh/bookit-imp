@@ -61,7 +61,7 @@ class Bookit_Available_Packages_API {
 	public function get_available_packages( $request ) {
 		global $wpdb;
 
-		$service_id = (int) $request->get_param( 'service_id' );
+		$service_id = absint( $request->get_param( 'service_id' ) );
 		$table      = $wpdb->prefix . 'bookings_package_types';
 
 		$rows = $wpdb->get_results(

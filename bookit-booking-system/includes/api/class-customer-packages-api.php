@@ -108,6 +108,11 @@ class Bookit_Customer_Packages_API {
 						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
+					'expires_at'        => array(
+						'required'          => false,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
 				),
 			)
 		);
@@ -279,9 +284,27 @@ class Bookit_Customer_Packages_API {
 
 		$purchased_at_raw = sanitize_text_field( (string) $request->get_param( 'purchased_at' ) );
 		$purchased_at     = '' !== $purchased_at_raw ? $purchased_at_raw : current_time( 'mysql' );
+		$expires_at_raw   = sanitize_text_field( (string) $request->get_param( 'expires_at' ) );
 		$expires_at       = null;
 
-		if ( (int) $package_type['expiry_enabled'] === 1 && ! empty( $package_type['expiry_days'] ) ) {
+		if ( ! $this->is_valid_datetime_string( $purchased_at ) ) {
+			return new WP_Error(
+				'invalid_purchased_at',
+				__( 'Invalid purchased_at datetime value.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( ! empty( $expires_at_raw ) ) {
+			if ( ! $this->is_valid_datetime_string( $expires_at_raw ) ) {
+				return new WP_Error(
+					'invalid_expires_at',
+					__( 'Invalid expires_at datetime value.', 'bookit-booking-system' ),
+					array( 'status' => 400 )
+				);
+			}
+			$expires_at = $this->normalize_datetime_string( $expires_at_raw );
+		} elseif ( (int) $package_type['expiry_enabled'] === 1 && ! empty( $package_type['expiry_days'] ) ) {
 			try {
 				$expires_datetime = new DateTime( $purchased_at );
 				$expires_datetime->modify( '+' . absint( $package_type['expiry_days'] ) . ' days' );
@@ -295,13 +318,22 @@ class Bookit_Customer_Packages_API {
 			}
 		}
 
+		$sessions_total = absint( $package_type['sessions_count'] );
+		if ( $sessions_total < 1 ) {
+			return new WP_Error(
+				'invalid_package_type_sessions',
+				__( 'Package type sessions_count must be greater than 0.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
 		$table = $wpdb->prefix . 'bookings_customer_packages';
 		$now   = current_time( 'mysql' );
 		$data  = array(
 			'customer_id'        => absint( $request->get_param( 'customer_id' ) ),
 			'package_type_id'    => $package_type_id,
-			'sessions_total'     => (int) $package_type['sessions_count'],
-			'sessions_remaining' => (int) $package_type['sessions_count'],
+			'sessions_total'     => $sessions_total,
+			'sessions_remaining' => $sessions_total,
 			'purchase_price'     => null === $package_type['fixed_price'] ? null : (float) $package_type['fixed_price'],
 			'purchased_at'       => $purchased_at,
 			'expires_at'         => $expires_at,
@@ -575,5 +607,43 @@ class Bookit_Customer_Packages_API {
 	 */
 	private function normalize_nullable_string( $value ) {
 		return '' === $value ? null : $value;
+	}
+
+	/**
+	 * Validate incoming datetime/date string format.
+	 *
+	 * @param string $value Datetime/date string.
+	 * @return bool
+	 */
+	private function is_valid_datetime_string( $value ) {
+		$formats = array( 'Y-m-d H:i:s', 'Y-m-d' );
+		foreach ( $formats as $format ) {
+			$date = DateTime::createFromFormat( $format, (string) $value );
+			if ( $date instanceof DateTime && $date->format( $format ) === (string) $value ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Normalize date or datetime strings before storage.
+	 *
+	 * @param string $value Input datetime/date string.
+	 * @return string
+	 */
+	private function normalize_datetime_string( $value ) {
+		$date_time = DateTime::createFromFormat( 'Y-m-d H:i:s', (string) $value );
+		if ( $date_time instanceof DateTime && $date_time->format( 'Y-m-d H:i:s' ) === (string) $value ) {
+			return $date_time->format( 'Y-m-d H:i:s' );
+		}
+
+		$date_only = DateTime::createFromFormat( 'Y-m-d', (string) $value );
+		if ( $date_only instanceof DateTime && $date_only->format( 'Y-m-d' ) === (string) $value ) {
+			return $date_only->format( 'Y-m-d 00:00:00' );
+		}
+
+		return (string) $value;
 	}
 }

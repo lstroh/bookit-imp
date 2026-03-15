@@ -3058,6 +3058,8 @@ class Bookit_Dashboard_Bookings_API {
 	 */
 	public function bulk_action( $request ) {
 		global $wpdb;
+		// Security audit note: dynamic SQL in this method uses prepared statements,
+		// while writes rely on $wpdb->update()/insert() format arrays.
 
 		$current_staff = Bookit_Auth::get_current_staff();
 		if ( ! $current_staff ) {

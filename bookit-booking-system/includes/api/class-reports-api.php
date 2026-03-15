@@ -16,6 +16,8 @@ if ( ! defined( 'WPINC' ) ) {
 class Bookit_Reports_API {
 
 	const NAMESPACE = 'bookit/v1';
+	// Security audit note: all queries that include external input use $wpdb->prepare().
+	// Static queries that contain no external input are intentionally left unprepared.
 
 	public function __construct() {
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
