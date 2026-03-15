@@ -222,6 +222,43 @@ class Booking_System_Email_Sender {
 						</div>
 					<?php endif; ?>
 
+					<?php
+					$is_package_payment_method = isset( $booking['payment_method'] ) && in_array( $booking['payment_method'], array( 'package_redemption', 'use_package' ), true );
+					if ( ! empty( $booking['customer_package_id'] ) && $is_package_payment_method ) :
+						$package_info = $this->get_package_info_for_email( (int) $booking['customer_package_id'] );
+						if ( $package_info ) :
+							$package_name = isset( $package_info['package_type_name'] ) ? (string) $package_info['package_type_name'] : '';
+							$expires_at   = isset( $package_info['expires_at'] ) ? (string) $package_info['expires_at'] : '';
+							?>
+							<div style="background:#eef7ff; border:1px solid #c7ddf5; border-left:4px solid #0073aa; border-radius:6px; padding:12px 16px; margin:20px 0;">
+								<p style="margin:0; font-size:14px; color:#1f3d56;">
+									<?php
+									printf(
+										/* translators: 1: package name, 2: sessions remaining, 3: total sessions */
+										esc_html__( 'Sessions remaining on your %1$s package: %2$d of %3$d', 'booking-system' ),
+										esc_html( $package_name ),
+										(int) $package_info['sessions_remaining'],
+										(int) $package_info['sessions_total']
+									);
+									?>
+								</p>
+								<?php if ( ! empty( $expires_at ) ) : ?>
+									<p style="margin:8px 0 0; font-size:14px; color:#1f3d56;">
+										<?php
+										printf(
+											/* translators: %s: package expiry date */
+											esc_html__( 'Your package expires on: %s', 'booking-system' ),
+											esc_html( date_i18n( get_option( 'date_format' ), strtotime( $expires_at ) ) )
+										);
+										?>
+									</p>
+								<?php endif; ?>
+							</div>
+							<?php
+						endif;
+					endif;
+					?>
+
 					<?php if ( ! empty( $cancellation_policy_text ) ) : ?>
 						<div style="background:#f0f4f8; border:1px solid #b0c4d8; border-left:4px solid #0073aa; border-radius:6px; padding:12px 16px; margin:20px 0;">
 							<p style="margin:0 0 6px; font-weight:600; font-size:13px; color:#1a3a52;">
@@ -356,5 +393,30 @@ class Booking_System_Email_Sender {
 		}
 
 		return (string) $policy_text;
+	}
+
+	/**
+	 * Fetch customer package details for customer email context.
+	 *
+	 * @param int $customer_package_id Customer package ID.
+	 * @return array<string,mixed>|null
+	 */
+	private function get_package_info_for_email( int $customer_package_id ): ?array {
+		global $wpdb;
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT cp.sessions_remaining, cp.sessions_total, cp.expires_at,
+						pt.name AS package_type_name
+				FROM {$wpdb->prefix}bookings_customer_packages cp
+				JOIN {$wpdb->prefix}bookings_package_types pt ON pt.id = cp.package_type_id
+				WHERE cp.id = %d
+				LIMIT 1",
+				$customer_package_id
+			),
+			ARRAY_A
+		);
+
+		return $row ? $row : null;
 	}
 }
