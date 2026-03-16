@@ -3,10 +3,150 @@
     <div class="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
       <div>
         <h2 class="text-lg font-semibold text-gray-900">Packages</h2>
-        <p class="text-sm text-gray-600 mt-1">Manage customer session bundles</p>
+        <p class="text-sm text-gray-600 mt-1">Manage package definitions and customer session bundles</p>
       </div>
     </div>
 
+    <div class="border-b border-gray-200 mb-6">
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="px-3 py-1.5 text-sm font-medium rounded-lg mb-3"
+          :class="activeTab === 'packageTypes' ? 'bg-primary-600 text-white' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'"
+          @click="activeTab = 'packageTypes'"
+        >
+          Package Types
+        </button>
+        <button
+          type="button"
+          class="px-3 py-1.5 text-sm font-medium rounded-lg mb-3"
+          :class="activeTab === 'customerPackages' ? 'bg-primary-600 text-white' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'"
+          @click="activeTab = 'customerPackages'"
+        >
+          Customer Packages
+        </button>
+      </div>
+    </div>
+
+    <div v-if="activeTab === 'packageTypes'">
+      <div class="mb-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div>
+          <h3 class="text-base font-semibold text-gray-900">Package Types</h3>
+          <p class="text-sm text-gray-600 mt-1">Create and manage reusable session bundle definitions</p>
+        </div>
+        <button
+          type="button"
+          class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="openCreatePackageTypeModal"
+        >
+          + Add Package Type
+        </button>
+      </div>
+
+      <div v-if="packageTypeActionError" role="alert" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        {{ packageTypeActionError }}
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div v-if="packageTypesLoading">
+          <span role="status" aria-live="polite" class="sr-only">Loading package types...</span>
+          <TableSkeleton :rows="6" :columns="7" />
+        </div>
+
+        <ErrorState
+          v-else-if="packageTypesError"
+          title="Failed to load package types"
+          :message="packageTypesError"
+          :show-home="false"
+          @retry="loadPackageTypes"
+        />
+
+        <div v-else-if="packageTypes.length === 0" class="p-8 text-center text-sm text-gray-600">
+          <p>No package types yet.</p>
+          <p class="mt-1 text-xs text-gray-500">
+            Create your first package type to start offering session bundles.
+          </p>
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sessions</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pricing</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applicable Services</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr
+                v-for="type in packageTypes"
+                :key="type.id"
+                class="hover:bg-gray-50 transition-colors"
+                :class="{ 'opacity-70': !type.is_active }"
+              >
+                <td class="px-6 py-4 text-sm text-gray-900">
+                  <div class="font-medium">{{ type.name }}</div>
+                  <div v-if="type.description" class="text-xs text-gray-500 mt-1 line-clamp-2">{{ type.description }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  {{ Number(type.sessions_count || 0) }} session{{ Number(type.sessions_count || 0) === 1 ? '' : 's' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  {{ formatPackageTypePricing(type) }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  <span v-if="!Array.isArray(type.applicable_service_ids) || type.applicable_service_ids.length === 0">
+                    All services
+                  </span>
+                  <span v-else class="inline-flex items-center gap-2">
+                    {{ type.applicable_service_ids.length }} service{{ type.applicable_service_ids.length === 1 ? '' : 's' }}
+                    <BookitTooltip
+                      :content="getApplicableServicesTooltip(type.applicable_service_ids)"
+                      position="top"
+                    />
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  {{ type.expiry_enabled ? `${Number(type.expiry_days || 0)} days` : 'Never' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span
+                    class="px-2.5 py-0.5 text-xs font-medium rounded-full"
+                    :class="type.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'"
+                  >
+                    {{ type.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <button
+                    type="button"
+                    class="text-primary-600 hover:text-primary-900 mr-3"
+                    @click="openEditPackageTypeModal(type)"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    v-if="type.is_active"
+                    type="button"
+                    class="text-red-600 hover:text-red-900"
+                    :disabled="deactivatingPackageTypeId === type.id"
+                    @click="confirmDeactivatePackageType(type)"
+                  >
+                    {{ deactivatingPackageTypeId === type.id ? 'Deactivating...' : 'Deactivate' }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div v-else>
     <div class="mb-4">
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -374,6 +514,53 @@
         </div>
       </div>
     </Teleport>
+    </div>
+
+    <Transition name="fade">
+      <PackageTypeFormModal
+        v-if="showPackageTypeFormModal"
+        :package-type="editingPackageType"
+        :services="activeServices"
+        @close="closePackageTypeFormModal"
+        @saved="handlePackageTypeSaved"
+      />
+    </Transition>
+
+    <div v-if="showDeactivatePackageTypeModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+        <div class="flex items-start mb-4">
+          <span class="text-3xl mr-3">&#x26A0;&#xFE0F;</span>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Deactivate Package Type</h3>
+          </div>
+        </div>
+        <p class="text-sm text-gray-700 mb-4">
+          Are you sure you want to deactivate <strong>{{ packageTypePendingDeactivate?.name }}</strong>?
+        </p>
+        <p class="text-xs text-gray-500 mb-4">
+          Existing customer packages remain usable. New purchases of this package type will be blocked.
+        </p>
+
+        <div class="flex justify-end gap-2">
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            :disabled="deactivatingPackageTypeId !== null"
+            @click="closeDeactivatePackageTypeModal"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+            :disabled="deactivatingPackageTypeId !== null"
+            @click="deactivatePackageType"
+          >
+            {{ deactivatingPackageTypeId !== null ? 'Deactivating...' : 'Deactivate' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -383,6 +570,8 @@ import { useRouter } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import ErrorState from '../components/ErrorState.vue'
 import TableSkeleton from '../components/TableSkeleton.vue'
+import BookitTooltip from '../components/BookitTooltip.vue'
+import PackageTypeFormModal from '../components/PackageTypeFormModal.vue'
 
 const router = useRouter()
 const api = useApi()
@@ -390,6 +579,7 @@ const currentUser = window.BOOKIT_DASHBOARD?.staff || {}
 
 const isAdmin = computed(() => currentUser.role === 'admin' || currentUser.role === 'bookit_admin')
 
+const activeTab = ref('packageTypes')
 const loading = ref(true)
 const error = ref(false)
 const errorMessage = ref('')
@@ -415,6 +605,19 @@ const redeemModalSelectedBookingId = ref(null)
 const redeemModalSubmitting = ref(false)
 const redeemModalRef = ref(null)           // template ref for focus trap
 const redeemPreviousActive = ref(null)     // element to restore focus to on close
+
+// Package type tab state
+const packageTypes = ref([])
+const packageTypesLoading = ref(true)
+const packageTypesError = ref('')
+const packageTypeActionError = ref('')
+const activeServices = ref([])
+const serviceNameMap = ref({})
+const showPackageTypeFormModal = ref(false)
+const editingPackageType = ref(null)
+const showDeactivatePackageTypeModal = ref(false)
+const packageTypePendingDeactivate = ref(null)
+const deactivatingPackageTypeId = ref(null)
 
 let searchTimeout = null
 
@@ -532,6 +735,111 @@ function getStatusClass(status) {
     cancelled: 'bg-red-100 text-red-700'
   }
   return map[status] || 'bg-gray-100 text-gray-700'
+}
+
+function formatPounds(value) {
+  const amount = Number(value || 0)
+  return `£${amount.toFixed(2)}`
+}
+
+function formatPackageTypePricing(type) {
+  if (type.price_mode === 'fixed') {
+    return formatPounds(type.fixed_price)
+  }
+  return `${Number(type.discount_percentage || 0).toFixed(2)}% discount`
+}
+
+function getApplicableServicesTooltip(serviceIds) {
+  if (!Array.isArray(serviceIds) || serviceIds.length === 0) {
+    return 'All services'
+  }
+
+  return serviceIds
+    .map((serviceId) => serviceNameMap.value[serviceId] || `Service #${serviceId}`)
+    .join('\n')
+}
+
+async function loadActiveServices() {
+  try {
+    const response = await api.get('/services/list?status=active')
+    if (response.data?.success && Array.isArray(response.data.services)) {
+      activeServices.value = response.data.services
+      serviceNameMap.value = response.data.services.reduce((acc, service) => {
+        acc[service.id] = service.name
+        return acc
+      }, {})
+    }
+  } catch {
+    activeServices.value = []
+    serviceNameMap.value = {}
+  }
+}
+
+async function loadPackageTypes() {
+  packageTypesLoading.value = true
+  packageTypesError.value = ''
+
+  try {
+    const response = await api.get('/package-types')
+    packageTypes.value = Array.isArray(response.data) ? response.data : []
+  } catch (err) {
+    packageTypesError.value = err.message || 'Failed to load package types.'
+  } finally {
+    packageTypesLoading.value = false
+  }
+}
+
+function openCreatePackageTypeModal() {
+  packageTypeActionError.value = ''
+  editingPackageType.value = null
+  showPackageTypeFormModal.value = true
+}
+
+function openEditPackageTypeModal(packageType) {
+  packageTypeActionError.value = ''
+  editingPackageType.value = packageType
+  showPackageTypeFormModal.value = true
+}
+
+function closePackageTypeFormModal() {
+  showPackageTypeFormModal.value = false
+  editingPackageType.value = null
+}
+
+async function handlePackageTypeSaved() {
+  closePackageTypeFormModal()
+  await loadPackageTypes()
+}
+
+function confirmDeactivatePackageType(packageType) {
+  packageTypeActionError.value = ''
+  packageTypePendingDeactivate.value = packageType
+  showDeactivatePackageTypeModal.value = true
+}
+
+function closeDeactivatePackageTypeModal() {
+  showDeactivatePackageTypeModal.value = false
+  packageTypePendingDeactivate.value = null
+}
+
+async function deactivatePackageType() {
+  if (!packageTypePendingDeactivate.value) {
+    return
+  }
+
+  const packageTypeId = packageTypePendingDeactivate.value.id
+  deactivatingPackageTypeId.value = packageTypeId
+  packageTypeActionError.value = ''
+
+  try {
+    await api.post(`/package-types/${packageTypeId}/deactivate`)
+    closeDeactivatePackageTypeModal()
+    await loadPackageTypes()
+  } catch (err) {
+    packageTypeActionError.value = err.message || 'Failed to deactivate package type.'
+  } finally {
+    deactivatingPackageTypeId.value = null
+  }
 }
 
 async function toggleRedemptions(pkg) {
@@ -756,6 +1064,8 @@ onMounted(() => {
     return
   }
 
+  loadPackageTypes()
+  loadActiveServices()
   loadPackages(1)
 })
 
