@@ -331,20 +331,27 @@ function validateForm() {
 function getPayload() {
   const payload = {
     name: String(formData.value.name || '').trim(),
-    description: String(formData.value.description || '').trim(),
     sessions_count: Number(formData.value.sessions_count),
     price_mode: formData.value.price_mode,
-    fixed_price: formData.value.price_mode === 'fixed' ? Number(formData.value.fixed_price).toFixed(2) : null,
-    discount_percentage: formData.value.price_mode === 'discount' ? Number(formData.value.discount_percentage).toFixed(2) : null,
     expiry_enabled: Boolean(formData.value.expiry_enabled),
-    expiry_days: formData.value.expiry_enabled ? Number(formData.value.expiry_days) : null,
     applicable_service_ids: formData.value.applicable_service_ids.length
       ? formData.value.applicable_service_ids.map((id) => Number(id))
       : null
   }
 
-  if (!payload.description) {
-    payload.description = ''
+  const description = String(formData.value.description || '').trim()
+  if (description) {
+    payload.description = description
+  }
+
+  if (formData.value.price_mode === 'fixed') {
+    payload.fixed_price = parseFloat(formData.value.fixed_price)
+  } else {
+    payload.discount_percentage = parseFloat(formData.value.discount_percentage)
+  }
+
+  if (formData.value.expiry_enabled && formData.value.expiry_days) {
+    payload.expiry_days = parseInt(formData.value.expiry_days, 10)
   }
 
   return payload
