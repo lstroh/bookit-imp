@@ -524,6 +524,15 @@ class Bookit_Package_Types_API {
 					}
 				}
 			}
+
+			// Normalise price fields based on final price_mode.
+			// When switching modes, the unused field must be cleared
+			// regardless of what the existing row contained.
+			if ( 'fixed' === $data['price_mode'] ) {
+				$data['discount_percentage'] = null;
+			} elseif ( 'discount' === $data['price_mode'] ) {
+				$data['fixed_price'] = null;
+			}
 		}
 
 		if ( '' === $data['name'] ) {
