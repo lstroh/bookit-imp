@@ -665,6 +665,37 @@ class Bookit_Dashboard_Bookings_API {
 							'type'    => 'integer',
 							'default' => 0,
 						),
+						'meeting_type'   => array(
+							'required'          => false,
+							'type'              => 'string',
+							'default'           => 'none',
+							'sanitize_callback' => 'sanitize_text_field',
+							'validate_callback' => function( $value ) {
+								return in_array( (string) $value, array( 'none', 'online', 'in_person' ), true );
+							},
+						),
+						'preferred_platform' => array(
+							'required'          => false,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+							'validate_callback' => function( $value ) {
+								if ( null === $value || '' === $value ) {
+									return true;
+								}
+								return in_array( (string) $value, array( 'zoom', 'google_meet', 'whatsapp', 'teams', 'generic' ), true );
+							},
+						),
+						'default_meeting_link' => array(
+							'required'          => false,
+							'type'              => 'string',
+							'sanitize_callback' => 'esc_url_raw',
+							'validate_callback' => function( $value ) {
+								if ( null === $value || '' === $value ) {
+									return true;
+								}
+								return strlen( (string) $value ) <= 2048;
+							},
+						),
 					),
 				),
 				array(
@@ -739,6 +770,37 @@ class Bookit_Dashboard_Bookings_API {
 					'display_order'  => array(
 						'type'    => 'integer',
 						'default' => 0,
+					),
+					'meeting_type'   => array(
+						'required'          => false,
+						'type'              => 'string',
+						'default'           => 'none',
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => function( $value ) {
+							return in_array( (string) $value, array( 'none', 'online', 'in_person' ), true );
+						},
+					),
+					'preferred_platform' => array(
+						'required'          => false,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => function( $value ) {
+							if ( null === $value || '' === $value ) {
+								return true;
+							}
+							return in_array( (string) $value, array( 'zoom', 'google_meet', 'whatsapp', 'teams', 'generic' ), true );
+						},
+					),
+					'default_meeting_link' => array(
+						'required'          => false,
+						'type'              => 'string',
+						'sanitize_callback' => 'esc_url_raw',
+						'validate_callback' => function( $value ) {
+							if ( null === $value || '' === $value ) {
+								return true;
+							}
+							return strlen( (string) $value ) <= 2048;
+						},
 					),
 				),
 			)
@@ -2645,6 +2707,9 @@ class Bookit_Dashboard_Bookings_API {
 					s.deposit_type,
 					s.buffer_before,
 					s.buffer_after,
+					s.meeting_type,
+					s.preferred_platform,
+					s.default_meeting_link,
 					s.is_active,
 					s.display_order,
 					s.created_at,
@@ -2694,6 +2759,13 @@ class Bookit_Dashboard_Bookings_API {
 			$service['deposit_amount'] = $service['deposit_amount'] ? (float) $service['deposit_amount'] : null;
 			$service['buffer_before']  = (int) $service['buffer_before'];
 			$service['buffer_after']   = (int) $service['buffer_after'];
+			$service['meeting_type']   = (string) ( $service['meeting_type'] ?? 'none' );
+			$service['preferred_platform'] = isset( $service['preferred_platform'] )
+				? (string) $service['preferred_platform']
+				: null;
+			$service['default_meeting_link'] = isset( $service['default_meeting_link'] )
+				? (string) $service['default_meeting_link']
+				: null;
 			$service['is_active']      = (bool) $service['is_active'];
 			$service['display_order']  = (int) $service['display_order'];
 		}
@@ -2782,6 +2854,13 @@ class Bookit_Dashboard_Bookings_API {
 		$service['deposit_amount'] = $service['deposit_amount'] ? (float) $service['deposit_amount'] : null;
 		$service['buffer_before']  = (int) $service['buffer_before'];
 		$service['buffer_after']   = (int) $service['buffer_after'];
+		$service['meeting_type']   = (string) ( $service['meeting_type'] ?? 'none' );
+		$service['preferred_platform'] = isset( $service['preferred_platform'] )
+			? (string) $service['preferred_platform']
+			: null;
+		$service['default_meeting_link'] = isset( $service['default_meeting_link'] )
+			? (string) $service['default_meeting_link']
+			: null;
 		$service['is_active']      = (bool) $service['is_active'];
 		$service['display_order']  = (int) $service['display_order'];
 
@@ -5313,6 +5392,18 @@ class Bookit_Dashboard_Bookings_API {
 		$category_ids   = $request->get_param( 'category_ids' ) ?: array();
 		$is_active      = filter_var( $request->get_param( 'is_active' ), FILTER_VALIDATE_BOOLEAN );
 		$display_order  = (int) $request->get_param( 'display_order' );
+		$meeting_type   = sanitize_text_field( (string) ( $request->get_param( 'meeting_type' ) ?? 'none' ) );
+		$preferred_platform = $request->get_param( 'preferred_platform' )
+			? sanitize_text_field( (string) $request->get_param( 'preferred_platform' ) )
+			: null;
+		$default_meeting_link = $request->get_param( 'default_meeting_link' )
+			? esc_url_raw( (string) $request->get_param( 'default_meeting_link' ) )
+			: null;
+
+		if ( 'none' === $meeting_type ) {
+			$preferred_platform   = null;
+			$default_meeting_link = null;
+		}
 
 		// Insert service.
 		$result = $wpdb->insert(
@@ -5326,12 +5417,15 @@ class Bookit_Dashboard_Bookings_API {
 				'deposit_type'   => $deposit_type,
 				'buffer_before'  => $buffer_before,
 				'buffer_after'   => $buffer_after,
+				'meeting_type'   => $meeting_type,
+				'preferred_platform' => $preferred_platform,
+				'default_meeting_link' => $default_meeting_link,
 				'is_active'      => $is_active ? 1 : 0,
 				'display_order'  => $display_order,
 				'created_at'     => current_time( 'mysql' ),
 				'updated_at'     => current_time( 'mysql' ),
 			),
-			array( '%s', '%s', '%d', '%f', '%f', '%s', '%d', '%d', '%d', '%d', '%s', '%s' )
+			array( '%s', '%s', '%d', '%f', '%f', '%s', '%d', '%d', '%s', '%s', '%s', '%d', '%d', '%s', '%s' )
 		);
 
 		if ( false === $result ) {
@@ -5432,6 +5526,18 @@ class Bookit_Dashboard_Bookings_API {
 		$category_ids   = $request->get_param( 'category_ids' ) ?: array();
 		$is_active      = filter_var( $request->get_param( 'is_active' ), FILTER_VALIDATE_BOOLEAN );
 		$display_order  = (int) $request->get_param( 'display_order' );
+		$meeting_type   = sanitize_text_field( (string) ( $request->get_param( 'meeting_type' ) ?? 'none' ) );
+		$preferred_platform = $request->get_param( 'preferred_platform' )
+			? sanitize_text_field( (string) $request->get_param( 'preferred_platform' ) )
+			: null;
+		$default_meeting_link = $request->get_param( 'default_meeting_link' )
+			? esc_url_raw( (string) $request->get_param( 'default_meeting_link' ) )
+			: null;
+
+		if ( 'none' === $meeting_type ) {
+			$preferred_platform   = null;
+			$default_meeting_link = null;
+		}
 
 		// Update service.
 		$result = $wpdb->update(
@@ -5445,12 +5551,15 @@ class Bookit_Dashboard_Bookings_API {
 				'deposit_type'   => $deposit_type,
 				'buffer_before'  => $buffer_before,
 				'buffer_after'   => $buffer_after,
+				'meeting_type'   => $meeting_type,
+				'preferred_platform' => $preferred_platform,
+				'default_meeting_link' => $default_meeting_link,
 				'is_active'      => $is_active ? 1 : 0,
 				'display_order'  => $display_order,
 				'updated_at'     => current_time( 'mysql' ),
 			),
 			array( 'id' => $service_id ),
-			array( '%s', '%s', '%d', '%f', '%f', '%s', '%d', '%d', '%d', '%d', '%s' ),
+			array( '%s', '%s', '%d', '%f', '%f', '%s', '%d', '%d', '%s', '%s', '%s', '%d', '%d', '%s' ),
 			array( '%d' )
 		);
 
