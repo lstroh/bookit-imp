@@ -5,7 +5,7 @@
  * DO NOT run this file directly - tables are created via Bookit_Database class.
  * 
  * Total Tables: 17
- * Last Updated: 2026-03-17
+ * Last Updated: 2026-03-08
  */
 
 -- ============================================
@@ -26,9 +26,6 @@ CREATE TABLE wp_bookings_services (
 	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	deleted_at DATETIME NULL DEFAULT NULL COMMENT 'Soft delete timestamp',
-	meeting_type VARCHAR(20) NOT NULL DEFAULT 'none' COMMENT 'none | online | in_person',
-	preferred_platform VARCHAR(20) NULL COMMENT 'zoom | google_meet | whatsapp | teams | generic',
-	default_meeting_link VARCHAR(2048) NULL COMMENT 'Optional default meeting link for this service',
 	PRIMARY KEY (id),
 	KEY idx_is_active (is_active),
 	KEY idx_deleted_at (deleted_at),
@@ -154,7 +151,6 @@ CREATE TABLE wp_bookings (
 	payment_method VARCHAR(50) NULL COMMENT 'stripe, paypal, cash, card',
 	payment_intent_id VARCHAR(255) NULL COMMENT 'Stripe PaymentIntent ID',
 	customer_package_id BIGINT UNSIGNED NULL COMMENT 'Optional link to redeemed customer package',
-	meeting_link VARCHAR(2048) NULL COMMENT 'Meeting URL for online bookings',
 	stripe_session_id VARCHAR(255) NULL DEFAULT NULL COMMENT 'Stripe Checkout session ID for lookup after payment',
 	special_requests TEXT NULL COMMENT 'Special requests from customer during booking',
 	staff_notes TEXT NULL COMMENT 'Internal staff notes',
@@ -496,31 +492,3 @@ CREATE TABLE wp_bookings_package_redemptions (
 -- - database/migrations/0006-create-customer-packages-table.php
 -- - database/migrations/0007-create-package-redemptions-table.php
 -- - database/migrations/0008-add-customer-package-id-to-bookings.php
---
--- Migration 9: Performance Indexes
--- Date: 2026-03-08
--- Sprint: Sprint 4D, Task 2
---
--- Added indexes:
--- 1. wp_bookings.idx_status_date (status, booking_date)
--- 2. wp_bookings.idx_staff_date_status (staff_id, booking_date, status)
--- 3. wp_bookings_customer_packages.idx_status_expires (status, expires_at)
--- Migration file: database/migrations/0009-add-performance-indexes.php
---
--- Migration 10: Meeting Fields on Services
--- Date: 2026-03-17
--- Sprint: Sprint 4F, Task 1
---
--- Added columns:
--- 1. wp_bookings_services.meeting_type VARCHAR(20) NOT NULL DEFAULT 'none'
--- 2. wp_bookings_services.preferred_platform VARCHAR(20) NULL
--- 3. wp_bookings_services.default_meeting_link VARCHAR(2048) NULL
--- Migration file: database/migrations/0010-add-meeting-fields-to-services.php
---
--- Migration 11: Meeting Link on Bookings
--- Date: 2026-03-17
--- Sprint: Sprint 4F, Task 1
---
--- Added column:
--- 1. wp_bookings.meeting_link VARCHAR(2048) NULL
--- Migration file: database/migrations/0011-add-meeting-link-to-bookings.php
