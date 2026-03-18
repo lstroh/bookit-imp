@@ -270,6 +270,25 @@ class Booking_System_Email_Sender {
 						</div>
 					<?php endif; ?>
 
+					<?php
+					/**
+					 * Filter the meeting section HTML in the customer confirmation email.
+					 * Return non-empty HTML from an extension to display a meeting link row.
+					 * Return empty string (default) to show nothing.
+					 *
+					 * @param string $html    The meeting section HTML. Default ''.
+					 * @param array  $booking The booking data array passed to this method.
+					 */
+					$bookit_email_meeting_html = apply_filters(
+						'bookit_email_meeting_section',
+						'',
+						$booking
+					);
+					if ( '' !== $bookit_email_meeting_html ) {
+						echo wp_kses_post( $bookit_email_meeting_html );
+					}
+					?>
+
 					<p><?php esc_html_e( 'We look forward to seeing you!', 'booking-system' ); ?></p>
 				</div>
 

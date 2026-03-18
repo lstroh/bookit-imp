@@ -84,6 +84,16 @@ if ( ! $emails_already_sent && ! $is_pay_on_arrival ) {
 // Clear booking wizard session
 $retriever->clear_booking_session();
 
+/**
+ * Fires after the booking confirmation page has loaded and emails
+ * have been sent. Extensions hook here to generate and store a
+ * meeting link for this booking.
+ *
+ * @param int   $booking_id The booking ID.
+ * @param array $booking    The full booking data array.
+ */
+do_action( 'bookit_after_booking_confirmed', $booking['id'], $booking );
+
 // Format date and time for display
 $date_formatted = $retriever->format_date( $booking['booking_date'] );
 $time_formatted = $retriever->format_time( $booking['start_time'] );
@@ -193,6 +203,25 @@ $time_formatted = $retriever->format_time( $booking['start_time'] );
 			</div>
 		<?php endif; ?>
 	</div>
+
+	<?php
+	/**
+	 * Filter the meeting section HTML on the confirmation page.
+	 * Return non-empty HTML from an extension to display a meeting link.
+	 * Return empty string (default) to show nothing.
+	 *
+	 * @param string $html    The meeting section HTML. Default ''.
+	 * @param array  $booking The full booking data array.
+	 */
+	$bookit_meeting_section_html = apply_filters(
+		'bookit_confirmation_meeting_section',
+		'',
+		$booking
+	);
+	if ( '' !== $bookit_meeting_section_html ) {
+		echo wp_kses_post( $bookit_meeting_section_html );
+	}
+	?>
 
 	<div class="bookit-confirmation-actions">
 		<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="bookit-btn-secondary">
