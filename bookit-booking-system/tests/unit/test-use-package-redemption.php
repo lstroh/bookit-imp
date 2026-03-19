@@ -62,6 +62,7 @@ class Test_Use_Package_Redemption extends WP_UnitTestCase {
 		);
 
 		$_SESSION = array();
+		$this->set_packages_enabled( '1' );
 
 		$this->service_id = $this->insert_test_service();
 		$this->staff_id   = $this->create_test_staff( array( 'role' => 'staff' ) );
@@ -439,6 +440,29 @@ class Test_Use_Package_Redemption extends WP_UnitTestCase {
 		$this->assertSame( array(), $response->get_data() );
 	}
 
+	public function test_my_packages_returns_empty_when_packages_disabled() {
+		$this->set_packages_enabled( '0' );
+
+		$customer_id     = $this->insert_customer( array( 'email' => 'disabled-packages@test.com' ) );
+		$package_type_id = $this->insert_package_type();
+		$this->insert_customer_package(
+			array(
+				'customer_id'     => $customer_id,
+				'package_type_id' => $package_type_id,
+				'status'          => 'active',
+			)
+		);
+
+		$request = new WP_REST_Request( 'GET', '/bookit/v1/wizard/my-packages' );
+		$request->set_param( 'customer_email', 'disabled-packages@test.com' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->set_packages_enabled( '1' );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array(), $response->get_data() );
+	}
+
 	public function test_my_packages_returns_active_packages_only() {
 		$customer_id     = $this->insert_customer( array( 'email' => 'active-only@test.com' ) );
 		$package_type_id = $this->insert_package_type();
@@ -800,6 +824,25 @@ class Test_Use_Package_Redemption extends WP_UnitTestCase {
 				"SELECT email FROM {$wpdb->prefix}bookings_customers WHERE id = %d",
 				$customer_id
 			)
+		);
+	}
+
+	/**
+	 * Set packages_enabled setting value.
+	 *
+	 * @param string $value Setting value.
+	 * @return void
+	 */
+	private function set_packages_enabled( $value ) {
+		global $wpdb;
+
+		$wpdb->replace(
+			$wpdb->prefix . 'bookings_settings',
+			array(
+				'setting_key'   => 'packages_enabled',
+				'setting_value' => (string) $value,
+			),
+			array( '%s', '%s' )
 		);
 	}
 

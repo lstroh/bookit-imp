@@ -67,6 +67,17 @@ class Bookit_Customer_Package_Lookup_API {
 			return Bookit_Rate_Limiter::handle_exceeded( 'wizard_my_pkgs', $ip );
 		}
 
+		$packages_enabled = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT setting_value FROM {$wpdb->prefix}bookings_settings
+				WHERE setting_key = %s LIMIT 1",
+				'packages_enabled'
+			)
+		);
+		if ( '1' !== (string) $packages_enabled ) {
+			return new WP_REST_Response( array(), 200 );
+		}
+
 		$customer_email = sanitize_email( (string) $request->get_param( 'customer_email' ) );
 		$service_id     = absint( $request->get_param( 'service_id' ) );
 
