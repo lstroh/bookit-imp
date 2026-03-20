@@ -556,6 +556,146 @@ class Test_Use_Package_Redemption extends WP_UnitTestCase {
 		$this->assertCount( 1, $data );
 	}
 
+	public function test_package_redemptions_returns_empty_for_unknown_email() {
+		$request = new WP_REST_Request( 'GET', '/bookit/v1/wizard/package-redemptions' );
+		$request->set_param( 'customer_email', 'missing-customer@test.com' );
+		$request->set_param( 'customer_package_id', 1 );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array(), $response->get_data() );
+	}
+
+	public function test_package_redemptions_returns_403_if_package_belongs_to_different_customer() {
+		$customer_a_id     = $this->insert_customer( array( 'email' => 'owner@test.com' ) );
+		$customer_b_id     = $this->insert_customer( array( 'email' => 'other@test.com' ) );
+		$package_type_id   = $this->insert_package_type();
+		$customer_package_id = $this->insert_customer_package(
+			array(
+				'customer_id'     => $customer_a_id,
+				'package_type_id' => $package_type_id,
+			)
+		);
+
+		$this->assertGreaterThan( 0, $customer_b_id );
+
+		$request = new WP_REST_Request( 'GET', '/bookit/v1/wizard/package-redemptions' );
+		$request->set_param( 'customer_email', 'other@test.com' );
+		$request->set_param( 'customer_package_id', $customer_package_id );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 403, $response->get_status() );
+	}
+
+	public function test_package_redemptions_returns_correct_shape() {
+		$customer_id        = $this->insert_customer( array( 'email' => 'shape@test.com' ) );
+		$package_type_id    = $this->insert_package_type();
+		$customer_package_id = $this->insert_customer_package(
+			array(
+				'customer_id'     => $customer_id,
+				'package_type_id' => $package_type_id,
+			)
+		);
+		$booking_id = $this->insert_booking(
+			array(
+				'customer_id' => $customer_id,
+			)
+		);
+		$this->insert_redemption(
+			array(
+				'customer_package_id' => $customer_package_id,
+				'booking_id'          => $booking_id,
+			)
+		);
+
+		$request = new WP_REST_Request( 'GET', '/bookit/v1/wizard/package-redemptions' );
+		$request->set_param( 'customer_email', 'shape@test.com' );
+		$request->set_param( 'customer_package_id', $customer_package_id );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertCount( 1, $data );
+		$this->assertArrayHasKey( 'redeemed_at', $data[0] );
+		$this->assertArrayHasKey( 'booking_date', $data[0] );
+		$this->assertArrayHasKey( 'service_name', $data[0] );
+		$this->assertArrayHasKey( 'staff_name', $data[0] );
+	}
+
+	public function test_package_redemptions_respects_packages_enabled_gate() {
+		$this->set_packages_enabled( '0' );
+
+		$customer_id        = $this->insert_customer( array( 'email' => 'disabled-redemptions@test.com' ) );
+		$package_type_id    = $this->insert_package_type();
+		$customer_package_id = $this->insert_customer_package(
+			array(
+				'customer_id'     => $customer_id,
+				'package_type_id' => $package_type_id,
+			)
+		);
+		$booking_id = $this->insert_booking(
+			array(
+				'customer_id' => $customer_id,
+			)
+		);
+		$this->insert_redemption(
+			array(
+				'customer_package_id' => $customer_package_id,
+				'booking_id'          => $booking_id,
+			)
+		);
+
+		$request = new WP_REST_Request( 'GET', '/bookit/v1/wizard/package-redemptions' );
+		$request->set_param( 'customer_email', 'disabled-redemptions@test.com' );
+		$request->set_param( 'customer_package_id', $customer_package_id );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->set_packages_enabled( '1' );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array(), $response->get_data() );
+	}
+
+	public function test_package_redemptions_returns_at_most_10_results() {
+		$customer_id        = $this->insert_customer( array( 'email' => 'limit-redemptions@test.com' ) );
+		$package_type_id    = $this->insert_package_type();
+		$customer_package_id = $this->insert_customer_package(
+			array(
+				'customer_id'        => $customer_id,
+				'package_type_id'    => $package_type_id,
+				'sessions_total'     => 20,
+				'sessions_remaining' => 20,
+			)
+		);
+
+		for ( $i = 0; $i < 12; $i++ ) {
+			$booking_id = $this->insert_booking(
+				array(
+					'customer_id' => $customer_id,
+					'booking_date' => gmdate( 'Y-m-d', strtotime( '+' . ( 7 + $i ) . ' days' ) ),
+					'start_time'  => '10:00:00',
+					'end_time'    => '11:00:00',
+				)
+			);
+			$this->insert_redemption(
+				array(
+					'customer_package_id' => $customer_package_id,
+					'booking_id'          => $booking_id,
+					'redeemed_at'         => gmdate( 'Y-m-d H:i:s', strtotime( "+{$i} minutes" ) ),
+				)
+			);
+		}
+
+		$request = new WP_REST_Request( 'GET', '/bookit/v1/wizard/package-redemptions' );
+		$request->set_param( 'customer_email', 'limit-redemptions@test.com' );
+		$request->set_param( 'customer_package_id', $customer_package_id );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertCount( 10, $data );
+	}
+
 	/**
 	 * Build standard booking data.
 	 *
@@ -713,6 +853,65 @@ class Test_Use_Package_Redemption extends WP_UnitTestCase {
 			$data,
 			array( '%d', '%d', '%d', '%d', '%f', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
+
+		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Insert booking test row.
+	 *
+	 * @param array $overrides Field overrides.
+	 * @return int
+	 */
+	private function insert_booking( $overrides = array() ) {
+		global $wpdb;
+
+		$defaults = array(
+			'customer_id'         => 1,
+			'service_id'          => $this->service_id,
+			'staff_id'            => $this->staff_id,
+			'booking_date'        => date( 'Y-m-d', strtotime( '+7 days' ) ),
+			'start_time'          => '10:00:00',
+			'end_time'            => '11:00:00',
+			'duration'            => 60,
+			'status'              => 'confirmed',
+			'total_price'         => 50.00,
+			'deposit_amount'      => 0,
+			'deposit_paid'        => 0,
+			'balance_due'         => 50.00,
+			'payment_method'      => 'pay_on_arrival',
+			'customer_package_id' => null,
+			'booking_reference'   => 'REF-' . wp_generate_password( 6, false ),
+			'created_at'          => current_time( 'mysql' ),
+			'updated_at'          => current_time( 'mysql' ),
+		);
+
+		$data = array_merge( $defaults, $overrides );
+		$wpdb->insert( $wpdb->prefix . 'bookings', $data );
+
+		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Insert redemption test row.
+	 *
+	 * @param array $overrides Field overrides.
+	 * @return int
+	 */
+	private function insert_redemption( $overrides = array() ) {
+		global $wpdb;
+
+		$defaults = array(
+			'customer_package_id' => 0,
+			'booking_id'          => 0,
+			'redeemed_at'         => current_time( 'mysql' ),
+			'redeemed_by'         => 0,
+			'notes'               => null,
+			'created_at'          => current_time( 'mysql' ),
+		);
+
+		$data = array_merge( $defaults, $overrides );
+		$wpdb->insert( $wpdb->prefix . 'bookings_package_redemptions', $data );
 
 		return (int) $wpdb->insert_id;
 	}
