@@ -148,6 +148,19 @@ class Bookit_Activator {
 				)
 			);
 		}
+
+		$my_packages_page = get_page_by_path( 'my-packages' );
+		if ( ! $my_packages_page ) {
+			wp_insert_post(
+				array(
+					'post_title'   => 'My Packages',
+					'post_name'    => 'my-packages',
+					'post_content' => '[bookit_my_packages]',
+					'post_status'  => 'publish',
+					'post_type'    => 'page',
+				)
+			);
+		}
 		global $wpdb;  // Declare global first
 
 		// Add setting_type column to settings table if missing.

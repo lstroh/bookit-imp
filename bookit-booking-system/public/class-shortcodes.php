@@ -25,6 +25,7 @@ class Bookit_Shortcodes {
 		add_shortcode( 'bookit_booking_wizard', array( $this, 'render_booking_wizard' ) );
 		add_shortcode( 'bookit_booking_confirmation', array( $this, 'render_booking_confirmation' ) );
 		add_shortcode( 'bookit_confirmation', array( $this, 'bookit_confirmation_page_shortcode' ) );
+		add_shortcode( 'bookit_my_packages', array( $this, 'render_my_packages' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_wizard_assets' ) );
 	}
 
@@ -114,6 +115,24 @@ class Bookit_Shortcodes {
 	}
 
 	/**
+	 * Render my packages shortcode.
+	 *
+	 * @param array  $atts Shortcode attributes.
+	 * @param string $content Shortcode content.
+	 * @return string My packages HTML.
+	 */
+	public function render_my_packages( $atts = array(), $content = '' ) {
+		ob_start();
+		$template_path = BOOKIT_PLUGIN_DIR . 'public/templates/my-packages.php';
+		if ( file_exists( $template_path ) ) {
+			include $template_path;
+		} else {
+			echo '<p>' . esc_html__( 'My Packages template not found.', 'bookit-booking-system' ) . '</p>';
+		}
+		return ob_get_clean();
+	}
+
+	/**
 	 * Enqueue wizard-specific assets.
 	 *
 	 * @return void
@@ -123,7 +142,8 @@ class Bookit_Shortcodes {
 		global $post;
 		$has_wizard = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_booking_wizard' );
 		$has_confirmation = is_a( $post, 'WP_Post' ) && ( has_shortcode( $post->post_content, 'bookit_booking_confirmation' ) || has_shortcode( $post->post_content, 'bookit_confirmation' ) );
-		if ( ! $has_wizard && ! $has_confirmation ) {
+		$has_my_packages = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_my_packages' );
+		if ( ! $has_wizard && ! $has_confirmation && ! $has_my_packages ) {
 			return;
 		}
 
@@ -216,5 +236,23 @@ class Bookit_Shortcodes {
 				'currentStep' => $current_step,
 			)
 		);
+
+		if ( $has_my_packages ) {
+			wp_enqueue_style(
+				'bookit-my-packages',
+				BOOKIT_PLUGIN_URL . 'public/assets/css/my-packages.css',
+				array(),
+				BOOKIT_VERSION,
+				'all'
+			);
+			wp_localize_script(
+				'bookit-wizard',
+				'bookitMyPackages',
+				array(
+					'restUrl' => rest_url( 'bookit/v1/wizard/package-redemptions' ),
+					'nonce'   => wp_create_nonce( 'wp_rest' ),
+				)
+			);
+		}
 	}
 }
