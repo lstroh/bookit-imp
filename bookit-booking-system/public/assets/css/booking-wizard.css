@@ -86,7 +86,7 @@
 	position: absolute;
 	top: -40px;
 	left: 0;
-	background: #0056B3;
+	background: var(--bookit-primary);
 	color: var(--bookit-text-inverse);
 	padding: 8px 16px;
 	text-decoration: none;
@@ -176,15 +176,15 @@
 
 /* Current step */
 .bookit-progress-step-current .bookit-progress-step-number {
-	background: #0056B3;
-	border-color: #0056B3;
+	background: var(--bookit-primary);
+	border-color: var(--bookit-primary);
 	color: var(--bookit-text-inverse);
 	border-width: 3px;
 	box-shadow: 0 0 0 2px rgba(0, 86, 179, 0.2);
 }
 
 .bookit-progress-step-current .bookit-progress-step-label {
-	color: #0056B3;
+	color: var(--bookit-primary);
 	font-weight: 600;
 }
 
@@ -260,7 +260,7 @@
 
 /* Focus indicators (WCAG 2.1 - ≥2px outline) */
 .bookit-btn:focus {
-	outline: 2px solid #0056B3;
+	outline: 2px solid var(--bookit-primary);
 	outline-offset: 2px;
 }
 
@@ -269,7 +269,7 @@
 }
 
 .bookit-btn:focus-visible {
-	outline: 2px solid #0056B3;
+	outline: 2px solid var(--bookit-primary);
 	outline-offset: 2px;
 }
 
@@ -293,34 +293,31 @@
 
 /* Next button */
 .bookit-btn-next {
-	background: #0056B3;
+	background: var(--bookit-primary);
 	color: var(--bookit-text-inverse);
-	border-color: #0056B3;
+	border-color: var(--bookit-primary);
 	flex: 1;
 }
 
 .bookit-btn-next:hover {
-	background: #004494;
-	border-color: #004494;
+	background: var(--bookit-primary-hover);
+	border-color: var(--bookit-primary-hover);
 }
 
 .bookit-btn-next:active {
-	background: #003375;
-	border-color: #003375;
+	background: var(--bookit-primary-hover);
+	border-color: var(--bookit-primary-hover);
 }
 
 .bookit-btn-next:disabled {
-	background: #E5E5E5;
-	color: #6C757D;
-	border-color: #E5E5E5;
+	background: var(--bookit-border);
+	color: var(--bookit-text-secondary);
+	border-color: var(--bookit-border);
 	cursor: not-allowed;
 	opacity: 0.6;
 }
 
 /* Hide back button on step 1 */
-.bookit-wizard-nav:has(.bookit-btn-back:not([style*="display: none"])) {
-	/* Fallback for browsers that don't support :has() */
-}
 
 /* ==========================================================================
    Timeout Warning
@@ -448,7 +445,7 @@
 	font-size: 1.5rem;
 	margin-bottom: 20px;
 	padding-bottom: 10px;
-	border-bottom: 2px solid #0056B3;
+	border-bottom: 2px solid var(--bookit-primary);
 	color: #333;
 }
 
@@ -485,7 +482,7 @@
 }
 
 .bookit-service-card:hover {
-	border-color: #0056B3;
+	border-color: var(--bookit-primary);
 	box-shadow: 0 4px 12px rgba(0, 86, 179, 0.1);
 	transform: translateY(-2px);
 }
@@ -523,7 +520,7 @@
 
 .bookit-service-price {
 	font-weight: 600;
-	color: #0056B3;
+	color: var(--bookit-primary);
 	font-size: 1.1rem;
 }
 
@@ -545,7 +542,7 @@
 .bookit-btn-select-service {
 	width: 100%;
 	padding: 12px 24px;
-	background: #0056B3;
+	background: var(--bookit-primary);
 	color: var(--bookit-text-inverse);
 	border: none;
 	border-radius: var(--bookit-border-radius-sm);
@@ -558,11 +555,11 @@
 }
 
 .bookit-btn-select-service:hover {
-	background: #004494;
+	background: var(--bookit-primary-hover);
 }
 
 .bookit-btn-select-service:focus {
-	outline: 2px solid #0056B3;
+	outline: 2px solid var(--bookit-primary);
 	outline-offset: 2px;
 }
 
@@ -592,7 +589,7 @@
 
 /* Accessibility: Focus indicators */
 .bookit-service-card:focus-within {
-	outline: 2px solid #0056B3;
+	outline: 2px solid var(--bookit-primary);
 	outline-offset: 2px;
 }
 
@@ -650,7 +647,7 @@
 }
 
 .bookit-staff-card:hover {
-	border-color: #0056B3;
+	border-color: var(--bookit-primary);
 	box-shadow: 0 4px 12px rgba(0, 86, 179, 0.1);
 	transform: translateY(-2px);
 }
@@ -701,7 +698,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: #0056B3;
+	background: var(--bookit-primary);
 	color: var(--bookit-text-inverse);
 }
 
@@ -735,7 +732,7 @@
 .bookit-staff-price {
 	font-size: 1.1rem;
 	font-weight: 600;
-	color: #0056B3;
+	color: var(--bookit-primary);
 	margin: 0 0 12px 0;
 }
 
@@ -750,7 +747,7 @@
 .bookit-btn-select-staff {
 	width: 100%;
 	padding: 12px 24px;
-	background: #0056B3;
+	background: var(--bookit-primary);
 	color: var(--bookit-text-inverse);
 	border: none;
 	border-radius: var(--bookit-border-radius-sm);
@@ -763,11 +760,11 @@
 }
 
 .bookit-btn-select-staff:hover {
-	background: #004494;
+	background: var(--bookit-primary-hover);
 }
 
 .bookit-btn-select-staff:focus {
-	outline: 2px solid #0056B3;
+	outline: 2px solid var(--bookit-primary);
 	outline-offset: 2px;
 }
 
@@ -779,11 +776,11 @@
 
 /* No Preference Card */
 .bookit-staff-card-no-preference {
-	border: 2px dashed #0056B3;
+	border: 2px dashed var(--bookit-primary);
 }
 
 .bookit-staff-card-no-preference:hover {
-	border-color: #004494;
+	border-color: var(--bookit-primary-hover);
 	box-shadow: 0 4px 12px rgba(0, 86, 179, 0.15);
 }
 
@@ -807,7 +804,7 @@
 
 /* Accessibility: Focus indicators */
 .bookit-staff-card:focus-within {
-	outline: 2px solid #0056B3;
+	outline: 2px solid var(--bookit-primary);
 	outline-offset: 2px;
 }
 
