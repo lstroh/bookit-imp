@@ -21,7 +21,7 @@
     width: 80px;
     height: 80px;
     background: white;
-    color: #10b981;
+    color: var(--bookit-color-success);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -63,7 +63,7 @@
 .bookit-detail-card {
     background: #f8f9fa;
     padding: 20px;
-    border-radius: 8px;
+    border-radius: var(--bookit-border-radius);
     margin-bottom: 20px;
 }
 
@@ -71,7 +71,7 @@
     display: flex;
     justify-content: space-between;
     padding: 12px 0;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--bookit-border);
 }
 
 .bookit-detail-row:last-child {
@@ -80,12 +80,12 @@
 
 .bookit-detail-label {
     font-weight: 600;
-    color: #6b7280;
+    color: var(--bookit-text-secondary);
     flex: 0 0 40%;
 }
 
 .bookit-detail-value {
-    color: #111827;
+    color: var(--bookit-text-primary);
     flex: 0 0 60%;
     text-align: right;
     font-weight: 500;
@@ -95,9 +95,9 @@
 .bookit-payment-summary {
     background: #ecfdf5;
     padding: 20px;
-    border-radius: 8px;
+    border-radius: var(--bookit-border-radius);
     margin: 20px 0;
-    border-left: 4px solid #10b981;
+    border-left: 4px solid var(--bookit-color-success);
 }
 
 .bookit-payment-summary h3 {
@@ -134,7 +134,7 @@
 .bookit-special-requests {
     background: #f3f4f6;
     padding: 20px;
-    border-radius: 8px;
+    border-radius: var(--bookit-border-radius);
     margin: 20px 0;
 }
 
@@ -160,7 +160,7 @@
 .bookit-btn-primary,
 .bookit-btn-secondary {
     padding: 14px 28px;
-    border-radius: 8px;
+    border-radius: var(--bookit-border-radius);
     text-decoration: none;
     font-size: 16px;
     font-weight: 600;
@@ -195,7 +195,7 @@
 .bookit-confirmation-help {
     text-align: center;
     padding: 20px;
-    color: #6b7280;
+    color: var(--bookit-text-secondary);
     font-size: 14px;
 }
 
@@ -216,7 +216,7 @@
 }
 
 .bookit-confirmation-error p {
-    color: #6b7280;
+    color: var(--bookit-text-secondary);
     margin: 15px 0;
     line-height: 1.6;
 }
