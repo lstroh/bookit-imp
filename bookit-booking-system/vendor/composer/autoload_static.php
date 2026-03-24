@@ -19,7 +19,14 @@ class ComposerStaticInite11a283517e0973336e794efc32734c1
         ),
         'P' =>
         array (
+            'Psr\\Http\\Message\\' => 17,
+            'Psr\\Http\\Client\\' => 16,
             'PhpParser\\' => 10,
+        ),
+        'H' =>
+        array (
+            'Http\\Message\\MultipartStream\\' => 29,
+            'Http\\Discovery\\' => 15,
         ),
         'D' =>
         array (
@@ -28,6 +35,7 @@ class ComposerStaticInite11a283517e0973336e794efc32734c1
         ),
         'B' =>
         array (
+            'Brevo\\' => 6,
             'BookingSystem\\' => 14,
         ),
     );
@@ -37,9 +45,26 @@ class ComposerStaticInite11a283517e0973336e794efc32734c1
         array (
             0 => __DIR__ . '/..' . '/stripe/stripe-php/lib',
         ),
+        'Psr\\Http\\Message\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/psr/http-factory/src',
+            1 => __DIR__ . '/..' . '/psr/http-message/src',
+        ),
+        'Psr\\Http\\Client\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/psr/http-client/src',
+        ),
         'PhpParser\\' =>
         array (
             0 => __DIR__ . '/..' . '/nikic/php-parser/lib/PhpParser',
+        ),
+        'Http\\Message\\MultipartStream\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/php-http/multipart-stream-builder/src',
+        ),
+        'Http\\Discovery\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/php-http/discovery/src',
         ),
         'Doctrine\\Instantiator\\' =>
         array (
@@ -48,6 +73,10 @@ class ComposerStaticInite11a283517e0973336e794efc32734c1
         'DeepCopy\\' =>
         array (
             0 => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy',
+        ),
+        'Brevo\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/getbrevo/brevo-php/src',
         ),
         'BookingSystem\\' =>
         array (

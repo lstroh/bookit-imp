@@ -171,6 +171,15 @@ class Bookit_Loader {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/booking/class-booking-retriever.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/email/class-email-sender.php';
 
+		// Notification provider interfaces.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/interfaces/interface-bookit-email-provider.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/interfaces/interface-bookit-sms-provider.php';
+
+		// Notification provider implementations.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/providers/class-bookit-brevo-email-provider.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/providers/class-bookit-wp-mail-fallback-provider.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/providers/class-bookit-brevo-sms-provider.php';
+
 		// Session cleanup cron.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-session-cleanup.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-audit-retention.php';
