@@ -7431,6 +7431,13 @@ class Bookit_Dashboard_Bookings_API {
 			'smtp_password',
 			'smtp_from_name',
 			'smtp_from_email',
+			'email_provider',
+			'brevo_api_key',
+			'brevo_from_name',
+			'brevo_from_email',
+			'sms_provider',
+			'brevo_sms_api_key',
+			'email_rate_limit_per_minute',
 			'stripe_connected',
 			'stripe_account_id',
 			'paypal_connected',
@@ -7512,6 +7519,8 @@ class Bookit_Dashboard_Bookings_API {
 			'stripe_secret_key',
 			'stripe_webhook_secret',
 			'paypal_client_secret',
+			'brevo_api_key',
+			'brevo_sms_api_key',
 		);
 	}
 
@@ -7675,33 +7684,58 @@ class Bookit_Dashboard_Bookings_API {
 	}
 
 	/**
-	 * Send test email using wp_mail.
+	 * Send a test email using the resolved notification provider.
 	 *
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public function send_test_email( $request ) {
-		$to_email = $request->get_param( 'to_email' );
+		$to_email = sanitize_email( $request->get_param( 'to_email' ) );
 
-		$subject = 'Test Email from Bookit Booking System';
-		$message = 'This is a test email sent at ' . current_time( 'mysql' ) . ".\n\n";
-		$message .= "If you received this email, your email configuration is working correctly!\n\n";
-		$message .= 'Bookit Booking System';
-
-		$result = wp_mail( $to_email, $subject, $message );
-
-		if ( ! $result ) {
+		if ( ! is_email( $to_email ) ) {
 			return new WP_Error(
-				'email_failed',
-				'Failed to send test email. Please check your SMTP configuration.',
+				'invalid_email',
+				__( 'Invalid recipient email address.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$provider = Bookit_Notification_Dispatcher::resolve_email_provider();
+
+		$subject  = sprintf(
+			/* translators: %s: site name */
+			__( 'Test Email from %s', 'bookit-booking-system' ),
+			get_bloginfo( 'name' )
+		);
+		$html_body = sprintf(
+			'<p>%s</p><p>%s</p>',
+			esc_html__( 'This is a test email sent from Bookit Booking System.', 'bookit-booking-system' ),
+			esc_html( current_time( 'mysql' ) )
+		);
+
+		$result = $provider->send(
+			array( 'email' => $to_email, 'name' => $to_email ),
+			$subject,
+			$html_body
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return new WP_Error(
+				'test_email_failed',
+				$result->get_error_message(),
 				array( 'status' => 500 )
 			);
 		}
 
 		return rest_ensure_response(
 			array(
-				'success' => true,
-				'message' => "Test email sent successfully to {$to_email}.",
+				'success'  => true,
+				'message'  => sprintf(
+					/* translators: %s: email address */
+					__( 'Test email sent successfully to %s.', 'bookit-booking-system' ),
+					$to_email
+				),
+				'provider' => $provider->get_name(),
 			)
 		);
 	}

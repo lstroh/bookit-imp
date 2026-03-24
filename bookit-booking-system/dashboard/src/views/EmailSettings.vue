@@ -15,17 +15,100 @@
         <p class="text-sm text-red-800">{{ saveError }}</p>
       </div>
 
-      <!-- SMTP Configuration Card -->
+      <!-- Top Warning Banner -->
+      <div v-if="emailProvider === 'wp_mail'" class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+        <span class="text-amber-500 text-xl flex-shrink-0">⚠️</span>
+        <p class="text-sm text-amber-800">
+          <strong>Using WordPress Mail.</strong> Emails may not be delivered reliably in production.
+          Configure Brevo above for reliable delivery.
+        </p>
+      </div>
+
+      <!-- Section 1: Email Provider -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">Email Provider</h2>
+        </div>
+        <form @submit.prevent="saveSettings" class="px-4 sm:px-6 py-6 space-y-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email Provider</label>
+            <select
+              v-model="emailProvider"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="wp_mail">WordPress Mail (default — no API key needed)</option>
+              <option value="brevo">Brevo (recommended for production)</option>
+            </select>
+          </div>
+
+          <div v-if="emailProvider === 'wp_mail'" class="bg-amber-50 border border-amber-200 rounded p-4">
+            <p class="text-sm text-amber-800">
+              ⚠️ WordPress Mail uses your server's PHP mail() function. Emails may arrive in spam.
+              Recommended for testing only. Configure Brevo for reliable production delivery.
+            </p>
+          </div>
+
+          <div v-if="emailProvider === 'brevo'" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Brevo API Key</label>
+              <input
+                v-model="brevoApiKey"
+                type="password"
+                placeholder="xkeysib-..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+              <div class="mt-2 flex items-center gap-2 text-sm">
+                <span
+                  :class="brevoConfigured ? 'bg-green-500' : 'bg-gray-400'"
+                  class="inline-block w-2 h-2 rounded-full"
+                ></span>
+                <span class="text-gray-700">
+                  {{ brevoConfigured ? 'Connected' : 'API key required' }}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">From Name</label>
+              <input
+                v-model="brevoFromName"
+                type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">From Email</label>
+              <input
+                v-model="brevoFromEmail"
+                type="email"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-4 border-t border-gray-200">
+            <button
+              type="submit"
+              :disabled="saving"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+            >
+              {{ saving ? 'Saving...' : 'Save SMTP Settings' }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Section 2: SMTP Configuration (Advanced) -->
       <div class="bg-white rounded-lg shadow-sm border border-gray-200">
         <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
           <div class="flex items-center justify-between">
             <div>
-              <h2 class="text-lg font-semibold text-gray-900">SMTP Settings</h2>
+              <h2 class="text-lg font-semibold text-gray-900">SMTP Configuration (Advanced)</h2>
               <p class="text-sm text-gray-500 mt-1">
                 Configure your email server for sending notifications
               </p>
             </div>
-            <!-- Enable/Disable Toggle -->
             <label class="flex items-center cursor-pointer">
               <input
                 v-model="settings.smtp_enabled"
@@ -41,7 +124,6 @@
         </div>
 
         <form @submit.prevent="saveSettings" class="px-4 sm:px-6 py-6 space-y-6">
-          <!-- Info Box -->
           <div class="bg-blue-50 border border-blue-200 rounded p-4">
             <div class="flex items-start gap-3">
               <span class="text-blue-600 text-xl flex-shrink-0">&#8505;&#65039;</span>
@@ -59,7 +141,6 @@
             </div>
           </div>
 
-          <!-- SMTP Host and Port -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div class="sm:col-span-2">
               <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -87,7 +168,6 @@
             </div>
           </div>
 
-          <!-- Encryption -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">
               Encryption
@@ -105,7 +185,6 @@
             </p>
           </div>
 
-          <!-- Authentication -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -136,7 +215,6 @@
             </div>
           </div>
 
-          <!-- From Name and Email -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -167,7 +245,6 @@
             </div>
           </div>
 
-          <!-- Save Button -->
           <div class="flex justify-end pt-4 border-t border-gray-200">
             <button
               type="submit"
@@ -180,27 +257,71 @@
         </form>
       </div>
 
-      <!-- Test Email Card -->
+      <!-- Section 3: SMS Notifications -->
       <div class="bg-white rounded-lg shadow-sm border border-gray-200">
         <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Test Email</h2>
+          <h2 class="text-lg font-semibold text-gray-900">SMS Notifications</h2>
+        </div>
+        <form @submit.prevent="saveSettings" class="px-4 sm:px-6 py-6 space-y-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">SMS Provider</label>
+            <select
+              v-model="smsProvider"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="none">Disabled</option>
+              <option value="brevo">Brevo SMS (coming soon)</option>
+            </select>
+          </div>
+
+          <div v-if="smsProvider === 'brevo'" class="space-y-4">
+            <div class="bg-blue-50 border border-blue-200 rounded p-4 text-sm text-blue-800">
+              Brevo SMS will be activated in a future sprint when live credentials are available.
+              Save your selection now to enable it automatically.
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Brevo SMS API Key</label>
+              <input
+                v-model="brevoSmsApiKey"
+                type="password"
+                disabled
+                placeholder="Brevo SMS API key — available in Sprint 5"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+              />
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-4 border-t border-gray-200">
+            <button
+              type="submit"
+              :disabled="saving"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+            >
+              {{ saving ? 'Saving...' : 'Save SMTP Settings' }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Section 4: Test Notifications -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">Test Notifications</h2>
           <p class="text-sm text-gray-500 mt-1">
-            Send a test email to verify your SMTP configuration is working
+            Send test notifications to verify configuration and provider routing
           </p>
         </div>
 
         <div class="px-4 sm:px-6 py-6">
-          <!-- Test Email Success -->
           <div v-if="testSuccess" class="mb-4 bg-green-50 border border-green-200 rounded p-3">
             <p class="text-sm text-green-800">&#10003; {{ testSuccess }}</p>
           </div>
 
-          <!-- Test Email Error -->
           <div v-if="testError" class="mb-4 bg-red-50 border border-red-200 rounded p-3">
             <p class="text-sm text-red-800">{{ testError }}</p>
           </div>
 
-          <!-- Warning if SMTP disabled -->
           <div v-if="!settings.smtp_enabled" class="mb-4 bg-amber-50 border border-amber-200 rounded p-3">
             <p class="text-sm text-amber-800">
               SMTP is currently disabled. Enable it above to use custom SMTP settings.
@@ -220,18 +341,23 @@
                 placeholder="your-email@example.com"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
-              <p class="text-xs text-gray-500 mt-1">
-                A test email will be sent to this address
-              </p>
             </div>
 
-            <div class="flex justify-end">
+            <div class="flex flex-col sm:flex-row sm:justify-end gap-3">
               <button
                 type="submit"
                 :disabled="sendingTest || !testEmailAddress"
                 class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 {{ sendingTest ? 'Sending...' : 'Send Test Email' }}
+              </button>
+              <button
+                type="button"
+                disabled
+                title="SMS not yet active"
+                class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-200 rounded-lg cursor-not-allowed"
+              >
+                Send Test SMS
               </button>
             </div>
           </form>
@@ -296,6 +422,13 @@ const saveError = ref('')
 const testSuccess = ref('')
 const testError = ref('')
 const testEmailAddress = ref('')
+const emailProvider = ref('wp_mail')
+const smsProvider = ref('none')
+const brevoApiKey = ref('')
+const brevoFromName = ref('')
+const brevoFromEmail = ref('')
+const brevoSmsApiKey = ref('')
+const brevoConfigured = ref(false)
 
 const settings = ref({
   smtp_enabled: false,
@@ -308,7 +441,7 @@ const settings = ref({
   smtp_from_email: ''
 })
 
-const SETTING_KEYS = 'smtp_enabled,smtp_host,smtp_port,smtp_encryption,smtp_username,smtp_password,smtp_from_name,smtp_from_email'
+const SETTING_KEYS = 'smtp_enabled,smtp_host,smtp_port,smtp_encryption,smtp_username,smtp_password,smtp_from_name,smtp_from_email,email_provider,brevo_api_key,brevo_from_name,brevo_from_email,sms_provider,brevo_sms_api_key'
 
 const loadSettings = async () => {
   loading.value = true
@@ -318,6 +451,13 @@ const loadSettings = async () => {
 
     if (response.data.success && response.data.settings) {
       Object.assign(settings.value, response.data.settings)
+      emailProvider.value = response.data.settings.email_provider || 'wp_mail'
+      smsProvider.value = response.data.settings.sms_provider || 'none'
+      brevoApiKey.value = response.data.settings.brevo_api_key === 'SAVED' ? '' : (response.data.settings.brevo_api_key || '')
+      brevoFromName.value = response.data.settings.brevo_from_name || ''
+      brevoFromEmail.value = response.data.settings.brevo_from_email || ''
+      brevoSmsApiKey.value = response.data.settings.brevo_sms_api_key === 'SAVED' ? '' : (response.data.settings.brevo_sms_api_key || '')
+      brevoConfigured.value = response.data.settings.brevo_api_key === 'SAVED'
     }
   } catch (err) {
     saveError.value = 'Failed to load settings.'
@@ -332,12 +472,29 @@ const saveSettings = async () => {
   saveError.value = ''
 
   try {
+    const payload = {
+      ...settings.value,
+      email_provider: emailProvider.value,
+      brevo_from_name: brevoFromName.value,
+      brevo_from_email: brevoFromEmail.value,
+      sms_provider: smsProvider.value
+    }
+
+    if (brevoApiKey.value !== '') {
+      payload.brevo_api_key = brevoApiKey.value
+    }
+
+    if (brevoSmsApiKey.value !== '') {
+      payload.brevo_sms_api_key = brevoSmsApiKey.value
+    }
+
     const response = await api.post('settings', {
-      settings: settings.value
+      settings: payload
     })
 
     if (response.data.success) {
       saveSuccess.value = 'SMTP settings saved successfully.'
+      brevoConfigured.value = brevoApiKey.value !== '' || response.data.settings?.brevo_api_key === 'SAVED'
 
       setTimeout(() => {
         saveSuccess.value = ''
@@ -363,7 +520,8 @@ const sendTestEmail = async () => {
     })
 
     if (response.data.success) {
-      testSuccess.value = response.data.message
+      const providerName = response.data.provider ? ` via ${response.data.provider}` : ''
+      testSuccess.value = `Test email sent${providerName}.`
 
       setTimeout(() => {
         testSuccess.value = ''
