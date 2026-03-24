@@ -179,6 +179,10 @@ class Bookit_Loader {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/providers/class-bookit-brevo-email-provider.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/providers/class-bookit-wp-mail-fallback-provider.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/providers/class-bookit-brevo-sms-provider.php';
+		// Notification queue and dispatcher.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/functions-notifications.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-email-queue.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-notification-dispatcher.php';
 
 		// Session cleanup cron.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-session-cleanup.php';
@@ -349,6 +353,33 @@ class Bookit_Loader {
 
 		// Audit retention cleanup cron.
 		add_action( 'bookit_audit_retention', array( 'Bookit_Audit_Retention', 'run' ) );
+
+		// Email queue processor -- fired by Action Scheduler or WP-Cron.
+		add_action(
+			'bookit_process_email_queue',
+			function( int $queue_id ) {
+				Bookit_Notification_Dispatcher::process_email_queue_item( $queue_id );
+			}
+		);
+
+		// Cancel pending queue items when a booking is cancelled or rescheduled.
+		add_action(
+			'bookit_after_booking_cancelled',
+			function( int $booking_id ) {
+				Bookit_Email_Queue::cancel_for_booking( $booking_id );
+			},
+			10,
+			1
+		);
+		// TODO: bookit_booking_rescheduled not yet fired in core -- hook registered for future use.
+		add_action(
+			'bookit_booking_rescheduled',
+			function( int $booking_id ) {
+				Bookit_Email_Queue::cancel_for_booking( $booking_id );
+			},
+			10,
+			1
+		);
 
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-package-expiry.php';
 		Bookit_Package_Expiry::init();
