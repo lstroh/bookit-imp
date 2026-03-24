@@ -183,6 +183,7 @@ class Bookit_Loader {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/functions-notifications.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-email-queue.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-notification-dispatcher.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-notification-exception.php';
 
 		// Session cleanup cron.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-session-cleanup.php';

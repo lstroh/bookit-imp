@@ -70,6 +70,7 @@
             <file>./tests/unit/test-package-email.php</file>
             <file>./tests/unit/test-provider-interfaces.php</file>
             <file>./tests/unit/test-notification-queue.php</file>
+            <file>./tests/unit/test-notification-retry.php</file>
         </testsuite>
     </testsuites>
 

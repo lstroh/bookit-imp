@@ -47,6 +47,26 @@ class Bookit_Notification_Dispatcher {
 			return;
 		}
 
+		// Per-minute rate limiter.
+		$rate_key   = 'bookit_email_rate_' . gmdate( 'YmdHi' );
+		$rate_count = (int) get_transient( $rate_key );
+		$rate_cap   = (int) self::get_setting( 'email_rate_limit_per_minute', 30 );
+
+		if ( $rate_count >= $rate_cap ) {
+			// Cap reached, push to start of next minute without consuming a retry.
+			$next_minute_ts = (int) ( ceil( time() / 60 ) * 60 );
+			Bookit_Email_Queue::update_status(
+				$queue_id,
+				'pending',
+				array(
+					'scheduled_at' => gmdate( 'Y-m-d H:i:s', $next_minute_ts ),
+				)
+			);
+			self::schedule_queue_processing( $queue_id, $next_minute_ts );
+			return;
+		}
+		set_transient( $rate_key, $rate_count + 1, 90 );
+
 		Bookit_Email_Queue::update_status( $queue_id, 'processing' );
 
 		$provider  = self::resolve_email_provider();
@@ -156,14 +176,7 @@ class Bookit_Notification_Dispatcher {
 	 * @return Bookit_Email_Provider_Interface
 	 */
 	public static function resolve_email_provider(): Bookit_Email_Provider_Interface {
-		global $wpdb;
-
-		$provider_slug = (string) $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s LIMIT 1",
-				'email_provider'
-			)
-		);
+		$provider_slug = (string) self::get_setting( 'email_provider', '' );
 
 		if ( 'brevo' === $provider_slug ) {
 			$brevo_provider = new Bookit_Brevo_Email_Provider();
@@ -181,14 +194,7 @@ class Bookit_Notification_Dispatcher {
 	 * @return Bookit_SMS_Provider_Interface|null
 	 */
 	public static function resolve_sms_provider(): ?Bookit_SMS_Provider_Interface {
-		global $wpdb;
-
-		$provider_slug = (string) $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s LIMIT 1",
-				'sms_provider'
-			)
-		);
+		$provider_slug = (string) self::get_setting( 'sms_provider', '' );
 
 		if ( 'brevo' === $provider_slug ) {
 			return new Bookit_Brevo_SMS_Provider();
@@ -216,5 +222,23 @@ class Bookit_Notification_Dispatcher {
 		}
 
 		wp_schedule_single_event( $timestamp, 'bookit_process_email_queue', array( $queue_id ) );
+	}
+
+	/**
+	 * Read a single value from wp_bookings_settings.
+	 *
+	 * @param string $key     Setting key.
+	 * @param mixed  $default Default value if not found.
+	 * @return mixed
+	 */
+	private static function get_setting( string $key, mixed $default = '' ): mixed {
+		global $wpdb;
+		$value = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s LIMIT 1",
+				$key
+			)
+		);
+		return ( null !== $value && '' !== $value ) ? $value : $default;
 	}
 }
