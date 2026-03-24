@@ -87,6 +87,9 @@ class Bookit_Loader {
 		// Public-facing functionality.
 		require_once BOOKIT_PLUGIN_DIR . 'public/class-bookit-public.php';
 
+		// Template loader (theme override support).
+		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-template-loader.php';
+
 		// Shortcode handler.
 		require_once BOOKIT_PLUGIN_DIR . 'public/class-shortcodes.php';
 

@@ -71,12 +71,7 @@ class Bookit_Shortcodes {
 		ob_start();
 
 		// Load wizard shell template.
-		$template_path = BOOKIT_PLUGIN_DIR . 'public/templates/booking-wizard-shell.php';
-		if ( file_exists( $template_path ) ) {
-			include $template_path;
-		} else {
-			echo '<p>' . esc_html__( 'Booking wizard template not found.', 'bookit-booking-system' ) . '</p>';
-		}
+		Bookit_Template_Loader::get_template( 'booking-wizard-shell.php' );
 
 		return ob_get_clean();
 	}
@@ -88,7 +83,7 @@ class Bookit_Shortcodes {
 	 */
 	public function bookit_confirmation_page_shortcode() {
 		ob_start();
-		include BOOKIT_PLUGIN_DIR . 'public/templates/booking-confirmed.php';
+		Bookit_Template_Loader::get_template( 'booking-confirmed.php' );
 		return ob_get_clean();
 	}
 
@@ -105,12 +100,7 @@ class Bookit_Shortcodes {
 		Bookit_Session_Manager::init();
 
 		ob_start();
-		$template_path = BOOKIT_PLUGIN_DIR . 'public/templates/booking-confirmed.php';
-		if ( file_exists( $template_path ) ) {
-			include $template_path;
-		} else {
-			echo '<p>' . esc_html__( 'Confirmation template not found.', 'bookit-booking-system' ) . '</p>';
-		}
+		Bookit_Template_Loader::get_template( 'booking-confirmed.php' );
 		return ob_get_clean();
 	}
 
@@ -123,12 +113,7 @@ class Bookit_Shortcodes {
 	 */
 	public function render_my_packages( $atts = array(), $content = '' ) {
 		ob_start();
-		$template_path = BOOKIT_PLUGIN_DIR . 'public/templates/my-packages.php';
-		if ( file_exists( $template_path ) ) {
-			include $template_path;
-		} else {
-			echo '<p>' . esc_html__( 'My Packages template not found.', 'bookit-booking-system' ) . '</p>';
-		}
+		Bookit_Template_Loader::get_template( 'my-packages.php' );
 		return ob_get_clean();
 	}
 

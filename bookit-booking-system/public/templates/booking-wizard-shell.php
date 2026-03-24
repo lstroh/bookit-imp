@@ -69,15 +69,8 @@ $step_labels = array(
 		$step_slug = isset( $step_slugs[ $current_step ] ) ? $step_slugs[ $current_step ] : 'step-' . $current_step;
 
 		// Load step template based on current step.
-		$step_template = BOOKIT_PLUGIN_DIR . 'public/templates/booking-step-' . $current_step . '-' . $step_slug . '.php';
-		if ( file_exists( $step_template ) ) {
-			include $step_template;
-		} else {
-			echo '<div class="bookit-step bookit-step-' . esc_attr( $current_step ) . '">';
-			echo '<h2>' . esc_html( sprintf( __( 'Step %d: %s', 'bookit-booking-system' ), $current_step, $step_labels[ $current_step ] ) ) . '</h2>';
-			echo '<p>' . esc_html__( 'Content will be built in Task ' . $current_step, 'bookit-booking-system' ) . '</p>';
-			echo '</div>';
-		}
+		$step_template_name = 'booking-step-' . $current_step . '-' . $step_slug . '.php';
+		Bookit_Template_Loader::get_template( $step_template_name );
 		?>
 	</main>
 

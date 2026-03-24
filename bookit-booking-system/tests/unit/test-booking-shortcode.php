@@ -12,6 +12,13 @@
 class Test_Booking_Shortcode extends WP_UnitTestCase {
 
 	/**
+	 * Temporary theme override files created by tests.
+	 *
+	 * @var array
+	 */
+	private $temp_theme_override_files = array();
+
+	/**
 	 * Set up each test.
 	 */
 	public function setUp(): void {
@@ -24,6 +31,13 @@ class Test_Booking_Shortcode extends WP_UnitTestCase {
 	 * Tear down each test.
 	 */
 	public function tearDown(): void {
+		foreach ( $this->temp_theme_override_files as $temp_file ) {
+			if ( file_exists( $temp_file ) ) {
+				wp_delete_file( $temp_file );
+			}
+		}
+		$this->temp_theme_override_files = array();
+
 		Bookit_Session_Manager::clear();
 		if ( session_status() === PHP_SESSION_ACTIVE ) {
 			session_destroy();
@@ -356,6 +370,64 @@ class Test_Booking_Shortcode extends WP_UnitTestCase {
 		$this->assertFalse( in_array( 'bookit-my-packages', $styles->queue, true ), 'bookit-my-packages CSS should not be enqueued' );
 
 		wp_reset_postdata();
+	}
+
+	/**
+	 * Test locate_template() falls back to plugin template when no override exists.
+	 *
+	 * @return void
+	 */
+	public function test_template_loader_returns_plugin_default_when_no_theme_override() {
+		$path = Bookit_Template_Loader::locate_template( 'booking-confirmed.php' );
+
+		$this->assertStringEndsWith( 'public/templates/booking-confirmed.php', $path );
+		$this->assertFileExists( $path );
+	}
+
+	/**
+	 * Test locate_template() returns active theme override when present.
+	 *
+	 * @return void
+	 */
+	public function test_template_loader_locate_returns_theme_override_when_present() {
+		$theme_override_dir = get_stylesheet_directory() . '/bookit';
+		if ( ! is_dir( $theme_override_dir ) ) {
+			wp_mkdir_p( $theme_override_dir );
+		}
+		if ( ! is_dir( $theme_override_dir ) ) {
+			mkdir( $theme_override_dir, 0777, true );
+		}
+		$this->assertDirectoryExists( $theme_override_dir );
+
+		$override_file = $theme_override_dir . '/booking-confirmed.php';
+		file_put_contents( $override_file, '<div class="bookit-test-template-override">Theme Override</div>' );
+		$this->temp_theme_override_files[] = $override_file;
+
+		$path = Bookit_Template_Loader::locate_template( 'booking-confirmed.php' );
+
+		$this->assertSame( $override_file, $path );
+	}
+
+	/**
+	 * Test get_template() can render output as string.
+	 *
+	 * @return void
+	 */
+	public function test_template_loader_get_template_renders_output() {
+		$output = Bookit_Template_Loader::get_template( 'booking-confirmed.php', array(), true );
+
+		$this->assertNotEmpty( $output );
+	}
+
+	/**
+	 * Test booking wizard shortcode still renders after loader migration.
+	 *
+	 * @return void
+	 */
+	public function test_booking_wizard_shortcode_still_renders_after_loader_migration() {
+		$output = do_shortcode( '[bookit_booking_wizard]' );
+
+		$this->assertStringContainsString( 'bookit-wizard-container', $output );
 	}
 
 	/**
