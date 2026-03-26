@@ -86,18 +86,25 @@ class Booking_System_Booking_Creator {
 		$deposit_amount = $amount_paid;
 		$balance_due    = max( 0, $total_price - $amount_paid );
 		$created_at     = current_time( 'mysql' );
-		$waiver_value   = isset( $data['cooling_off_waiver'] ) ? absint( $data['cooling_off_waiver'] ) : 0;
-		$requires_waiver = bookit_booking_requires_waiver( (string) $data['booking_date'] );
+		$skip_waiver    = ! empty( $data['skip_waiver'] ) && (bool) $data['skip_waiver'];
 
-		if ( $requires_waiver && 1 !== $waiver_value ) {
-			return new WP_Error(
-				'cooling_off_waiver_required',
-				'Cooling-off waiver is required for bookings within 14 days.'
-			);
+		if ( ! $skip_waiver ) {
+			$waiver_value    = isset( $data['cooling_off_waiver'] ) ? absint( $data['cooling_off_waiver'] ) : 0;
+			$requires_waiver = bookit_booking_requires_waiver( (string) $data['booking_date'] );
+
+			if ( $requires_waiver && 1 !== $waiver_value ) {
+				return new WP_Error(
+					'cooling_off_waiver_required',
+					'Cooling-off waiver is required for bookings within 14 days.'
+				);
+			}
+
+			$waiver_given = ( $requires_waiver && 1 === $waiver_value ) ? 1 : 0;
+			$waiver_at    = $waiver_given ? current_time( 'mysql', true ) : null;
+		} else {
+			$waiver_given = 0;
+			$waiver_at    = null;
 		}
-
-		$waiver_given = ( $requires_waiver && 1 === $waiver_value ) ? 1 : 0;
-		$waiver_at    = $waiver_given ? current_time( 'mysql', true ) : null;
 
 		// Pay on arrival bookings start as pending_payment; paid bookings are confirmed immediately.
 		$status = ( isset( $data['payment_method'] ) && 'pay_on_arrival' === $data['payment_method'] )

@@ -191,6 +191,27 @@ class Test_Cooling_Off_Waiver extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @covers Booking_System_Booking_Creator::create_booking
+	 */
+	public function test_dashboard_booking_skips_waiver_check() {
+		$booking_creator = new Booking_System_Booking_Creator();
+		$booking_date    = wp_date( 'Y-m-d', strtotime( '+3 days' ), wp_timezone() );
+		$booking_id      = $booking_creator->create_booking(
+			$this->build_booking_data(
+				array(
+					'booking_date'       => $booking_date,
+					'cooling_off_waiver' => 0,
+					'skip_waiver'        => true,
+				)
+			)
+		);
+
+		$this->assertFalse( is_wp_error( $booking_id ) );
+		$this->assertIsInt( $booking_id );
+		$this->assertGreaterThan( 0, $booking_id );
+	}
+
+	/**
 	 * @covers Bookit_Contact_API::save_contact_details
 	 */
 	public function test_booking_rejected_if_waiver_missing_when_required() {

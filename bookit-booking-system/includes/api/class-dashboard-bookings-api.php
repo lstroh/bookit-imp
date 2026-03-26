@@ -4677,6 +4677,7 @@ class Bookit_Dashboard_Bookings_API {
 			'payment_method'      => $request->get_param( 'payment_method' ),
 			'amount_paid'         => (float) $request->get_param( 'amount_paid' ),
 			'special_requests'    => $request->get_param( 'special_requests' ),
+			'skip_waiver'         => true,
 		);
 
 		// Allow extensions to modify booking data before dashboard manual booking creation.
