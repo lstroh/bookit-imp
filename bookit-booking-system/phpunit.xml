@@ -71,6 +71,7 @@
             <file>./tests/unit/test-provider-interfaces.php</file>
             <file>./tests/unit/test-notification-queue.php</file>
             <file>./tests/unit/test-notification-retry.php</file>
+            <file>./tests/unit/test-notification-dispatcher.php</file>
             <file>./tests/unit/test-notification-settings-api.php</file>
         </testsuite>
     </testsuites>

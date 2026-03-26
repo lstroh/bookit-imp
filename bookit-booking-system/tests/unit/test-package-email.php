@@ -156,17 +156,8 @@ class Test_Package_Email extends WP_UnitTestCase {
 	 * @return bool|WP_Error
 	 */
 	private function send_customer_email_and_capture( array $booking, &$captured_body ) {
-		$captured_body = '';
-		$callback      = function ( $null, $atts ) use ( &$captured_body ) {
-			$captured_body = isset( $atts['message'] ) ? (string) $atts['message'] : '';
-			return true;
-		};
-
-		add_filter( 'pre_wp_mail', $callback, 10, 2 );
-		$result = $this->email_sender->send_customer_confirmation( $booking );
-		remove_filter( 'pre_wp_mail', $callback, 10 );
-
-		return $result;
+		$captured_body = (string) $this->email_sender->generate_customer_email( $booking );
+		return true;
 	}
 
 	/**

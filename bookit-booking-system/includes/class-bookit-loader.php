@@ -167,10 +167,6 @@ class Bookit_Loader {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-package-redemption-api.php';
 		new Bookit_Package_Redemption_API();
 
-		// Booking retrieval and email (confirmation page).
-		require_once BOOKIT_PLUGIN_DIR . 'includes/booking/class-booking-retriever.php';
-		require_once BOOKIT_PLUGIN_DIR . 'includes/email/class-email-sender.php';
-
 		// Notification provider interfaces.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/interfaces/interface-bookit-email-provider.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/interfaces/interface-bookit-sms-provider.php';
@@ -179,11 +175,16 @@ class Bookit_Loader {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/providers/class-bookit-brevo-email-provider.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/providers/class-bookit-wp-mail-fallback-provider.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/providers/class-bookit-brevo-sms-provider.php';
+
 		// Notification queue and dispatcher.
-		require_once BOOKIT_PLUGIN_DIR . 'includes/functions-notifications.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-email-queue.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/functions-notifications.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-notification-dispatcher.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-notification-exception.php';
+
+		// Booking retrieval and email (confirmation page).
+		require_once BOOKIT_PLUGIN_DIR . 'includes/booking/class-booking-retriever.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/email/class-email-sender.php';
 
 		// Session cleanup cron.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-session-cleanup.php';

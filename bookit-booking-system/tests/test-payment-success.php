@@ -85,12 +85,50 @@ class Test_Payment_Success extends WP_UnitTestCase {
 		$plugin_dir = dirname( __DIR__ );
 		$retriever_file = $plugin_dir . '/includes/booking/class-booking-retriever.php';
 		$email_file     = $plugin_dir . '/includes/email/class-email-sender.php';
+		$queue_file     = $plugin_dir . '/includes/notifications/class-bookit-email-queue.php';
+		$notify_fn_file = $plugin_dir . '/includes/functions-notifications.php';
+		$dispatcher_file = $plugin_dir . '/includes/notifications/class-bookit-notification-dispatcher.php';
+		$email_iface_file = $plugin_dir . '/includes/notifications/interfaces/interface-bookit-email-provider.php';
+		$sms_iface_file   = $plugin_dir . '/includes/notifications/interfaces/interface-bookit-sms-provider.php';
+		$brevo_email_provider_file = $plugin_dir . '/includes/notifications/providers/class-bookit-brevo-email-provider.php';
+		$wp_mail_provider_file     = $plugin_dir . '/includes/notifications/providers/class-bookit-wp-mail-fallback-provider.php';
+		$brevo_sms_provider_file   = $plugin_dir . '/includes/notifications/providers/class-bookit-brevo-sms-provider.php';
+		$notification_exception_file = $plugin_dir . '/includes/notifications/class-bookit-notification-exception.php';
 
 		// Load session manager (used by session cleanup tests).
 		require_once $plugin_dir . '/includes/core/class-session-manager.php';
 
 		// Load booking retriever and email sender when implemented (TDD).
 		if ( file_exists( $retriever_file ) && file_exists( $email_file ) ) {
+			// Notification stack is required for queued email sending.
+			if ( file_exists( $email_iface_file ) ) {
+				require_once $email_iface_file;
+			}
+			if ( file_exists( $sms_iface_file ) ) {
+				require_once $sms_iface_file;
+			}
+			if ( file_exists( $brevo_email_provider_file ) ) {
+				require_once $brevo_email_provider_file;
+			}
+			if ( file_exists( $wp_mail_provider_file ) ) {
+				require_once $wp_mail_provider_file;
+			}
+			if ( file_exists( $brevo_sms_provider_file ) ) {
+				require_once $brevo_sms_provider_file;
+			}
+			if ( file_exists( $queue_file ) ) {
+				require_once $queue_file;
+			}
+			if ( file_exists( $notify_fn_file ) ) {
+				require_once $notify_fn_file;
+			}
+			if ( file_exists( $dispatcher_file ) ) {
+				require_once $dispatcher_file;
+			}
+			if ( file_exists( $notification_exception_file ) ) {
+				require_once $notification_exception_file;
+			}
+
 			require_once $retriever_file;
 			require_once $email_file;
 			$this->booking_retriever = new Booking_System_Booking_Retriever();
@@ -373,13 +411,13 @@ class Test_Payment_Success extends WP_UnitTestCase {
 		$booking = $this->booking_retriever->get_booking_by_stripe_session( 'cs_test_session123' );
 		$this->assertNotNull( $booking );
 
-		// Remove the bypass filter so wp_mail actually gets called.
+		// Remove the bypass filter so enqueue actually happens.
 		remove_filter( 'bookit_send_email', '__return_false' );
 
-		$wp_mail_called = false;
-		$captured_to    = '';
-		$captured_subject = '';
-		$captured_body   = '';
+		$wp_mail_called    = false;
+		$captured_to       = '';
+		$captured_subject  = '';
+		$captured_body     = '';
 		add_filter(
 			'pre_wp_mail',
 			function ( $null, $atts ) use ( &$wp_mail_called, &$captured_to, &$captured_subject, &$captured_body ) {
@@ -398,12 +436,25 @@ class Test_Payment_Success extends WP_UnitTestCase {
 		remove_all_filters( 'pre_wp_mail' );
 		add_filter( 'bookit_send_email', '__return_false' ); // Re-add for other tests.
 
-		$this->assertTrue( $wp_mail_called, 'wp_mail should have been called' );
-		$this->assertEquals( 'john@example.com', $captured_to );
-		$this->assertStringContainsString( 'Booking Confirmed', $captured_subject );
-		$this->assertStringContainsString( 'Test Haircut', $captured_body );
-		// Note: $result may be WP_Error in test environments without a mail server.
-		// The important thing is that wp_mail was called with correct parameters.
+		$this->assertTrue( $result );
+		$this->assertFalse( is_wp_error( $result ) );
+		$this->assertFalse( $wp_mail_called, 'wp_mail should not be called directly' );
+
+		global $wpdb;
+		$table = $wpdb->prefix . 'bookit_email_queue';
+		$row   = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE email_type = %s ORDER BY id DESC LIMIT 1",
+				'customer_confirmation'
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $row );
+		$this->assertSame( 'pending', $row['status'] );
+		$this->assertSame( 'john@example.com', $row['recipient_email'] );
+		$this->assertStringContainsString( 'Booking Confirmed', (string) $row['subject'] );
+		$this->assertStringContainsString( 'Test Haircut', (string) $row['html_body'] );
 	}
 
 	/**
@@ -473,7 +524,7 @@ class Test_Payment_Success extends WP_UnitTestCase {
 		$booking = $this->booking_retriever->get_booking_by_stripe_session( 'cs_test_session123' );
 		$this->assertNotNull( $booking );
 
-		// Remove the bypass filter so wp_mail actually gets called.
+		// Remove the bypass filter so enqueue actually happens.
 		remove_filter( 'bookit_send_email', '__return_false' );
 
 		$admin_email = get_option( 'admin_email' );
@@ -497,9 +548,22 @@ class Test_Payment_Success extends WP_UnitTestCase {
 		remove_all_filters( 'pre_wp_mail' );
 		add_filter( 'bookit_send_email', '__return_false' ); // Re-add for other tests.
 
-		$this->assertTrue( $wp_mail_called );
-		$this->assertEquals( $admin_email, $captured_to );
-		$this->assertStringContainsString( 'New Booking', $captured_subject );
+		$this->assertFalse( $wp_mail_called, 'wp_mail should not be called directly' );
+
+		global $wpdb;
+		$table = $wpdb->prefix . 'bookit_email_queue';
+		$row   = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE email_type = %s ORDER BY id DESC LIMIT 1",
+				'business_notification'
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $row );
+		$this->assertSame( 'pending', $row['status'] );
+		$this->assertSame( $admin_email, $row['recipient_email'] );
+		$this->assertStringContainsString( 'New Booking', (string) $row['subject'] );
 	}
 
 	/**
@@ -518,20 +582,13 @@ class Test_Payment_Success extends WP_UnitTestCase {
 		$booking = $this->booking_retriever->get_booking_by_stripe_session( 'cs_test_session123' );
 		$this->assertNotNull( $booking );
 
-		// Force wp_mail to return false (short-circuit via pre_wp_mail).
+		// wp_mail() is not called directly anymore; enqueue should still succeed.
 		add_filter( 'pre_wp_mail', '__return_false', 10, 0 );
-
 		$result = $this->email_sender->send_customer_confirmation( $booking );
-
 		remove_filter( 'pre_wp_mail', '__return_false', 10 );
 
-		// Spec: returns WP_Error with code 'email_failed' when send fails.
-		if ( is_wp_error( $result ) ) {
-			$this->assertEquals( 'email_failed', $result->get_error_code() );
-			$this->assertNotEmpty( $result->get_error_message() );
-		} else {
-			$this->assertTrue( true, 'Implementation may return WP_Error on wp_mail failure' );
-		}
+		$this->assertTrue( $result );
+		$this->assertFalse( is_wp_error( $result ) );
 	}
 
 	// -------------------------------------------------------------------------

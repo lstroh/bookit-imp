@@ -47,24 +47,33 @@ class Booking_System_Email_Sender {
 			$booking['service_name']
 		);
 
-		$body = $this->generate_customer_email( $booking );
-
-		$headers = array(
-			'Content-Type: text/html; charset=UTF-8',
-			'From: ' . get_bloginfo( 'name' ) . ' <' . get_option( 'admin_email' ) . '>',
+		$recipient = array(
+			'email' => sanitize_email( $booking['customer_email'] ),
+			'name'  => trim(
+				( $booking['customer_first_name'] ?? '' ) . ' ' .
+				( $booking['customer_last_name'] ?? '' )
+			),
 		);
 
-		$sent = wp_mail( $to, $subject, $body, $headers );
+		$html_body = $this->generate_customer_email( $booking );
 
-		if ( ! $sent ) {
+		$queue_id = bookit_enqueue_email(
+			'customer_confirmation',
+			$recipient,
+			$subject,
+			$html_body,
+			(int) ( $booking['id'] ?? 0 )
+		);
+
+		if ( false === $queue_id ) {
 			if ( self::should_log() ) {
-				error_log( 'Email Sender: Failed to send customer confirmation to ' . $to );
+				error_log( 'Email Sender: Failed to enqueue customer confirmation for ' . $booking['customer_email'] );
 			}
-			return new WP_Error( 'email_failed', 'Failed to send confirmation email' );
+			return new \WP_Error( 'email_queue_failed', 'Failed to queue confirmation email' );
 		}
 
 		if ( self::should_log() ) {
-			error_log( 'Email Sender: Customer confirmation sent to ' . $to );
+			error_log( 'Email Sender: Customer confirmation queued (queue_id=' . $queue_id . ') for ' . $booking['customer_email'] );
 		}
 		return true;
 	}
@@ -89,22 +98,31 @@ class Booking_System_Email_Sender {
 			$this->format_date( $booking['booking_date'] )
 		);
 
-		$body    = $this->generate_business_email( $booking );
-		$headers = array(
-			'Content-Type: text/html; charset=UTF-8',
+		$admin_email = get_option( 'admin_email' );
+		$recipient   = array(
+			'email' => $admin_email,
+			'name'  => get_bloginfo( 'name' ),
 		);
 
-		$sent = wp_mail( $to, $subject, $body, $headers );
+		$html_body = $this->generate_business_email( $booking );
 
-		if ( ! $sent ) {
+		$queue_id = bookit_enqueue_email(
+			'business_notification',
+			$recipient,
+			$subject,
+			$html_body,
+			(int) ( $booking['id'] ?? 0 )
+		);
+
+		if ( false === $queue_id ) {
 			if ( self::should_log() ) {
-				error_log( 'Email Sender: Failed to send business notification to ' . $to );
+				error_log( 'Email Sender: Failed to enqueue business notification' );
 			}
-			return new WP_Error( 'email_failed', 'Failed to send notification email' );
+			return new \WP_Error( 'email_queue_failed', 'Failed to queue business notification email' );
 		}
 
 		if ( self::should_log() ) {
-			error_log( 'Email Sender: Business notification sent to ' . $to );
+			error_log( 'Email Sender: Business notification queued (queue_id=' . $queue_id . ')' );
 		}
 		return true;
 	}
