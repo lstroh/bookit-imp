@@ -149,7 +149,7 @@ class Test_Wizard_API extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that POST validates step number (1-4).
+	 * Test that POST validates step number (1-5).
 	 *
 	 * @covers Bookit_Wizard_API::validate_step
 	 */
@@ -161,7 +161,7 @@ class Test_Wizard_API extends WP_UnitTestCase {
 		$response = rest_get_server()->dispatch( $request );
 		$this->assertEquals( 400, $response->get_status() );
 
-		$request->set_body_params( array( 'current_step' => 5 ) );
+		$request->set_body_params( array( 'current_step' => 6 ) );
 		$response = rest_get_server()->dispatch( $request );
 		$this->assertEquals( 400, $response->get_status() );
 	}
@@ -212,13 +212,13 @@ class Test_Wizard_API extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that POST with valid step 1-4 succeeds.
+	 * Test that POST with valid step 1-5 succeeds.
 	 *
 	 * @covers Bookit_Wizard_API::validate_step
 	 * @covers Bookit_Wizard_API::update_session
 	 */
 	public function test_post_session_accepts_valid_steps() {
-		foreach ( array( 1, 2, 3, 4 ) as $step ) {
+		foreach ( array( 1, 2, 3, 4, 5 ) as $step ) {
 			$request = new WP_REST_Request( 'POST', '/' . $this->namespace . $this->route );
 			$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
 			$request->set_body_params( array( 'current_step' => $step ) );

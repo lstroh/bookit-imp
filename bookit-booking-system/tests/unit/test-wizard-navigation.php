@@ -116,24 +116,22 @@ class Test_Wizard_Navigation extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that step 4 is the final step; step validation blocks >4.
-	 * Step 4 (contact form) uses its own nav; shell nav is hidden on step 4.
+	 * Step validation blocks steps above 5.
 	 *
 	 * @covers Bookit_Wizard_API::validate_step
 	 * @covers Bookit_Shortcodes::render_booking_wizard
 	 */
-	public function test_cannot_go_above_step_four() {
-		Bookit_Session_Manager::set( 'current_step', 4 );
+	public function test_cannot_go_above_step_five() {
+		Bookit_Session_Manager::set( 'current_step', 5 );
 		$output = do_shortcode( '[bookit_booking_wizard]' );
 		$this->assertStringContainsString( 'bookit-progress-step-current', $output );
-		$this->assertStringContainsString( 'Contact Details', $output );
 
 		$request = new WP_REST_Request( 'POST', '/' . $this->namespace . $this->route );
 		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
-		$request->set_body_params( array( 'current_step' => 5 ) );
+		$request->set_body_params( array( 'current_step' => 6 ) );
 		$response = rest_get_server()->dispatch( $request );
 		$this->assertEquals( 400, $response->get_status() );
-		$this->assertEquals( 4, (int) Bookit_Session_Manager::get( 'current_step' ) );
+		$this->assertEquals( 5, (int) Bookit_Session_Manager::get( 'current_step' ) );
 	}
 
 	/**
@@ -145,7 +143,7 @@ class Test_Wizard_Navigation extends WP_UnitTestCase {
 		$request = new WP_REST_Request( 'POST', '/' . $this->namespace . $this->route );
 		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
 
-		foreach ( array( 0, -1, 5, 99 ) as $invalid ) {
+		foreach ( array( 0, -1, 6, 99 ) as $invalid ) {
 			$request->set_body_params( array( 'current_step' => $invalid ) );
 			$response = rest_get_server()->dispatch( $request );
 			$this->assertEquals( 400, $response->get_status(), "Step $invalid should be rejected" );

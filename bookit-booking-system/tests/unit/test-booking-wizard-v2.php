@@ -606,6 +606,184 @@ class Test_Booking_Wizard_V2 extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step5_renders_zone_a_summary() {
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff( array( 'first_name' => 'Elena', 'last_name' => 'Torres' ) );
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 5 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Swedish Massage' );
+		Bookit_Session_Manager::set( 'service_duration', 60 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Elena Torres' );
+		Bookit_Session_Manager::set( 'date', '2026-06-15' );
+		Bookit_Session_Manager::set( 'time', '11:00' );
+		Bookit_Session_Manager::set( 'customer_email', 'guest@example.com' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( 'bookit-v2-zone-label', $output );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step5_renders_deposit_split_when_deposit_exists() {
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service(
+			array(
+				'deposit_type'   => 'fixed',
+				'deposit_amount' => 25,
+				'price'          => 100.00,
+			)
+		);
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 5 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Test' );
+		Bookit_Session_Manager::set( 'service_duration', 60 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Staff' );
+		Bookit_Session_Manager::set( 'date', '2026-06-15' );
+		Bookit_Session_Manager::set( 'time', '11:00' );
+		Bookit_Session_Manager::set( 'customer_email', 'guest@example.com' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( 'Today (deposit)', $output );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step5_renders_single_total_when_no_deposit() {
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service(
+			array(
+				'deposit_type'   => 'none',
+				'deposit_amount' => 0,
+				'price'          => 80.00,
+			)
+		);
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 5 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Test' );
+		Bookit_Session_Manager::set( 'service_duration', 45 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Anyone' );
+		Bookit_Session_Manager::set( 'date', '2026-08-01' );
+		Bookit_Session_Manager::set( 'time', '14:00' );
+		Bookit_Session_Manager::set( 'customer_email', 'guest@example.com' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( 'Total due today', $output );
+		$this->assertStringNotContainsString( 'Today (deposit)', $output );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step5_renders_no_zone_b_when_packages_disabled() {
+		global $wpdb;
+
+		$wpdb->replace(
+			$wpdb->prefix . 'bookings_settings',
+			array(
+				'setting_key'   => 'packages_enabled',
+				'setting_value' => '0',
+				'created_at'    => current_time( 'mysql' ),
+				'updated_at'    => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%s', '%s' )
+		);
+
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 5 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Test' );
+		Bookit_Session_Manager::set( 'service_duration', 60 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Staff' );
+		Bookit_Session_Manager::set( 'date', '2026-06-15' );
+		Bookit_Session_Manager::set( 'time', '11:00' );
+		Bookit_Session_Manager::set( 'customer_email', 'guest@example.com' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringNotContainsString( 'bookit-v2-zone-b--use-package', $output );
+		$this->assertStringNotContainsString( 'bookit-v2-zone-b--buy-package', $output );
+
+		$wpdb->delete( $wpdb->prefix . 'bookings_settings', array( 'setting_key' => 'packages_enabled' ), array( '%s' ) );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step5_cancellation_policy_collapsed_by_default() {
+		global $wpdb;
+
+		$wpdb->replace(
+			$wpdb->prefix . 'bookings_settings',
+			array(
+				'setting_key'   => 'cancellation_policy_text',
+				'setting_value' => 'Please cancel 24 hours in advance.',
+				'created_at'    => current_time( 'mysql' ),
+				'updated_at'    => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%s', '%s' )
+		);
+
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 5 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Test' );
+		Bookit_Session_Manager::set( 'service_duration', 60 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Staff' );
+		Bookit_Session_Manager::set( 'date', '2026-06-15' );
+		Bookit_Session_Manager::set( 'time', '11:00' );
+		Bookit_Session_Manager::set( 'customer_email', 'guest@example.com' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( '<details', $output );
+		$this->assertStringNotContainsString( '<details open', $output );
+
+		$wpdb->delete( $wpdb->prefix . 'bookings_settings', array( 'setting_key' => 'cancellation_policy_text' ), array( '%s' ) );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_existing_wizard_all_tests_still_pass() {
+		$output = do_shortcode( '[bookit_booking_wizard]' );
+		$this->assertStringContainsString( 'bookit-wizard-container', $output );
+	}
+
+	/**
 	 * Create a category row.
 	 *
 	 * @param array $args Overrides.

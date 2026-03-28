@@ -292,6 +292,29 @@ class Bookit_Shortcodes {
 		}
 
 		if ( $has_wizard_v2 ) {
+			require_once BOOKIT_PLUGIN_DIR . 'includes/wizard-v2-payment-amounts.php';
+			$v2_deposit_amount = (float) Bookit_Session_Manager::get( 'deposit_due', 0.00 );
+			$v2_total_amount   = (float) Bookit_Session_Manager::get( 'total_price', 0.00 );
+			if ( 5 === (int) $current_step ) {
+				$v2_service_id = (int) Bookit_Session_Manager::get( 'service_id', 0 );
+				if ( $v2_service_id > 0 ) {
+					global $wpdb;
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+					$v2_service_row = $wpdb->get_row(
+						$wpdb->prepare(
+							"SELECT * FROM {$wpdb->prefix}bookings_services WHERE id = %d",
+							$v2_service_id
+						),
+						ARRAY_A
+					);
+					if ( $v2_service_row ) {
+						$v2_amounts      = bookit_v2_compute_payment_amounts_from_service( $v2_service_row );
+						$v2_deposit_amount = $v2_amounts['has_deposit'] ? (float) $v2_amounts['deposit_due'] : 0.0;
+						$v2_total_amount   = (float) $v2_amounts['total_price'];
+					}
+				}
+			}
+
 			wp_enqueue_style(
 				'bookit-wizard-v2',
 				BOOKIT_PLUGIN_URL . 'public/assets/css/booking-wizard-v2.css',
@@ -315,8 +338,8 @@ class Bookit_Shortcodes {
 					'nonce'         => wp_create_nonce( 'wp_rest' ),
 					'bookingNonce'  => Bookit_CSRF_Protection::get_nonce(),
 					'currentStep'   => $current_step,
-					'depositAmount' => (float) Bookit_Session_Manager::get( 'deposit_due', 0.00 ),
-					'totalAmount'   => (float) Bookit_Session_Manager::get( 'total_price', 0.00 ),
+					'depositAmount' => $v2_deposit_amount,
+					'totalAmount'   => $v2_total_amount,
 				)
 			);
 		}

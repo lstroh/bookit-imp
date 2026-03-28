@@ -51,6 +51,25 @@ class Bookit_DateTime_API {
 
 		register_rest_route(
 			'bookit/v1',
+			'/wizard/timeslots',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'get_timeslots' ),
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'date' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'format'            => 'YYYY-MM-DD',
+						'validate_callback' => array( $this, 'validate_date_param' ),
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			'bookit/v1',
 			'/datetime/select',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,

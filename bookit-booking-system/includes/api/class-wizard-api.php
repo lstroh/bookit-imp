@@ -77,6 +77,21 @@ class Bookit_Wizard_API {
 							'type'              => 'object',
 							'sanitize_callback' => array( $this, 'sanitize_customer' ),
 						),
+						'service_name'   => array(
+							'required'          => false,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'service_duration' => array(
+							'required'          => false,
+							'type'              => 'integer',
+							'sanitize_callback' => 'absint',
+						),
+						'payment_method' => array(
+							'required'          => false,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
 					),
 				),
 			)
@@ -108,7 +123,7 @@ class Bookit_Wizard_API {
 	 * @return bool True if valid.
 	 */
 	public function validate_step( $value, $request, $param ) {
-		return $value >= 1 && $value <= 4;
+		return $value >= 1 && $value <= 5;
 	}
 
 	/**
@@ -207,9 +222,25 @@ class Bookit_Wizard_API {
 			$update_data['time'] = sanitize_text_field( $params['time'] );
 		}
 
+		if ( isset( $params['service_name'] ) ) {
+			$update_data['service_name'] = sanitize_text_field( $params['service_name'] );
+		}
+
+		if ( isset( $params['service_duration'] ) ) {
+			$update_data['service_duration'] = absint( $params['service_duration'] );
+		}
+
+		if ( isset( $params['payment_method'] ) ) {
+			$update_data['payment_method'] = sanitize_text_field( $params['payment_method'] );
+		}
+
 		if ( isset( $params['customer'] ) && is_array( $params['customer'] ) ) {
 			$current_customer = Bookit_Session_Manager::get( 'customer', array() );
 			$update_data['customer'] = array_merge( $current_customer, $params['customer'] );
+		}
+
+		if ( isset( $update_data['service_id'] ) && (int) $update_data['service_id'] > 0 ) {
+			$this->maybe_fill_service_meta_from_db( $update_data );
 		}
 
 		// Update session.
@@ -233,5 +264,35 @@ class Bookit_Wizard_API {
 			),
 			200
 		);
+	}
+
+	/**
+	 * Fill service name/duration from DB when missing.
+	 *
+	 * @param array $update_data Update payload (by ref).
+	 * @return void
+	 */
+	private function maybe_fill_service_meta_from_db( array &$update_data ) {
+		if ( ! empty( $update_data['service_name'] ) && isset( $update_data['service_duration'] ) && (int) $update_data['service_duration'] > 0 ) {
+			return;
+		}
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT name, duration FROM {$wpdb->prefix}bookings_services WHERE id = %d",
+				(int) $update_data['service_id']
+			),
+			ARRAY_A
+		);
+		if ( ! $row ) {
+			return;
+		}
+		if ( empty( $update_data['service_name'] ) ) {
+			$update_data['service_name'] = $row['name'];
+		}
+		if ( ! isset( $update_data['service_duration'] ) || (int) $update_data['service_duration'] <= 0 ) {
+			$update_data['service_duration'] = (int) $row['duration'];
+		}
 	}
 }
