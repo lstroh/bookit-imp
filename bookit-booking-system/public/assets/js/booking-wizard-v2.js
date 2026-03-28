@@ -231,8 +231,22 @@
 						return r.json();
 					} );
 				} ).then( function( data ) {
+					var container = document.getElementById( 'bookit-v2-time-sections' );
 					if ( data && data.success && data.slots ) {
-						renderTimeSections( data.slots );
+						var hasSlots = ( data.slots.morning && data.slots.morning.length ) ||
+							( data.slots.afternoon && data.slots.afternoon.length ) ||
+							( data.slots.evening && data.slots.evening.length );
+						if ( hasSlots ) {
+							renderTimeSections( data.slots );
+						} else {
+							// No slots — show message and unselect the day
+							dayBtn.classList.remove( 'bookit-v2-day--selected' );
+							dayBtn.classList.remove( 'bookit-v2-day--available' );
+							dayBtn.classList.add( 'bookit-v2-day--disabled' );
+							if ( container ) {
+								container.innerHTML = '<p style="font-size:13px;color:var(--bookit-text-muted);padding:8px 0;">No availability on this date. Please choose another day.</p>';
+							}
+						}
 					}
 				} );
 			} );
@@ -339,23 +353,50 @@
 
 		document.querySelectorAll( '.bookit-v2-package-row' ).forEach( function( row ) {
 			row.addEventListener( 'click', function() {
-				document.querySelectorAll( '.bookit-v2-package-row' ).forEach( function( r ) {
-					r.classList.remove( 'bookit-v2-package-row--selected' );
-				} );
-				row.classList.add( 'bookit-v2-package-row--selected' );
-				var radio = row.querySelector( 'input[type="radio"]' );
-				if ( radio ) {
-					radio.checked = true;
+				var isAlreadySelected = row.classList.contains( 'bookit-v2-package-row--selected' );
+
+				if ( isAlreadySelected ) {
+					// Deselect — re-enable Zone C and reset to card
+					row.classList.remove( 'bookit-v2-package-row--selected' );
+					var radio = row.querySelector( 'input[type="radio"]' );
+					if ( radio ) {
+						radio.checked = false;
+					}
+					// Re-enable Zone C rows
+					document.querySelectorAll( '#bookit-v2-zone-c .bookit-v2-payment-row' ).forEach( function( pr ) {
+						pr.classList.remove( 'bookit-v2-payment-row--disabled' );
+					} );
+					// Re-select card as default
+					var cardRow = document.querySelector( '#bookit-v2-pay-card' );
+					var cardRadio = document.querySelector( '#bookit-v2-radio-card' );
+					if ( cardRow ) {
+						cardRow.classList.add( 'bookit-v2-payment-row--selected' );
+					}
+					if ( cardRadio ) {
+						cardRadio.checked = true;
+					}
+					updateCtaLabel( 'card' );
+				} else {
+					// Select this package row
+					document.querySelectorAll( '.bookit-v2-package-row' ).forEach( function( r ) {
+						r.classList.remove( 'bookit-v2-package-row--selected' );
+					} );
+					row.classList.add( 'bookit-v2-package-row--selected' );
+					var radio = row.querySelector( 'input[type="radio"]' );
+					if ( radio ) {
+						radio.checked = true;
+					}
+					// Disable Zone C
+					document.querySelectorAll( '#bookit-v2-zone-c .bookit-v2-payment-row' ).forEach( function( pr ) {
+						pr.classList.add( 'bookit-v2-payment-row--disabled' );
+						pr.classList.remove( 'bookit-v2-payment-row--selected' );
+					} );
+					document.querySelectorAll( '#bookit-v2-zone-c input[type="radio"]' ).forEach( function( pr ) {
+						pr.checked = false;
+					} );
+					var val = row.dataset.value || ( radio ? radio.value : '' );
+					updateCtaLabel( val );
 				}
-				document.querySelectorAll( '#bookit-v2-zone-c .bookit-v2-payment-row' ).forEach( function( pr ) {
-					pr.classList.add( 'bookit-v2-payment-row--disabled' );
-					pr.classList.remove( 'bookit-v2-payment-row--selected' );
-				} );
-				document.querySelectorAll( '#bookit-v2-zone-c input[type="radio"]' ).forEach( function( pr ) {
-					pr.checked = false;
-				} );
-				var val = row.dataset.value || ( radio ? radio.value : '' );
-				updateCtaLabel( val );
 			} );
 		} );
 
