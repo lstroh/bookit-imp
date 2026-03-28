@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bookit — Step 5: Payment (No Package)</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #f0eeeb;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 2rem 1rem 7rem;
+  }
+
+  :root {
+    --accent: #1a7a6e;
+    --accent-light: #e8f5f3;
+    --accent-border: #1a7a6e;
+    --text-primary: #1c1c1a;
+    --text-secondary: #6b6b68;
+    --text-muted: #a8a8a5;
+    --border: #e0deda;
+    --border-hover: #c8c8c4;
+    --bg-card: #ffffff;
+    --radius-card: 14px;
+    --radius-btn: 12px;
+  }
+
+  .wizard-shell {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .progress-bar {
+    background: #ffffff;
+    border-radius: 16px 16px 0 0;
+    padding: 1.25rem 1.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .steps-row { display: flex; align-items: flex-start; }
+
+  .step-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    padding-bottom: 14px;
+  }
+
+  .step-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.01em;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .step-item.active .step-label { color: var(--accent); font-weight: 600; }
+  .step-item.done .step-label { color: var(--text-secondary); }
+
+  .step-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2.5px;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+  }
+
+  .step-item.done::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2.5px;
+    background: var(--accent-light);
+    border-radius: 2px 2px 0 0;
+  }
+
+  .wizard-body {
+    background: #ffffff;
+    border-radius: 0 0 16px 16px;
+    overflow: hidden;
+  }
+
+  .confirm-banner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    background: #f7f6f4;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 1.5rem;
+  }
+
+  .confirm-banner-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.5;
+  }
+
+  .confirm-banner-change {
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: inherit;
+    padding: 0;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .zone-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* Zone A */
+  .zone-a {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .summary-rows { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+
+  .summary-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .summary-key { font-size: 13px; color: var(--text-secondary); flex-shrink: 0; }
+  .summary-val { font-size: 13px; color: var(--text-primary); font-weight: 500; text-align: right; }
+
+  .zone-divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+  .deposit-rows { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .deposit-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .deposit-key { font-size: 13px; color: var(--text-secondary); }
+  .deposit-val { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+  .deposit-row.total .deposit-key { font-weight: 600; color: var(--text-primary); font-size: 14px; }
+  .deposit-row.total .deposit-val { font-size: 15px; font-weight: 700; }
+
+  .policy-disclosure { width: 100%; border: none; background: none; padding: 0; cursor: pointer; }
+
+  .policy-disclosure summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    list-style: none;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+    user-select: none;
+  }
+
+  .policy-disclosure summary::-webkit-details-marker { display: none; }
+  .policy-chevron { font-size: 11px; color: var(--text-muted); transition: transform 0.2s ease; }
+  .policy-disclosure[open] .policy-chevron { transform: rotate(180deg); }
+  .policy-body { font-size: 13px; color: var(--text-secondary); line-height: 1.6; padding: 8px 0 4px; }
+
+  /* Zone C only — no Zone B in this file */
+  .zone-c { padding: 1.25rem 1.5rem; }
+
+  .payment-rows { display: flex; flex-direction: column; gap: 8px; }
+
+  .payment-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    user-select: none;
+  }
+
+  .payment-row:hover { border-color: var(--border-hover); }
+  .payment-row.selected { border-color: var(--accent-border); background: var(--accent-light); }
+
+  .payment-row input[type="radio"] {
+    width: 18px; height: 18px; flex-shrink: 0;
+    accent-color: var(--accent); cursor: pointer;
+  }
+
+  .payment-label-group { flex: 1; }
+  .payment-label { font-size: 14px; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+  .payment-row.selected .payment-label { color: var(--accent); }
+  .payment-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+  .payment-logos { display: flex; gap: 4px; flex-shrink: 0; }
+  .logo-pill { font-size: 9px; font-weight: 700; padding: 3px 6px; border-radius: 4px; letter-spacing: 0.03em; }
+  .logo-visa { background: #1a1f71; color: #ffffff; }
+  .logo-mc { background: #eb001b; color: #ffffff; }
+  .logo-paypal { background: #003087; color: #ffffff; }
+
+  /* Footer */
+  .wizard-footer {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 100;
+  }
+
+  .footer-inner {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-continue {
+    width: 100%;
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-btn);
+    padding: 15px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: -0.01em;
+    transition: background 0.15s ease, transform 0.1s ease;
+    font-family: inherit;
+  }
+
+  .btn-continue:hover { background: #155f55; }
+  .btn-continue:active { transform: scale(0.99); }
+
+  .btn-back {
+    background: none; border: none;
+    color: var(--text-secondary); font-size: 13px;
+    cursor: pointer; padding: 2px; text-align: center; font-family: inherit;
+  }
+
+  .btn-back:hover { color: var(--text-primary); }
+
+  @media (max-width: 500px) {
+    body { padding: 1rem 0.75rem 8rem; }
+    .progress-bar { padding: 1rem 1rem 0; }
+    .step-label { font-size: 10px; }
+    .wizard-footer { padding: 0.875rem 1rem; }
+    .confirm-banner { padding: 10px 1rem; }
+    .zone-a, .zone-c { padding: 1.25rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wizard-shell">
+
+  <div class="progress-bar">
+    <div class="steps-row">
+      <div class="step-item done"><span class="step-label">Service</span></div>
+      <div class="step-item done"><span class="step-label">Staff</span></div>
+      <div class="step-item done"><span class="step-label">Date &amp; Time</span></div>
+      <div class="step-item done"><span class="step-label">Your Details</span></div>
+      <div class="step-item active"><span class="step-label">Payment</span></div>
+    </div>
+  </div>
+
+  <div class="wizard-body">
+
+    <div class="confirm-banner">
+      <span class="confirm-banner-text">Swedish Massage &middot; 60 min &middot; Elena Torres &middot; Wed 15 Apr, 11:00</span>
+      <button class="confirm-banner-change">Change</button>
+    </div>
+
+    <!-- Zone A -->
+    <div class="zone-a">
+      <p class="zone-label">Review your booking</p>
+      <div class="summary-rows">
+        <div class="summary-row"><span class="summary-key">Service</span><span class="summary-val">Swedish Massage</span></div>
+        <div class="summary-row"><span class="summary-key">Duration</span><span class="summary-val">60 min</span></div>
+        <div class="summary-row"><span class="summary-key">With</span><span class="summary-val">Elena Torres</span></div>
+        <div class="summary-row"><span class="summary-key">Date</span><span class="summary-val">Wednesday, 15 April 2026</span></div>
+        <div class="summary-row"><span class="summary-key">Time</span><span class="summary-val">11:00</span></div>
+      </div>
+      <div class="zone-divider"></div>
+      <div class="deposit-rows">
+        <div class="deposit-row"><span class="deposit-key">Today (deposit)</span><span class="deposit-val">£25.00</span></div>
+        <div class="deposit-row"><span class="deposit-key">Remaining (on the day)</span><span class="deposit-val">£75.00</span></div>
+        <div class="deposit-row total"><span class="deposit-key">Total</span><span class="deposit-val">£100.00</span></div>
+      </div>
+      <details class="policy-disclosure">
+        <summary>Cancellation policy <span class="policy-chevron">&#8964;</span></summary>
+        <p class="policy-body">You can cancel or reschedule free of charge up to 24 hours before your appointment. Cancellations made within 24 hours may result in your deposit being forfeited.</p>
+      </details>
+    </div>
+
+    <!-- Zone C only — no packages -->
+    <div class="zone-c">
+      <p class="zone-label">How would you like to pay?</p>
+      <div class="payment-rows">
+
+        <div class="payment-row selected" id="pay-card" onclick="selectPayment('card')">
+          <input type="radio" name="payment_choice" id="radio-card" value="card" checked>
+          <div class="payment-label-group">
+            <div class="payment-label">Pay by card</div>
+          </div>
+          <div class="payment-logos">
+            <span class="logo-pill logo-visa">VISA</span>
+            <span class="logo-pill logo-mc">MC</span>
+          </div>
+        </div>
+
+        <div class="payment-row" id="pay-paypal" onclick="selectPayment('paypal')">
+          <input type="radio" name="payment_choice" id="radio-paypal" value="paypal">
+          <div class="payment-label-group">
+            <div class="payment-label">PayPal</div>
+          </div>
+          <div class="payment-logos">
+            <span class="logo-pill logo-paypal">PayPal</span>
+          </div>
+        </div>
+
+        <div class="payment-row" id="pay-person" onclick="selectPayment('person')">
+          <input type="radio" name="payment_choice" id="radio-person" value="person">
+          <div class="payment-label-group">
+            <div class="payment-label">Pay in person</div>
+            <div class="payment-sub">No payment needed now</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="wizard-footer">
+  <div class="footer-inner">
+    <button class="btn-continue" id="cta-btn">Pay £25.00 now</button>
+    <button class="btn-back">Back</button>
+  </div>
+</div>
+
+<script>
+  var ctaLabels = {
+    'card': 'Pay £25.00 now',
+    'paypal': 'Continue to PayPal',
+    'person': 'Confirm booking'
+  };
+
+  function selectPayment(method) {
+    ['pay-card','pay-paypal','pay-person'].forEach(function(id) {
+      document.getElementById(id).classList.remove('selected');
+    });
+    ['radio-card','radio-paypal','radio-person'].forEach(function(id) {
+      document.getElementById(id).checked = false;
+    });
+
+    var map = { 'card': 'pay-card', 'paypal': 'pay-paypal', 'person': 'pay-person' };
+    var radioMap = { 'card': 'radio-card', 'paypal': 'radio-paypal', 'person': 'radio-person' };
+    document.getElementById(map[method]).classList.add('selected');
+    document.getElementById(radioMap[method]).checked = true;
+    document.getElementById('cta-btn').textContent = ctaLabels[method];
+  }
+</script>
+
+</body>
+</html>

@@ -127,4 +127,81 @@ The HTML reference file for each step lives alongside this document in `/design/
 
 ## Step 5 — Payment
 
-_To be added._
+**Reference files:**
+- `wizard-step5-with-package.html` — customer has an active applicable package
+- `wizard-step5-buy-package.html` — customer has no package, upsell available
+- `wizard-step5-no-package.html` — no packages in either direction, payment only
+
+### Zone logic
+
+Step 5 has three vertical zones. Zone B is conditional and mutually exclusive with itself — a customer never sees both package sections simultaneously.
+
+| Condition | Zones shown |
+|---|---|
+| Customer has active applicable package | Zone A + Zone B (use package) + Zone C |
+| Customer has no package, packages enabled for service | Zone A + Zone B (buy package) + Zone C |
+| Packages disabled or not applicable | Zone A + Zone C only |
+
+### Zone A — Booking summary
+
+| Decision | Value |
+|---|---|
+| Zone label | "Review your booking" — small uppercase muted text |
+| Summary rows | Service · Duration · With · Date · Time — left key, right value, 13px |
+| Deposit split | Three rows below a thin divider: "Today (deposit)" / "Remaining (on the day)" / "Total" (bolder, larger). All right-aligned values. |
+| No deposit scenario | Single row: "Total due today: £X" |
+| Cancellation policy | Collapsed `<details>` disclosure. Label "Cancellation policy" + chevron. One tap to expand. Never shown open by default. |
+
+### Zone B — Packages (conditional, never both variants shown together)
+
+**Use package variant** (customer has active package):
+
+| Decision | Value |
+|---|---|
+| Zone background | Accent light tint (`--accent-light`) to signal it is a benefit, not a burden |
+| Zone label | "Your packages" |
+| Intro text | "You have an active package for this service — use a session instead of paying now." |
+| Package row | Radio row: package name + sessions remaining + expiry date |
+| Selecting package | Greys out Zone C entirely (opacity 0.4, pointer-events none). CTA changes to "Use my package". |
+| Deselecting package | Zone C re-enabled. CTA returns to payment method label. |
+
+**Buy package variant** (no active package, upsell available):
+
+| Decision | Value |
+|---|---|
+| Zone background | Light grey (`#fafaf9`) — neutral, not a benefit signal |
+| Zone label | "Save with a package" |
+| Intro text | "Book multiple sessions and save — use your first session for this appointment." |
+| Package cards | Radio cards showing: bundle name / saving in accent colour / price right-aligned |
+| Sub-note | "Your appointment will be confirmed after the package purchase." |
+| Selecting a bundle | Greys out Zone C entirely. CTA changes to "Buy package & confirm". |
+| Zone C label when buy package shown | "Or pay for this session only" — reinforces the choice |
+
+### Zone C — Payment methods
+
+| Decision | Value |
+|---|---|
+| Zone label | "How would you like to pay?" (or "Or pay for this session only" when buy package shown) |
+| Payment methods | Pay by card (pre-selected) · PayPal · Pay in person |
+| Method row style | Full-width radio row, same selected state as all other wizard radio elements |
+| Card logos | VISA + MC pill badges, right-aligned in the row |
+| PayPal logo | PayPal pill badge, right-aligned |
+| Pay in person | No logo. Sub-label: "No payment needed now" |
+| Default selection | Pay by card always pre-selected |
+
+### CTA dynamic label
+
+The sticky footer CTA text updates immediately on any selection change — package or payment method.
+
+| Selection | CTA text |
+|---|---|
+| Pay by card (with deposit) | "Pay £[deposit amount] now" |
+| Pay by card (no deposit) | "Pay £[total] now" |
+| PayPal | "Continue to PayPal" |
+| Pay in person | "Confirm booking" |
+| Use existing package | "Use my package" |
+| Buy package | "Buy package & confirm" |
+
+### Back link
+
+Active — returns to Step 4.
