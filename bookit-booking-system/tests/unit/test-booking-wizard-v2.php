@@ -504,6 +504,108 @@ class Test_Booking_Wizard_V2 extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step4_renders_contact_form() {
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff( array( 'first_name' => 'Elena', 'last_name' => 'Torres' ) );
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 4 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Swedish Massage' );
+		Bookit_Session_Manager::set( 'service_duration', 60 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Elena Torres' );
+		Bookit_Session_Manager::set( 'date', '2026-06-15' );
+		Bookit_Session_Manager::set( 'time', '11:00' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( 'id="first-name"', $output );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step4_waiver_shown_when_booking_within_14_days() {
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		$within = wp_date( 'Y-m-d', strtotime( '+3 days' ), wp_timezone() );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 4 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Service' );
+		Bookit_Session_Manager::set( 'service_duration', 60 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Staff' );
+		Bookit_Session_Manager::set( 'date', $within );
+		Bookit_Session_Manager::set( 'time', '10:00' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( 'bookit-v2-waiver-block', $output );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step4_waiver_hidden_when_booking_beyond_14_days() {
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		$beyond = wp_date( 'Y-m-d', strtotime( '+30 days' ), wp_timezone() );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 4 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Service' );
+		Bookit_Session_Manager::set( 'service_duration', 60 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Staff' );
+		Bookit_Session_Manager::set( 'date', $beyond );
+		Bookit_Session_Manager::set( 'time', '10:00' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringNotContainsString( 'bookit-v2-waiver-block', $output );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step4_special_requests_toggle_collapsed_by_default() {
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 4 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Service' );
+		Bookit_Session_Manager::set( 'service_duration', 45 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Anyone' );
+		Bookit_Session_Manager::set( 'date', '2026-08-01' );
+		Bookit_Session_Manager::set( 'time', '14:00' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( 'bookit-v2-special-requests-toggle', $output );
+		$this->assertStringContainsString( 'id="special-requests"', $output );
+		$this->assertStringContainsString( 'style="display:none;"', $output );
+	}
+
+	/**
 	 * Create a category row.
 	 *
 	 * @param array $args Overrides.

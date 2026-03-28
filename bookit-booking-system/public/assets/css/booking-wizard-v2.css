@@ -575,7 +575,8 @@
   border-color: var(--bookit-primary);
 }
 
-.bookit-v2-wizard-container .bookit-v2-form-input.bookit-v2-input--error {
+.bookit-v2-wizard-container .bookit-v2-form-input.bookit-v2-input--error,
+.bookit-v2-wizard-container .bookit-v2-form-input.field-error {
   border-color: var(--bookit-color-error);
   background: #fef2f2;
 }
