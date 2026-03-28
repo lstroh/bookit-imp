@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bookit — Step 2: Staff (List, 5+ staff)</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #f0eeeb;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 2rem 1rem 6rem;
+  }
+
+  :root {
+    --accent: #1a7a6e;
+    --accent-light: #e8f5f3;
+    --accent-border: #1a7a6e;
+    --text-primary: #1c1c1a;
+    --text-secondary: #6b6b68;
+    --text-muted: #a8a8a5;
+    --border: #e0deda;
+    --border-hover: #c8c8c4;
+    --bg-card: #ffffff;
+    --radius-card: 14px;
+    --radius-btn: 12px;
+  }
+
+  .wizard-shell {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Progress bar (identical to Step 1) ── */
+  .progress-bar {
+    background: #ffffff;
+    border-radius: 16px 16px 0 0;
+    padding: 1.25rem 1.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .steps-row { display: flex; align-items: flex-start; }
+
+  .step-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    padding-bottom: 14px;
+  }
+
+  .step-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.01em;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .step-item.active .step-label { color: var(--accent); font-weight: 600; }
+  .step-item.done .step-label { color: var(--text-secondary); }
+
+  .step-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2.5px;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+  }
+
+  .step-item.done::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2.5px;
+    background: var(--accent-light);
+    border-radius: 2px 2px 0 0;
+  }
+
+  /* ── Main content ── */
+  .wizard-body {
+    background: #ffffff;
+    padding: 1.75rem 1.5rem 2rem;
+    border-radius: 0 0 16px 16px;
+  }
+
+  .step-heading {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin-bottom: 4px;
+  }
+
+  .step-subheading {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+  }
+
+  /* ── Service banner ── */
+  .service-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f7f6f4;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 1.5rem;
+  }
+
+  .service-banner-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .service-banner-change {
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: inherit;
+    padding: 0;
+  }
+
+  .service-banner-change:hover { color: var(--text-secondary); }
+
+  /* ── Staff list (compact, single column) ── */
+  .staff-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .staff-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    user-select: none;
+  }
+
+  .staff-row:hover:not(.unavailable) {
+    border-color: var(--border-hover);
+  }
+
+  .staff-row.selected {
+    border-color: var(--accent-border);
+    background: var(--accent-light);
+  }
+
+  .staff-row.unavailable {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  /* ── Avatar (smaller in list) ── */
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+
+  /* ── Row middle ── */
+  .staff-row-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .staff-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .staff-row.selected .staff-name { color: var(--accent); }
+
+  .staff-title {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Row right ── */
+  .staff-row-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .staff-price {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .staff-row.selected .staff-price { color: var(--accent); }
+
+  .unavailable-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  /* Bio expand in list — shown as a subtle dropdown below the row */
+  .staff-bio-row {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    padding: 6px 14px 10px 62px;
+    display: none;
+    background: var(--accent-light);
+    border: 1.5px solid var(--accent-border);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    margin-top: -8px;
+  }
+
+  .staff-bio-row.visible { display: block; }
+
+  .bio-expand {
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--accent);
+    cursor: pointer;
+    padding: 0;
+    margin-left: 4px;
+  }
+
+  .bio-expand:hover { text-decoration: underline; }
+
+  /* ── Any available card ── */
+  .any-available-card {
+    background: #f7f6f4;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 1rem 1.125rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    user-select: none;
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .any-available-card:hover { border-color: var(--border-hover); }
+
+  .any-available-card.selected {
+    border-color: var(--accent-border);
+    background: var(--accent-light);
+  }
+
+  .any-available-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .any-available-card.selected .any-available-name { color: var(--accent); }
+
+  .any-available-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  /* ── Footer ── */
+  .wizard-footer {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 100;
+  }
+
+  .footer-inner {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-continue {
+    width: 100%;
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-btn);
+    padding: 15px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: -0.01em;
+    transition: background 0.15s ease, transform 0.1s ease;
+    font-family: inherit;
+  }
+
+  .btn-continue:hover { background: #155f55; }
+  .btn-continue:active { transform: scale(0.99); }
+  .btn-continue:disabled {
+    background: var(--border);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-back {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px;
+    text-align: center;
+    font-family: inherit;
+  }
+
+  .btn-back:hover { color: var(--text-primary); }
+
+  @media (max-width: 500px) {
+    body { padding: 1rem 0.75rem 7rem; }
+    .progress-bar { padding: 1rem 1rem 0; }
+    .wizard-body { padding: 1.5rem 1rem 2rem; }
+    .step-label { font-size: 10px; }
+    .wizard-footer { padding: 0.875rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wizard-shell">
+
+  <!-- Progress bar -->
+  <div class="progress-bar">
+    <div class="steps-row">
+      <div class="step-item done"><span class="step-label">Service</span></div>
+      <div class="step-item active"><span class="step-label">Staff</span></div>
+      <div class="step-item"><span class="step-label">Date &amp; Time</span></div>
+      <div class="step-item"><span class="step-label">Your Details</span></div>
+      <div class="step-item"><span class="step-label">Payment</span></div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="wizard-body">
+
+    <h1 class="step-heading">Who would you like?</h1>
+    <p class="step-subheading">Choose a team member for your appointment.</p>
+
+    <!-- Service banner -->
+    <div class="service-banner">
+      <span class="service-banner-text">Swedish Massage &middot; 60 min</span>
+      <button class="service-banner-change">Change</button>
+    </div>
+
+    <!-- Compact staff list -->
+    <div class="staff-list" id="staff-list">
+
+      <!-- Row 1: selected -->
+      <div class="staff-row selected" id="row-et" onclick="selectStaff('row-et', 'bio-et')">
+        <div class="avatar" style="background:#1a7a6e;">ET</div>
+        <div class="staff-row-info">
+          <div class="staff-name">Elena Torres</div>
+          <div class="staff-title">Senior Therapist <button class="bio-expand" onclick="expandBio(event,'bio-et')">Read more</button></div>
+        </div>
+        <div class="staff-row-right">
+          <span class="staff-price">£45</span>
+        </div>
+      </div>
+      <div class="staff-bio-row visible" id="bio-et">Specialist in deep tissue and relaxation. 10 years of experience in therapeutic massage, sports recovery, and stress relief.</div>
+
+      <!-- Row 2 -->
+      <div class="staff-row" id="row-jm" onclick="selectStaff('row-jm', 'bio-jm')">
+        <div class="avatar" style="background:#7c5cbf;">JM</div>
+        <div class="staff-row-info">
+          <div class="staff-name">James Miller</div>
+          <div class="staff-title">Sports Therapist <button class="bio-expand" onclick="expandBio(event,'bio-jm')">Read more</button></div>
+        </div>
+        <div class="staff-row-right">
+          <span class="staff-price">£50</span>
+        </div>
+      </div>
+      <div class="staff-bio-row" id="bio-jm">Focused on injury rehab and recovery. Specialises in sports massage and postural correction.</div>
+
+      <!-- Row 3 -->
+      <div class="staff-row" id="row-sk" onclick="selectStaff('row-sk', 'bio-sk')">
+        <div class="avatar" style="background:#c46b1a;">SK</div>
+        <div class="staff-row-info">
+          <div class="staff-name">Sofia Kim</div>
+          <div class="staff-title">Aromatherapy Lead <button class="bio-expand" onclick="expandBio(event,'bio-sk')">Read more</button></div>
+        </div>
+        <div class="staff-row-right">
+          <span class="staff-price">£48</span>
+        </div>
+      </div>
+      <div class="staff-bio-row" id="bio-sk">Certified in holistic treatments and essential oil therapy. Creates personalised, deeply relaxing experiences.</div>
+
+      <!-- Row 4 -->
+      <div class="staff-row" id="row-rp" onclick="selectStaff('row-rp', null)">
+        <div class="avatar" style="background:#2a6db5;">RP</div>
+        <div class="staff-row-info">
+          <div class="staff-name">Rachel Park</div>
+          <div class="staff-title">Hot Stone Specialist</div>
+        </div>
+        <div class="staff-row-right">
+          <span class="staff-price">£52</span>
+        </div>
+      </div>
+
+      <!-- Row 5 -->
+      <div class="staff-row" id="row-al" onclick="selectStaff('row-al', null)">
+        <div class="avatar" style="background:#b5481a;">AL</div>
+        <div class="staff-row-info">
+          <div class="staff-name">Anna Lund</div>
+          <div class="staff-title">Reflexology &amp; Massage</div>
+        </div>
+        <div class="staff-row-right">
+          <span class="staff-price">£42</span>
+        </div>
+      </div>
+
+      <!-- Row 6 -->
+      <div class="staff-row" id="row-no" onclick="selectStaff('row-no', null)">
+        <div class="avatar" style="background:#1a6b7a;">NO</div>
+        <div class="staff-row-info">
+          <div class="staff-name">Nathan Osei</div>
+          <div class="staff-title">Remedial Therapist</div>
+        </div>
+        <div class="staff-row-right">
+          <span class="staff-price">£55</span>
+        </div>
+      </div>
+
+      <!-- Row 7: unavailable -->
+      <div class="staff-row unavailable" id="row-pw">
+        <div class="avatar" style="background:#b0ada8;">PW</div>
+        <div class="staff-row-info">
+          <div class="staff-name">Priya White</div>
+          <div class="staff-title">Lead Therapist</div>
+        </div>
+        <div class="staff-row-right">
+          <span class="unavailable-label">No availability</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Any available — always last -->
+    <div class="any-available-card" id="any-card" onclick="selectAny()">
+      <span class="any-available-name">Any available team member</span>
+      <span class="any-available-sub">We'll match you with the first available person for your chosen time.</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- Sticky footer -->
+<div class="wizard-footer">
+  <div class="footer-inner">
+    <button class="btn-continue" id="btn-continue">Continue</button>
+    <button class="btn-back">Back</button>
+  </div>
+</div>
+
+<script>
+  var allRowIds = ['row-et','row-jm','row-sk','row-rp','row-al','row-no','row-pw'];
+  var allBioIds = ['bio-et','bio-jm','bio-sk'];
+
+  function selectStaff(rowId, bioId) {
+    var row = document.getElementById(rowId);
+    if (!row || row.classList.contains('unavailable')) return;
+    allRowIds.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.remove('selected');
+    });
+    allBioIds.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.remove('visible');
+    });
+    document.getElementById('any-card').classList.remove('selected');
+    row.classList.add('selected');
+    if (bioId) {
+      var bio = document.getElementById(bioId);
+      if (bio) bio.classList.add('visible');
+    }
+    document.getElementById('btn-continue').disabled = false;
+  }
+
+  function selectAny() {
+    allRowIds.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.remove('selected');
+    });
+    allBioIds.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.remove('visible');
+    });
+    document.getElementById('any-card').classList.add('selected');
+    document.getElementById('btn-continue').disabled = false;
+  }
+
+  function expandBio(event, bioId) {
+    event.stopPropagation();
+    var bio = document.getElementById(bioId);
+    if (bio) bio.classList.toggle('visible');
+  }
+</script>
+
+</body>
+</html>

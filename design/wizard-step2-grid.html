@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bookit — Step 2: Staff (Grid, 3–4 staff)</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #f0eeeb;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 2rem 1rem 6rem;
+  }
+
+  :root {
+    --accent: #1a7a6e;
+    --accent-light: #e8f5f3;
+    --accent-border: #1a7a6e;
+    --text-primary: #1c1c1a;
+    --text-secondary: #6b6b68;
+    --text-muted: #a8a8a5;
+    --border: #e0deda;
+    --border-hover: #c8c8c4;
+    --bg-card: #ffffff;
+    --radius-card: 14px;
+    --radius-btn: 12px;
+  }
+
+  .wizard-shell {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Progress bar (identical to Step 1) ── */
+  .progress-bar {
+    background: #ffffff;
+    border-radius: 16px 16px 0 0;
+    padding: 1.25rem 1.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .steps-row {
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .step-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    padding-bottom: 14px;
+  }
+
+  .step-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.01em;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .step-item.active .step-label {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .step-item.done .step-label {
+    color: var(--text-secondary);
+  }
+
+  .step-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2.5px;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+  }
+
+  .step-item.done::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2.5px;
+    background: var(--accent-light);
+    border-radius: 2px 2px 0 0;
+  }
+
+  /* ── Main content ── */
+  .wizard-body {
+    background: #ffffff;
+    padding: 1.75rem 1.5rem 2rem;
+    border-radius: 0 0 16px 16px;
+  }
+
+  .step-heading {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin-bottom: 4px;
+  }
+
+  .step-subheading {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+  }
+
+  /* ── Service confirmation banner ── */
+  .service-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f7f6f4;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 1.5rem;
+  }
+
+  .service-banner-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .service-banner-change {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: inherit;
+    padding: 0;
+  }
+
+  .service-banner-change:hover {
+    color: var(--text-secondary);
+  }
+
+  /* ── Staff grid (2-col) ── */
+  .staff-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  /* Full-width card for odd last item */
+  .staff-grid .staff-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .staff-card {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 1rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .staff-card:hover:not(.unavailable) {
+    border-color: var(--border-hover);
+    transform: translateY(-1px);
+  }
+
+  .staff-card.selected {
+    border-color: var(--accent-border);
+    background: var(--accent-light);
+  }
+
+  .staff-card.unavailable {
+    cursor: default;
+    opacity: 0.55;
+  }
+
+  /* ── Avatar ── */
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    flex-shrink: 0;
+    margin-bottom: 2px;
+  }
+
+  .staff-card.selected .avatar {
+    box-shadow: 0 0 0 2px var(--accent-light), 0 0 0 3px var(--accent);
+  }
+
+  /* ── Staff card body ── */
+  .staff-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+
+  .staff-card.selected .staff-name {
+    color: var(--accent);
+  }
+
+  .staff-title {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.3;
+  }
+
+  .staff-price {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-top: 2px;
+  }
+
+  .staff-card.selected .staff-price {
+    color: var(--accent);
+  }
+
+  .staff-bio {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    margin-top: 2px;
+  }
+
+  .bio-expand {
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    padding: 0;
+    display: inline;
+  }
+
+  .bio-expand:hover {
+    text-decoration: underline;
+  }
+
+  .bio-full {
+    display: none;
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    margin-top: 2px;
+  }
+
+  /* ── Unavailable label ── */
+  .unavailable-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+    margin-top: 4px;
+  }
+
+  /* ── Any available card ── */
+  .any-available-card {
+    background: #f7f6f4;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 1rem 1.125rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    user-select: none;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .any-available-card:hover {
+    border-color: var(--border-hover);
+  }
+
+  .any-available-card.selected {
+    border-color: var(--accent-border);
+    background: var(--accent-light);
+  }
+
+  .any-available-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .any-available-card.selected .any-available-name {
+    color: var(--accent);
+  }
+
+  .any-available-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  /* ── Footer (identical to Step 1) ── */
+  .wizard-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 100;
+  }
+
+  .footer-inner {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-continue {
+    width: 100%;
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-btn);
+    padding: 15px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: -0.01em;
+    transition: background 0.15s ease, transform 0.1s ease;
+    font-family: inherit;
+  }
+
+  .btn-continue:hover { background: #155f55; }
+  .btn-continue:active { transform: scale(0.99); }
+  .btn-continue:disabled {
+    background: var(--border);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-back {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px;
+    text-align: center;
+    font-family: inherit;
+  }
+
+  .btn-back:hover { color: var(--text-primary); }
+
+  @media (max-width: 500px) {
+    body { padding: 1rem 0.75rem 7rem; }
+    .progress-bar { padding: 1rem 1rem 0; }
+    .wizard-body { padding: 1.5rem 1rem 2rem; }
+    .step-label { font-size: 10px; }
+    .wizard-footer { padding: 0.875rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wizard-shell">
+
+  <!-- Progress bar — Staff active, Service done -->
+  <div class="progress-bar">
+    <div class="steps-row">
+      <div class="step-item done">
+        <span class="step-label">Service</span>
+      </div>
+      <div class="step-item active">
+        <span class="step-label">Staff</span>
+      </div>
+      <div class="step-item">
+        <span class="step-label">Date &amp; Time</span>
+      </div>
+      <div class="step-item">
+        <span class="step-label">Your Details</span>
+      </div>
+      <div class="step-item">
+        <span class="step-label">Payment</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="wizard-body">
+
+    <h1 class="step-heading">Who would you like?</h1>
+    <p class="step-subheading">Choose a team member for your appointment.</p>
+
+    <!-- Service confirmation banner -->
+    <div class="service-banner">
+      <span class="service-banner-text">Swedish Massage &middot; 60 min</span>
+      <button class="service-banner-change">Change</button>
+    </div>
+
+    <!-- Staff grid: 4 staff, 2-column -->
+    <div class="staff-grid" id="staff-grid">
+
+      <!-- Card 1: selected -->
+      <div class="staff-card selected" onclick="selectStaff(this)">
+        <div class="avatar" style="background:#1a7a6e;">ET</div>
+        <span class="staff-name">Elena Torres</span>
+        <span class="staff-title">Senior Therapist</span>
+        <span class="staff-price">£45</span>
+        <span class="staff-bio">Specialist in deep tissue and relaxation.
+          <button class="bio-expand" onclick="expandBio(event, this)">Read more</button>
+        </span>
+        <span class="bio-full">Elena has 10 years of experience in therapeutic massage, sports recovery, and stress relief treatments. She works with clients of all ages and fitness levels.</span>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="staff-card" onclick="selectStaff(this)">
+        <div class="avatar" style="background:#7c5cbf;">JM</div>
+        <span class="staff-name">James Miller</span>
+        <span class="staff-title">Sports Therapist</span>
+        <span class="staff-price">£50</span>
+        <span class="staff-bio">Focused on injury rehab and recovery.
+          <button class="bio-expand" onclick="expandBio(event, this)">Read more</button>
+        </span>
+        <span class="bio-full">James specialises in sports massage, injury rehabilitation, and postural correction. Ideal for athletes and those with chronic pain.</span>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="staff-card" onclick="selectStaff(this)">
+        <div class="avatar" style="background:#c46b1a;">SK</div>
+        <span class="staff-name">Sofia Kim</span>
+        <span class="staff-title">Aromatherapy Lead</span>
+        <span class="staff-price">£48</span>
+        <span class="staff-bio">Certified in holistic and essential oil therapy.
+          <button class="bio-expand" onclick="expandBio(event, this)">Read more</button>
+        </span>
+        <span class="bio-full">Sofia combines traditional aromatherapy with modern techniques to create deeply relaxing, personalised experiences.</span>
+      </div>
+
+      <!-- Card 4: unavailable — spans full width as odd last item -->
+      <div class="staff-card unavailable">
+        <div class="avatar" style="background:#c0bdb8;">RK</div>
+        <span class="staff-name">Robert King</span>
+        <span class="staff-title">Master Stylist</span>
+        <span class="staff-price">£55</span>
+        <span class="unavailable-label">No availability this month</span>
+      </div>
+
+    </div>
+
+    <!-- Any available team member — always last -->
+    <div class="any-available-card" id="any-card" onclick="selectAny()">
+      <span class="any-available-name">Any available team member</span>
+      <span class="any-available-sub">We'll match you with the first available person for your chosen time.</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- Sticky footer -->
+<div class="wizard-footer">
+  <div class="footer-inner">
+    <button class="btn-continue" id="btn-continue">Continue</button>
+    <button class="btn-back">Back</button>
+  </div>
+</div>
+
+<script>
+  function selectStaff(card) {
+    if (card.classList.contains('unavailable')) return;
+    document.querySelectorAll('#staff-grid .staff-card').forEach(function(c) {
+      c.classList.remove('selected');
+    });
+    document.getElementById('any-card').classList.remove('selected');
+    card.classList.add('selected');
+    document.getElementById('btn-continue').disabled = false;
+  }
+
+  function selectAny() {
+    document.querySelectorAll('#staff-grid .staff-card').forEach(function(c) {
+      c.classList.remove('selected');
+    });
+    document.getElementById('any-card').classList.add('selected');
+    document.getElementById('btn-continue').disabled = false;
+  }
+
+  function expandBio(event, btn) {
+    event.stopPropagation();
+    var card = btn.closest('.staff-card');
+    var bioFull = card.querySelector('.bio-full');
+    var bioShort = card.querySelector('.staff-bio');
+    bioFull.style.display = 'block';
+    bioShort.style.display = 'none';
+  }
+</script>
+
+</body>
+</html>
