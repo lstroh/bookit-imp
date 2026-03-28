@@ -78,6 +78,29 @@ The HTML reference file for each step lives alongside this document in `/design/
 
 ---
 
-## Steps 3–5
+## Step 3 — Date & Time selection
+
+**Reference file:** `wizard-step3.html`
+
+| Decision | Value |
+|---|---|
+| Heading | "When would you like to come in?" |
+| Subheading | "Choose a date and time for your appointment." |
+| Confirmation banner | Shows service + duration + staff member (e.g. "Swedish Massage · 60 min · Elena Torres") with a "Change" text link on the right |
+| Calendar style | Month grid, clean and minimal. 7 columns Mon–Sun. Day headers in small uppercase muted text. |
+| Calendar navigation | Prev/next month arrows only. Month and year centred between arrows. |
+| Day states | Available: dark text, tappable / Selected: filled accent circle, white text / Unavailable: muted grey, not tappable / Other month: greyed out, not tappable / Today: subtle dot beneath the number |
+| Time slot layout | Pill buttons in a 3-column grid (`repeat(3, 1fr)`). Pills wrap naturally left-to-right on the last row — no artificial centering of orphaned pills. |
+| Time slot grouping | Morning / Afternoon / Evening sections with small uppercase muted label above each group |
+| Empty time groups | Hidden entirely — do not show "No slots available" message |
+| Slot states | Available: light grey border, white background / Selected: filled accent, white text / Unavailable: muted text and border, light grey background, not tappable |
+| Scroll behaviour | Calendar stays visible at top; time slots appear below it on the same screen. No collapse. Single continuous scroll. |
+| Evening group | Hidden in reference file (empty). Shown only when evening slots exist. |
+| Back link | Active — returns to Step 2 |
+| Continue button | Enabled only after both a date and a time slot are selected |
+
+---
+
+## Steps 4–5
 
 _To be added as each step is designed._
