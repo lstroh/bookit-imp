@@ -11,21 +11,22 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 $current_step = (int) Bookit_Session_Manager::get( 'current_step', 1 );
-?>
-<div class="bookit-v2-wizard-container" data-step="<?php echo esc_attr( $current_step ); ?>">
 
-	<?php Bookit_Template_Loader::get_template( 'partials/booking-wizard-v2-progress.php', array( 'current_step' => $current_step ) ); ?>
+$html  = '<div class="bookit-v2-wizard-container" data-step="' . esc_attr( $current_step ) . '">';
+$html .= Bookit_Template_Loader::get_template( 'partials/booking-wizard-v2-progress.php', array( 'current_step' => $current_step ), true );
 
-	<?php if ( 1 === $current_step ) : ?>
-		<?php Bookit_Template_Loader::get_template( 'booking-wizard-v2-step-1.php' ); ?>
-	<?php elseif ( 2 === $current_step ) : ?>
-		<?php Bookit_Template_Loader::get_template( 'booking-wizard-v2-step-2.php' ); ?>
-	<?php elseif ( 3 === $current_step ) : ?>
-		<?php Bookit_Template_Loader::get_template( 'booking-wizard-v2-step-3.php' ); ?>
-	<?php elseif ( 4 === $current_step ) : ?>
-		<?php Bookit_Template_Loader::get_template( 'booking-wizard-v2-step-4.php' ); ?>
-	<?php elseif ( 5 === $current_step ) : ?>
-		<?php Bookit_Template_Loader::get_template( 'booking-wizard-v2-step-5.php' ); ?>
-	<?php endif; ?>
+if ( 1 === $current_step ) {
+	$html .= Bookit_Template_Loader::get_template( 'booking-wizard-v2-step-1.php', array(), true );
+} elseif ( 2 === $current_step ) {
+	$html .= Bookit_Template_Loader::get_template( 'booking-wizard-v2-step-2.php', array(), true );
+} elseif ( 3 === $current_step ) {
+	$html .= Bookit_Template_Loader::get_template( 'booking-wizard-v2-step-3.php', array(), true );
+} elseif ( 4 === $current_step ) {
+	$html .= Bookit_Template_Loader::get_template( 'booking-wizard-v2-step-4.php', array(), true );
+} elseif ( 5 === $current_step ) {
+	$html .= Bookit_Template_Loader::get_template( 'booking-wizard-v2-step-5.php', array(), true );
+}
 
-</div>
+$html .= '</div>';
+
+echo $html;
