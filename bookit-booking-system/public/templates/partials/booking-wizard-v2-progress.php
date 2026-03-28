@@ -5,7 +5,7 @@
  * @package    Bookit_Booking_System
  * @subpackage Bookit_Booking_System/public/templates
  *
- * @var int $current_step Current wizard step (1–5).
+ * @var int $current_step Current wizard step (1–5), passed from shell template.
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -20,19 +20,24 @@ $step_labels = array(
 	5 => __( 'Payment',      'bookit-booking-system' ),
 );
 ?>
-<nav class="bookit-v2-progress" aria-label="<?php esc_attr_e( 'Booking progress', 'bookit-booking-system' ); ?>">
-	<?php for ( $i = 1; $i <= 5; $i++ ) : ?>
-		<?php
-		if ( $i < $current_step ) {
-			$item_class = 'bookit-v2-step-item bookit-v2-step-item--done';
-		} elseif ( $i === $current_step ) {
-			$item_class = 'bookit-v2-step-item bookit-v2-step-item--active';
-		} else {
-			$item_class = 'bookit-v2-step-item bookit-v2-step-item--inactive';
-		}
-		?>
-		<span class="<?php echo esc_attr( $item_class ); ?>">
-			<span class="bookit-v2-step-label"><?php echo esc_html( $step_labels[ $i ] ); ?></span>
-		</span>
-	<?php endfor; ?>
-</nav>
+<div class="bookit-v2-progress-wrap">
+	<nav class="bookit-v2-progress" aria-label="<?php esc_attr_e( 'Booking progress', 'bookit-booking-system' ); ?>">
+		<?php for ( $i = 1; $i <= 5; $i++ ) : ?>
+			<?php
+			if ( $i < $current_step ) {
+				$item_class = 'bookit-v2-step-item bookit-v2-step-item--done';
+				$aria_label = sprintf( __( 'Step %d: %s — completed', 'bookit-booking-system' ), $i, $step_labels[ $i ] );
+			} elseif ( $i === $current_step ) {
+				$item_class = 'bookit-v2-step-item bookit-v2-step-item--active';
+				$aria_label = sprintf( __( 'Step %d: %s — current', 'bookit-booking-system' ), $i, $step_labels[ $i ] );
+			} else {
+				$item_class = 'bookit-v2-step-item bookit-v2-step-item--inactive';
+				$aria_label = sprintf( __( 'Step %d: %s', 'bookit-booking-system' ), $i, $step_labels[ $i ] );
+			}
+			?>
+			<span class="<?php echo esc_attr( $item_class ); ?>" aria-label="<?php echo esc_attr( $aria_label ); ?>">
+				<span class="bookit-v2-step-label" aria-hidden="true"><?php echo esc_html( $step_labels[ $i ] ); ?></span>
+			</span>
+		<?php endfor; ?>
+	</nav>
+</div>
