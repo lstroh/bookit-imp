@@ -69,6 +69,7 @@ require_once BOOKIT_PLUGIN_DIR . 'includes/database/migration-idempotency-table.
 function bookit_activate() {
 	require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-activator.php';
 	Bookit_Activator::activate();
+	delete_transient( 'theme_' . get_stylesheet() . '_page_templates' );
 }
 
 /**
