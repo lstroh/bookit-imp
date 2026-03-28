@@ -234,7 +234,10 @@ $layout_container_tag = $use_list_layout ? 'bookit-v2-staff-list' : 'bookit-v2-s
 
 		<div class="bookit-v2-sticky-footer">
 			<div class="bookit-v2-footer-inner">
-				<button type="button" class="bookit-v2-cta-btn" id="bookit-v2-continue"><?php esc_html_e( 'Continue', 'bookit-booking-system' ); ?></button>
+				<button type="button" class="bookit-v2-cta-btn" id="bookit-v2-continue"
+					<?php echo ( -1 === $selected_staff_id ) ? 'disabled' : ''; ?>>
+					<?php esc_html_e( 'Continue', 'bookit-booking-system' ); ?>
+				</button>
 				<a href="?step=1" class="bookit-v2-btn-back"><?php esc_html_e( 'Back', 'bookit-booking-system' ); ?></a>
 			</div>
 		</div>

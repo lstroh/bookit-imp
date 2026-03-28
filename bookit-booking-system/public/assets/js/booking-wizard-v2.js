@@ -53,7 +53,10 @@
 
 	function advanceStep( step ) {
 		postToSession( { current_step: step + 1 } ).then( function() {
-			window.location.reload();
+			// Navigate to the base page URL without ?step= to prevent
+			// the PHP shell from clamping back to a previous step
+			var base = window.location.pathname;
+			window.location.href = base;
 		} );
 	}
 
@@ -127,6 +130,10 @@
 				if ( el.classList.contains( 'bookit-v2-staff-card' ) ) {
 					el.classList.add( 'bookit-v2-staff-card--selected' );
 				}
+				var cont = document.getElementById( 'bookit-v2-continue' );
+				if ( cont ) {
+					cont.removeAttribute( 'disabled' );
+				}
 				var sid = el.dataset.staffId;
 				var staffId = sid === undefined || sid === '' ? 0 : parseInt( sid, 10 );
 				fetch( w.restUrl + 'bookit/v1/staff/select', {
@@ -146,6 +153,12 @@
 				} );
 			} );
 		} );
+
+		// Set initial Continue button state
+		var continueBtn = document.getElementById( 'bookit-v2-continue' );
+		if ( continueBtn && ! document.querySelector( '.bookit-v2-staff-row--selected, .bookit-v2-staff-card--selected' ) ) {
+			continueBtn.setAttribute( 'disabled', 'disabled' );
+		}
 	}
 
 	function formatSlotButtonLabel( slot ) {
@@ -189,7 +202,7 @@
 			html += '</div></div>';
 		} );
 		container.innerHTML = html;
-		container.scrollIntoView( { behavior: 'smooth', block: 'start' } );
+		container.scrollIntoView( { behavior: 'smooth', block: 'nearest' } );
 	}
 
 	function initStep3() {

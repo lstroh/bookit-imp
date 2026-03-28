@@ -275,8 +275,13 @@
 			})
 			.then(function(data) {
 				if (data.success) {
-					// Redirect to payment step (Step 5)
-					window.location.href = data.redirect_url || '/book?step=5';
+					// If on a v2 wizard page, stay on it (session is now step 5)
+					// Fall back to redirect_url only if not on a v2 page
+					if ( document.querySelector( '.bookit-v2-wizard-container' ) ) {
+						window.location.href = window.location.pathname;
+					} else {
+						window.location.href = data.redirect_url || '/book?step=5';
+					}
 				} else {
 					if (data.errors) {
 						var map = {
