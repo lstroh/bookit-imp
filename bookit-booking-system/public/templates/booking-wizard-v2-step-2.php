@@ -58,8 +58,9 @@ if ( '1' === $staff_hidden ) {
 	Bookit_Session_Manager::set( 'staff_id', 0 );
 	Bookit_Session_Manager::set( 'staff_name', 'Any available' );
 	Bookit_Session_Manager::set( 'current_step', 3 );
-	wp_safe_redirect( get_permalink() );
-	exit;
+	if ( wp_safe_redirect( get_permalink() ) ) {
+		exit;
+	}
 }
 
 if ( count( $staff_members ) === 1 ) {
@@ -67,8 +68,9 @@ if ( count( $staff_members ) === 1 ) {
 	Bookit_Session_Manager::set( 'staff_id', $only['id'] );
 	Bookit_Session_Manager::set( 'staff_name', $only['full_name'] );
 	Bookit_Session_Manager::set( 'current_step', 3 );
-	wp_safe_redirect( get_permalink() );
-	exit;
+	if ( wp_safe_redirect( get_permalink() ) ) {
+		exit;
+	}
 }
 
 $selected_staff_id = (int) Bookit_Session_Manager::get( 'staff_id', -1 );

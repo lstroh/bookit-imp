@@ -33,8 +33,9 @@ if ( 1 === $total_services ) {
 		Bookit_Session_Manager::set( 'service_name', $single_service['name'] );
 		Bookit_Session_Manager::set( 'service_duration', $single_service['duration'] );
 		Bookit_Session_Manager::set( 'current_step', 2 );
-		wp_safe_redirect( get_permalink() );
-		exit;
+		if ( wp_safe_redirect( get_permalink() ) ) {
+			exit;
+		}
 	}
 }
 
