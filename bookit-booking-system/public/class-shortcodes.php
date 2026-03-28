@@ -23,10 +23,13 @@ class Bookit_Shortcodes {
 	 */
 	public function __construct() {
 		add_shortcode( 'bookit_booking_wizard', array( $this, 'render_booking_wizard' ) );
+		add_shortcode( 'bookit_wizard_v2', array( $this, 'render_booking_wizard_v2' ) );
 		add_shortcode( 'bookit_booking_confirmation', array( $this, 'render_booking_confirmation' ) );
 		add_shortcode( 'bookit_confirmation', array( $this, 'bookit_confirmation_page_shortcode' ) );
 		add_shortcode( 'bookit_my_packages', array( $this, 'render_my_packages' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_wizard_assets' ) );
+		add_filter( 'theme_page_templates', array( $this, 'register_wizard_v2_page_template' ), 10, 4 );
+		add_filter( 'template_include', array( $this, 'load_wizard_v2_page_template' ), 99 );
 	}
 
 	/**
@@ -72,6 +75,53 @@ class Bookit_Shortcodes {
 
 		// Load wizard shell template.
 		Bookit_Template_Loader::get_template( 'booking-wizard-shell.php' );
+
+		return ob_get_clean();
+	}
+
+	/**
+	 * Render booking wizard V2 shortcode.
+	 *
+	 * @param array  $atts
+	 * @param string $content
+	 * @return string
+	 */
+	public function render_booking_wizard_v2( $atts = array(), $content = '' ) {
+		// Initialize session.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
+		Bookit_Session_Manager::init();
+
+		// Check if session expired.
+		if ( Bookit_Session_Manager::is_expired() ) {
+			Bookit_Session_Manager::clear();
+		}
+
+		// Get current step from session.
+		$current_step = (int) Bookit_Session_Manager::get( 'current_step', 1 );
+
+		// Allow backward navigation via ?step= URL parameter.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['step'] ) ) {
+			$requested_step = (int) $_GET['step'];
+
+			// Only allow navigating backwards (to a step already completed) or to the current step.
+			if ( $requested_step >= 1 && $requested_step <= $current_step ) {
+				$current_step = $requested_step;
+				Bookit_Session_Manager::set( 'current_step', $current_step );
+			}
+		}
+
+		// Validate step range.
+		if ( $current_step < 1 || $current_step > 5 ) {
+			$current_step = 1;
+			Bookit_Session_Manager::set( 'current_step', 1 );
+		}
+
+		// Start output buffering.
+		ob_start();
+
+		// Load wizard shell template.
+		Bookit_Template_Loader::get_template( 'booking-wizard-v2-shell.php' );
 
 		return ob_get_clean();
 	}
@@ -128,7 +178,8 @@ class Bookit_Shortcodes {
 		$has_wizard = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_booking_wizard' );
 		$has_confirmation = is_a( $post, 'WP_Post' ) && ( has_shortcode( $post->post_content, 'bookit_booking_confirmation' ) || has_shortcode( $post->post_content, 'bookit_confirmation' ) );
 		$has_my_packages = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_my_packages' );
-		if ( ! $has_wizard && ! $has_confirmation && ! $has_my_packages ) {
+		$has_wizard_v2 = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_wizard_v2' );
+		if ( ! $has_wizard && ! $has_wizard_v2 && ! $has_confirmation && ! $has_my_packages ) {
 			return;
 		}
 
@@ -239,5 +290,69 @@ class Bookit_Shortcodes {
 				)
 			);
 		}
+
+		if ( $has_wizard_v2 ) {
+			wp_enqueue_style(
+				'bookit-wizard-v2',
+				BOOKIT_PLUGIN_URL . 'public/assets/css/booking-wizard-v2.css',
+				array(),
+				BOOKIT_VERSION,
+				'all'
+			);
+			wp_enqueue_script(
+				'bookit-wizard-v2',
+				BOOKIT_PLUGIN_URL . 'public/assets/js/booking-wizard-v2.js',
+				array( 'jquery' ),
+				BOOKIT_VERSION,
+				true
+			);
+			wp_localize_script(
+				'bookit-wizard-v2',
+				'bookitWizardV2',
+				array(
+					'restUrl'       => rest_url(),
+					'ajaxUrl'       => rest_url( 'bookit/v1/wizard/session' ),
+					'nonce'         => wp_create_nonce( 'wp_rest' ),
+					'bookingNonce'  => Bookit_CSRF_Protection::get_nonce(),
+					'currentStep'   => $current_step,
+					'depositAmount' => (float) Bookit_Session_Manager::get( 'deposit_due', 0.00 ),
+					'totalAmount'   => (float) Bookit_Session_Manager::get( 'total_price', 0.00 ),
+				)
+			);
+		}
+	}
+
+	/**
+	 * Register the Bookit Wizard V2 page template for the Page editor dropdown.
+	 *
+	 * @param array       $post_templates Array of template header names keyed by filename.
+	 * @param WP_Theme    $theme            Current theme object.
+	 * @param WP_Post     $post             The post being edited, null in list context.
+	 * @param string      $post_type        Post type.
+	 * @return array
+	 */
+	public function register_wizard_v2_page_template( $post_templates, $theme = null, $post = null, $post_type = 'page' ) {
+		$post_templates['bookit-wizard-v2.php'] = __( 'Bookit Wizard V2', 'bookit-booking-system' );
+		return $post_templates;
+	}
+
+	/**
+	 * Load the plugin page template when the Bookit Wizard V2 template is selected.
+	 *
+	 * @param string $template Path to the template file.
+	 * @return string
+	 */
+	public function load_wizard_v2_page_template( $template ) {
+		if ( ! is_singular( 'page' ) ) {
+			return $template;
+		}
+		$slug = get_page_template_slug();
+		if ( 'bookit-wizard-v2.php' === $slug ) {
+			$path = BOOKIT_PLUGIN_DIR . 'public/templates/page-wizard-v2.php';
+			if ( file_exists( $path ) ) {
+				return $path;
+			}
+		}
+		return $template;
 	}
 }
