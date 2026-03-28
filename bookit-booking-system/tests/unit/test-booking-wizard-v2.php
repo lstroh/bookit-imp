@@ -410,6 +410,100 @@ class Test_Booking_Wizard_V2 extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step3_renders_calendar() {
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 3 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Cal Service' );
+		Bookit_Session_Manager::set( 'service_duration', 60 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Test Staff' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertTrue(
+			strpos( $output, 'bookit-v2-day--available' ) !== false || strpos( $output, 'bookit-v2-day--disabled' ) !== false,
+			'Calendar should render at least one day cell state'
+		);
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step3_morning_group_hidden_when_empty() {
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 3 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Holiday Test' );
+		Bookit_Session_Manager::set( 'service_duration', 60 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Staff' );
+		Bookit_Session_Manager::set( 'date', '2026-01-01' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringNotContainsString( 'bookit-v2-time-section"', $output, 'Morning/Afternoon/Evening wrappers should be absent (not the time-sections container id)' );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step3_slots_not_rendered_when_no_date_selected() {
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 3 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'No Date' );
+		Bookit_Session_Manager::set( 'service_duration', 45 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Anyone' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringNotContainsString( 'bookit-v2-slot--available', $output );
+		$this->assertStringNotContainsString( 'bookit-v2-slot--selected', $output );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step3_continue_button_disabled_when_no_slot_selected() {
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 3 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'No Time' );
+		Bookit_Session_Manager::set( 'service_duration', 30 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Pro' );
+		Bookit_Session_Manager::set( 'date', '2026-12-15' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertMatchesRegularExpression( '/<button[^>]*bookit-v2-cta-btn[^>]*\sdisabled/', $output );
+	}
+
+	/**
 	 * Create a category row.
 	 *
 	 * @param array $args Overrides.
