@@ -86,15 +86,27 @@
 				} );
 				card.classList.add( 'bookit-v2-service-card--selected' );
 				postToSession( {
-					current_step: 2,
+					current_step: 1,
 					service_id: parseInt( card.dataset.serviceId, 10 ),
 					service_name: card.dataset.serviceName || '',
 					service_duration: parseInt( card.dataset.serviceDuration, 10 ) || 0
 				} ).then( function() {
-					window.location.reload();
+					var continueBtn = document.getElementById( 'bookit-v2-continue' );
+					if ( continueBtn ) {
+						continueBtn.removeAttribute( 'disabled' );
+					}
 				} );
 			} );
 		} );
+
+		// Set initial Continue button state based on whether a card is already selected
+		var continueBtn = document.getElementById( 'bookit-v2-continue' );
+		if ( continueBtn ) {
+			var alreadySelected = document.querySelector( '.bookit-v2-service-card--selected' );
+			if ( ! alreadySelected ) {
+				continueBtn.setAttribute( 'disabled', 'disabled' );
+			}
+		}
 	}
 
 	function initStep2() {

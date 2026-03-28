@@ -88,7 +88,8 @@ $grid_few_class = ( $total_services <= 2 ) ? ' bookit-v2-services-grid--few' : '
 
 		<div class="bookit-v2-sticky-footer">
 			<div class="bookit-v2-footer-inner">
-				<button type="button" class="bookit-v2-cta-btn" id="bookit-v2-continue"><?php esc_html_e( 'Continue', 'bookit-booking-system' ); ?></button>
+				<button type="button" class="bookit-v2-cta-btn" id="bookit-v2-continue"
+					<?php echo ( 0 === $selected_service_id ) ? 'disabled' : ''; ?>><?php esc_html_e( 'Continue', 'bookit-booking-system' ); ?></button>
 				<button type="button" class="bookit-v2-btn-back bookit-v2-btn-back--disabled" disabled><?php esc_html_e( 'Back', 'bookit-booking-system' ); ?></button>
 			</div>
 		</div>
