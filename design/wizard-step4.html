@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bookit — Step 4: Your Details</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #f0eeeb;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 2rem 1rem 6rem;
+  }
+
+  :root {
+    --accent: #1a7a6e;
+    --accent-light: #e8f5f3;
+    --accent-border: #1a7a6e;
+    --text-primary: #1c1c1a;
+    --text-secondary: #6b6b68;
+    --text-muted: #a8a8a5;
+    --border: #e0deda;
+    --border-hover: #c8c8c4;
+    --bg-card: #ffffff;
+    --radius-card: 14px;
+    --radius-btn: 12px;
+    --error: #c0392b;
+    --error-light: #fdf3f2;
+    --error-border: #e8b4b0;
+    /* Waiver amber — fixed, not a theme token */
+    --waiver-bg: #fffbf0;
+    --waiver-border: #e6a817;
+    --waiver-heading: #92610a;
+    --waiver-text: #5c3d06;
+  }
+
+  .wizard-shell {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Progress bar ── */
+  .progress-bar {
+    background: #ffffff;
+    border-radius: 16px 16px 0 0;
+    padding: 1.25rem 1.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .steps-row { display: flex; align-items: flex-start; }
+
+  .step-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    padding-bottom: 14px;
+  }
+
+  .step-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.01em;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .step-item.active .step-label { color: var(--accent); font-weight: 600; }
+  .step-item.done .step-label { color: var(--text-secondary); }
+
+  .step-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2.5px;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+  }
+
+  .step-item.done::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2.5px;
+    background: var(--accent-light);
+    border-radius: 2px 2px 0 0;
+  }
+
+  /* ── Main content ── */
+  .wizard-body {
+    background: #ffffff;
+    padding: 1.75rem 1.5rem 2rem;
+    border-radius: 0 0 16px 16px;
+  }
+
+  /* ── Confirmation banner ── */
+  .confirm-banner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    background: #f7f6f4;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 1.25rem;
+  }
+
+  .confirm-banner-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.5;
+  }
+
+  .confirm-banner-change {
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: inherit;
+    padding: 0;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .confirm-banner-change:hover { color: var(--text-secondary); }
+
+  /* ── Headings ── */
+  .step-heading {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin-bottom: 4px;
+  }
+
+  .step-subheading {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+
+  /* ── Form ── */
+  .form-group {
+    margin-bottom: 1.125rem;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--text-primary);
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.15s ease;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .form-input::placeholder { color: var(--text-muted); }
+
+  .form-input:focus {
+    border-color: var(--accent);
+  }
+
+  .form-input.error {
+    border-color: var(--error-border);
+    background: var(--error-light);
+  }
+
+  .form-input.error:focus {
+    border-color: var(--error);
+  }
+
+  .field-error {
+    display: block;
+    font-size: 12px;
+    color: var(--error);
+    margin-top: 5px;
+    line-height: 1.4;
+  }
+
+  /* ── Special requests toggle ── */
+  .special-requests-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+    margin-bottom: 1.125rem;
+  }
+
+  .special-requests-toggle:hover { text-decoration: underline; }
+
+  .special-requests-toggle .plus {
+    font-size: 16px;
+    line-height: 1;
+    font-weight: 400;
+  }
+
+  /* ── Divider ── */
+  .form-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1.25rem 0;
+  }
+
+  /* ── Checkbox group ── */
+  .checkbox-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 0.75rem;
+  }
+
+  .checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .checkbox-label {
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.4;
+    cursor: pointer;
+  }
+
+  .checkbox-helper {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    margin-left: 28px;
+    line-height: 1.4;
+  }
+
+  /* ── Waiver block ── */
+  .waiver-block {
+    background: var(--waiver-bg);
+    border: 1px solid #f0d080;
+    border-left: 3.5px solid var(--waiver-border);
+    border-radius: 10px;
+    padding: 1rem 1.125rem;
+    margin-top: 1.125rem;
+  }
+
+  .waiver-heading {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--waiver-heading);
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+
+  .waiver-body {
+    font-size: 13px;
+    color: var(--waiver-text);
+    line-height: 1.55;
+    margin-bottom: 12px;
+  }
+
+  .waiver-checkbox-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .waiver-checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    accent-color: var(--waiver-border);
+    cursor: pointer;
+  }
+
+  .waiver-checkbox-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--waiver-text);
+    line-height: 1.4;
+    cursor: pointer;
+  }
+
+  /* ── Footer ── */
+  .wizard-footer {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 100;
+  }
+
+  .footer-inner {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-continue {
+    width: 100%;
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-btn);
+    padding: 15px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: -0.01em;
+    transition: background 0.15s ease, transform 0.1s ease;
+    font-family: inherit;
+  }
+
+  .btn-continue:hover { background: #155f55; }
+  .btn-continue:active { transform: scale(0.99); }
+
+  .btn-back {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px;
+    text-align: center;
+    font-family: inherit;
+  }
+
+  .btn-back:hover { color: var(--text-primary); }
+
+  @media (max-width: 500px) {
+    body { padding: 1rem 0.75rem 7rem; }
+    .progress-bar { padding: 1rem 1rem 0; }
+    .wizard-body { padding: 1.5rem 1rem 2rem; }
+    .step-label { font-size: 10px; }
+    .wizard-footer { padding: 0.875rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wizard-shell">
+
+  <!-- Progress bar -->
+  <div class="progress-bar">
+    <div class="steps-row">
+      <div class="step-item done"><span class="step-label">Service</span></div>
+      <div class="step-item done"><span class="step-label">Staff</span></div>
+      <div class="step-item done"><span class="step-label">Date &amp; Time</span></div>
+      <div class="step-item active"><span class="step-label">Your Details</span></div>
+      <div class="step-item"><span class="step-label">Payment</span></div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="wizard-body">
+
+    <!-- Confirmation banner — wraps to two lines on mobile, that's fine -->
+    <div class="confirm-banner">
+      <span class="confirm-banner-text">Swedish Massage &middot; 60 min &middot; Elena Torres &middot; Wed 15 Apr, 11:00</span>
+      <button class="confirm-banner-change">Change</button>
+    </div>
+
+    <h1 class="step-heading">Your details</h1>
+    <p class="step-subheading">Almost there — just a few details to confirm your booking.</p>
+
+    <!-- Form -->
+    <form novalidate>
+
+      <!-- First name -->
+      <div class="form-group">
+        <label class="form-label" for="first-name">First name</label>
+        <input class="form-input" type="text" id="first-name" name="first_name"
+          autocomplete="given-name" placeholder="Jane">
+      </div>
+
+      <!-- Last name -->
+      <div class="form-group">
+        <label class="form-label" for="last-name">Last name</label>
+        <input class="form-input" type="text" id="last-name" name="last_name"
+          autocomplete="family-name" placeholder="Smith">
+      </div>
+
+      <!-- Email — shown in error state -->
+      <div class="form-group">
+        <label class="form-label" for="email">Email address</label>
+        <input class="form-input error" type="email" id="email" name="email"
+          autocomplete="email" value="jane.doe@" inputmode="email">
+        <span class="field-error">Please enter a valid email address</span>
+      </div>
+
+      <!-- Phone -->
+      <div class="form-group">
+        <label class="form-label" for="phone">Phone number</label>
+        <input class="form-input" type="tel" id="phone" name="phone"
+          autocomplete="tel" placeholder="07700 900000" inputmode="tel">
+      </div>
+
+      <!-- Special requests — collapsed -->
+      <button type="button" class="special-requests-toggle">
+        <span class="plus">+</span> Add special requests
+      </button>
+
+      <div class="form-divider"></div>
+
+      <!-- Marketing consent -->
+      <div class="checkbox-group">
+        <input type="checkbox" id="marketing-consent" name="marketing_consent">
+        <label class="checkbox-label" for="marketing-consent">
+          Keep me updated with offers and news
+        </label>
+      </div>
+      <p class="checkbox-helper">You can unsubscribe at any time.</p>
+
+      <!-- Cooling-off waiver — fixed amber, not theme-overridable -->
+      <div class="waiver-block">
+        <p class="waiver-heading">Important: Right to Cancel</p>
+        <p class="waiver-body">Your appointment is within 14 days. By ticking this box you're asking us to confirm your booking immediately and acknowledge you'll lose your right to cancel once the service begins.</p>
+        <div class="waiver-checkbox-group">
+          <input type="checkbox" id="cooling-off-waiver" name="cooling_off_waiver" required>
+          <label class="waiver-checkbox-label" for="cooling-off-waiver">
+            I understand and agree to waive my cancellation right.
+          </label>
+        </div>
+      </div>
+
+    </form>
+
+  </div>
+</div>
+
+<!-- Sticky footer -->
+<div class="wizard-footer">
+  <div class="footer-inner">
+    <button class="btn-continue">Continue</button>
+    <button class="btn-back">Back</button>
+  </div>
+</div>
+
+</body>
+</html>

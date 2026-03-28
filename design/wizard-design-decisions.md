@@ -101,6 +101,30 @@ The HTML reference file for each step lives alongside this document in `/design/
 
 ---
 
-## Steps 4–5
+## Step 4 — Your details
 
-_To be added as each step is designed._
+**Reference file:** `wizard-step4.html`
+
+| Decision | Value |
+|---|---|
+| Heading | "Your details" |
+| Subheading | "Almost there — just a few details to confirm your booking." |
+| Confirmation banner | Shows all four previous selections: service · duration · staff · date and time (e.g. "Swedish Massage · 60 min · Elena Torres · Wed 15 Apr, 11:00"). Wraps to two lines on mobile — do not truncate. |
+| Field order | First name → Last name → Email → Phone → Special requests (collapsed) → Marketing consent → Cooling-off waiver |
+| Field style | Single column, full width, rounded corners (10px), 1.5px border, 12px padding. Label above each field in 13px dark grey. |
+| Autocomplete | `given-name` / `family-name` / `email` / `tel` on respective inputs |
+| Input modes | `inputmode="email"` on email field · `inputmode="tel"` on phone field |
+| Phone placeholder | `07700 900000` (UK domestic mobile format) |
+| Special requests | Collapsed by default behind a "+ Add special requests" text link in accent colour. Reveals a textarea on tap. |
+| Error state | Red border on input, light red background tint, red error message below the field. Scroll to first errored field on submission attempt. |
+| Marketing consent | Optional checkbox, unchecked by default. Label: "Keep me updated with offers and news." Helper text below: "You can unsubscribe at any time." |
+| Cooling-off waiver | Shown only when booking is within 14 days. Required checkbox. Visually distinct block: warm amber tint background (`#fffbf0`), amber left border (3.5px, `#e6a817`). Contains bold heading "Important: Right to Cancel", plain-English explanation paragraph, then the required checkbox. |
+| Waiver CSS | Amber values are fixed — NOT `--bookit-*` theme tokens. The waiver is a legal signal, not a brand element, and must not be overridden by themes. |
+| Back link | Active — returns to Step 3 |
+| Continue button | Enabled at all times visually; validation runs on submit |
+
+---
+
+## Step 5 — Payment
+
+_To be added._
