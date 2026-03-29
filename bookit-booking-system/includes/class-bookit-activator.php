@@ -161,6 +161,34 @@ class Bookit_Activator {
 				)
 			);
 		}
+
+		// Create V2 wizard page on activation.
+		$wizard_v2_page = get_page_by_path( 'book-v2' );
+		if ( ! $wizard_v2_page ) {
+			wp_insert_post(
+				array(
+					'post_title'   => 'Book Online',
+					'post_name'    => 'book-v2',
+					'post_content' => '[bookit_wizard_v2]',
+					'post_status'  => 'publish',
+					'post_type'    => 'page',
+				)
+			);
+		}
+
+		// Create V2 confirmation page on activation.
+		$confirmed_v2_page = get_page_by_path( 'booking-confirmed-v2' );
+		if ( ! $confirmed_v2_page ) {
+			wp_insert_post(
+				array(
+					'post_title'   => 'Booking Confirmed',
+					'post_name'    => 'booking-confirmed-v2',
+					'post_content' => '[bookit_booking_confirmed_v2]',
+					'post_status'  => 'publish',
+					'post_type'    => 'page',
+				)
+			);
+		}
 		global $wpdb;  // Declare global first
 
 		// Add setting_type column to settings table if missing.
