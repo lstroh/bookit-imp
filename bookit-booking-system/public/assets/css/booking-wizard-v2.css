@@ -766,46 +766,45 @@
   font-weight: 700;
 }
 
-/* Cancellation policy disclosure */
-.bookit-v2-wizard-container .bookit-v2-policy-disclosure {
-  width: 100%;
-  border: none;
+/* Cancellation policy notice block */
+/* Fixed blue-grey values — informational signal, not theme token */
+.bookit-v2-wizard-container .bookit-v2-policy-notice {
+  background: #f0f4f8;
+  border-left: 3.5px solid #5b7fa6;
+  border-radius: var(--bookit-border-radius);
+  padding: 0.875rem 1rem;
+  margin-top: 12px;
+}
+
+.bookit-v2-wizard-container .bookit-v2-policy-notice__summary {
+  font-size: 13px;
+  color: #3d5a73;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.bookit-v2-wizard-container .bookit-v2-policy-expand-btn {
   background: none;
-  padding: 0;
-}
-
-.bookit-v2-wizard-container .bookit-v2-policy-disclosure summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  color: var(--bookit-text-secondary);
+  border: none;
+  font-family: inherit;
+  font-size: 12px;
+  color: #5b7fa6;
   cursor: pointer;
-  list-style: none;
-  padding: 8px 0;
-  border-top: 1px solid var(--bookit-border);
-  user-select: none;
+  padding: 0;
+  margin-left: 4px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
-.bookit-v2-wizard-container .bookit-v2-policy-disclosure summary::-webkit-details-marker {
-  display: none;
+.bookit-v2-wizard-container .bookit-v2-policy-expand-btn:hover {
+  color: #3d5a73;
 }
 
-.bookit-v2-wizard-container .bookit-v2-policy-chevron {
-  font-size: 11px;
-  color: var(--bookit-text-muted);
-  transition: transform 0.2s ease;
-}
-
-.bookit-v2-wizard-container .bookit-v2-policy-disclosure[open] .bookit-v2-policy-chevron {
-  transform: rotate(180deg);
-}
-
-.bookit-v2-wizard-container .bookit-v2-policy-body {
+.bookit-v2-wizard-container .bookit-v2-policy-notice__full {
   font-size: 13px;
-  color: var(--bookit-text-secondary);
-  line-height: 1.6;
-  padding: 8px 0 4px;
+  color: #3d5a73;
+  line-height: 1.55;
+  margin: 8px 0 0;
 }
 
 /* Zone B — packages */

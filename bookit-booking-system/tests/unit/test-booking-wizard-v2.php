@@ -737,7 +737,159 @@ class Test_Booking_Wizard_V2 extends WP_UnitTestCase {
 	/**
 	 * @coversNothing
 	 */
-	public function test_v2_step5_cancellation_policy_collapsed_by_default() {
+	public function test_v2_step5_policy_notice_renders_when_policy_set() {
+		global $wpdb;
+
+		$wpdb->replace(
+			$wpdb->prefix . 'bookings_settings',
+			array(
+				'setting_key'   => 'cancellation_policy_text',
+				'setting_value' => 'First line. Second line.',
+				'created_at'    => current_time( 'mysql' ),
+				'updated_at'    => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%s', '%s' )
+		);
+
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 5 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Test' );
+		Bookit_Session_Manager::set( 'service_duration', 60 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Staff' );
+		Bookit_Session_Manager::set( 'date', '2026-06-15' );
+		Bookit_Session_Manager::set( 'time', '11:00' );
+		Bookit_Session_Manager::set( 'customer_email', 'guest@example.com' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( 'bookit-v2-policy-notice', $output );
+
+		$wpdb->delete( $wpdb->prefix . 'bookings_settings', array( 'setting_key' => 'cancellation_policy_text' ), array( '%s' ) );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step5_policy_notice_hidden_when_policy_empty() {
+		global $wpdb;
+
+		$wpdb->delete( $wpdb->prefix . 'bookings_settings', array( 'setting_key' => 'cancellation_policy_text' ), array( '%s' ) );
+		update_option( 'bookit_cancellation_policy_text', '', false );
+
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 5 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Test' );
+		Bookit_Session_Manager::set( 'service_duration', 60 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Staff' );
+		Bookit_Session_Manager::set( 'date', '2026-06-15' );
+		Bookit_Session_Manager::set( 'time', '11:00' );
+		Bookit_Session_Manager::set( 'customer_email', 'guest@example.com' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringNotContainsString( 'bookit-v2-policy-notice', $output );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step5_policy_first_sentence_always_visible() {
+		global $wpdb;
+
+		$policy = 'Free cancellation up to 24 hours before your appointment. Late cancellations may forfeit deposit.';
+		$wpdb->replace(
+			$wpdb->prefix . 'bookings_settings',
+			array(
+				'setting_key'   => 'cancellation_policy_text',
+				'setting_value' => $policy,
+				'created_at'    => current_time( 'mysql' ),
+				'updated_at'    => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%s', '%s' )
+		);
+
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 5 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Test' );
+		Bookit_Session_Manager::set( 'service_duration', 60 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Staff' );
+		Bookit_Session_Manager::set( 'date', '2026-06-15' );
+		Bookit_Session_Manager::set( 'time', '11:00' );
+		Bookit_Session_Manager::set( 'customer_email', 'guest@example.com' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( 'bookit-v2-policy-notice__summary', $output );
+		$this->assertStringContainsString( 'Free cancellation up to 24 hours before your appointment.', $output );
+
+		$wpdb->delete( $wpdb->prefix . 'bookings_settings', array( 'setting_key' => 'cancellation_policy_text' ), array( '%s' ) );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step5_policy_expand_btn_present_when_multiple_sentences() {
+		global $wpdb;
+
+		$wpdb->replace(
+			$wpdb->prefix . 'bookings_settings',
+			array(
+				'setting_key'   => 'cancellation_policy_text',
+				'setting_value' => 'Sentence one. Sentence two.',
+				'created_at'    => current_time( 'mysql' ),
+				'updated_at'    => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%s', '%s' )
+		);
+
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service();
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 5 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Test' );
+		Bookit_Session_Manager::set( 'service_duration', 60 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Staff' );
+		Bookit_Session_Manager::set( 'date', '2026-06-15' );
+		Bookit_Session_Manager::set( 'time', '11:00' );
+		Bookit_Session_Manager::set( 'customer_email', 'guest@example.com' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( 'bookit-v2-policy-expand-btn', $output );
+
+		$wpdb->delete( $wpdb->prefix . 'bookings_settings', array( 'setting_key' => 'cancellation_policy_text' ), array( '%s' ) );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step5_policy_expand_btn_absent_when_single_sentence() {
 		global $wpdb;
 
 		$wpdb->replace(
@@ -769,8 +921,8 @@ class Test_Booking_Wizard_V2 extends WP_UnitTestCase {
 		Bookit_Session_Manager::set( 'customer_email', 'guest@example.com' );
 
 		$output = do_shortcode( '[bookit_wizard_v2]' );
-		$this->assertStringContainsString( '<details', $output );
-		$this->assertStringNotContainsString( '<details open', $output );
+		$this->assertStringContainsString( 'bookit-v2-policy-notice', $output );
+		$this->assertStringNotContainsString( 'bookit-v2-policy-expand-btn', $output );
 
 		$wpdb->delete( $wpdb->prefix . 'bookings_settings', array( 'setting_key' => 'cancellation_policy_text' ), array( '%s' ) );
 	}

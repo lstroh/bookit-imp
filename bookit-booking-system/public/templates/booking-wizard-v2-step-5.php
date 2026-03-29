@@ -75,6 +75,29 @@ if ( null === $cancellation_policy_text || '' === trim( (string) $cancellation_p
 	$cancellation_policy_text = get_option( 'bookit_cancellation_policy_text', '' );
 }
 
+$cancellation_policy_text = trim( (string) $cancellation_policy_text );
+
+$policy_first_sentence = '';
+$policy_remainder      = '';
+
+if ( ! empty( $cancellation_policy_text ) ) {
+	$dot_pos = strpos( $cancellation_policy_text, '. ' );
+	if ( false !== $dot_pos ) {
+		$policy_first_sentence = substr(
+			$cancellation_policy_text,
+			0,
+			$dot_pos + 1
+		);
+		$policy_remainder = trim(
+			substr( $cancellation_policy_text, $dot_pos + 2 )
+		);
+	} else {
+		// Single sentence — show all, no expand link.
+		$policy_first_sentence = $cancellation_policy_text;
+		$policy_remainder      = '';
+	}
+}
+
 $packages_enabled = $wpdb->get_var(
 	$wpdb->prepare(
 		"SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s LIMIT 1",
@@ -214,14 +237,55 @@ if ( 'buy_package' === $zone_b_variant ) {
 			</div>
 			<?php endif; ?>
 
-			<?php if ( '' !== trim( (string) $cancellation_policy_text ) ) : ?>
-			<details class="bookit-v2-policy-disclosure">
-				<summary>
-					<?php esc_html_e( 'Cancellation policy', 'bookit-booking-system' ); ?>
-					<span class="bookit-v2-policy-chevron">&#8964;</span>
-				</summary>
-				<p class="bookit-v2-policy-body"><?php echo wp_kses_post( $cancellation_policy_text ); ?></p>
-			</details>
+			<?php if ( ! empty( $cancellation_policy_text ) ) : ?>
+			<div class="bookit-v2-policy-notice">
+				<p class="bookit-v2-policy-notice__summary">
+					<?php echo esc_html( $policy_first_sentence ); ?>
+					<?php if ( ! empty( $policy_remainder ) ) : ?>
+					<button
+						type="button"
+						class="bookit-v2-policy-expand-btn"
+						aria-expanded="false"
+						aria-controls="bookit-v2-policy-full">
+						<?php esc_html_e( 'See full policy', 'bookit-booking-system' ); ?>
+					</button>
+					<?php endif; ?>
+				</p>
+				<?php if ( ! empty( $policy_remainder ) ) : ?>
+				<p class="bookit-v2-policy-notice__full"
+					id="bookit-v2-policy-full"
+					hidden>
+					<?php echo esc_html( $policy_remainder ); ?>
+				</p>
+				<?php endif; ?>
+			</div>
+			<?php if ( ! empty( $policy_remainder ) ) : ?>
+			<script>
+(function() {
+	var btn = document.querySelector(
+		'.bookit-v2-policy-expand-btn'
+	);
+	if ( ! btn ) return;
+	btn.addEventListener( 'click', function() {
+		var full = document.getElementById(
+			'bookit-v2-policy-full'
+		);
+		var expanded = btn.getAttribute(
+			'aria-expanded'
+		) === 'true';
+		if ( expanded ) {
+			full.hidden = true;
+			btn.setAttribute( 'aria-expanded', 'false' );
+			btn.textContent = <?php echo wp_json_encode( __( 'See full policy', 'bookit-booking-system' ) ); ?>;
+		} else {
+			full.hidden = false;
+			btn.setAttribute( 'aria-expanded', 'true' );
+			btn.textContent = <?php echo wp_json_encode( __( 'Hide full policy', 'bookit-booking-system' ) ); ?>;
+		}
+	} );
+} )();
+			</script>
+			<?php endif; ?>
 			<?php endif; ?>
 		</div>
 
