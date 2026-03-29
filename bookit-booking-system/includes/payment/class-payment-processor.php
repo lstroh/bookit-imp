@@ -282,7 +282,7 @@ class Booking_System_Payment_Processor {
 	 * @param array<string, mixed> $session_data Booking wizard session data.
 	 * @return array{success: bool, booking_id: int, redirect_url: string}|WP_Error
 	 */
-	private function process_use_package( $session_data ) {
+	public function process_use_package( $session_data ) {
 		global $wpdb;
 
 		if ( empty( $session_data ) ) {

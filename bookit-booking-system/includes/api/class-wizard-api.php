@@ -96,6 +96,17 @@ class Bookit_Wizard_API {
 				),
 			)
 		);
+
+		register_rest_route(
+			'bookit/v1',
+			'/wizard/complete',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'complete_booking' ),
+				'permission_callback' => array( $this, 'check_permission' ),
+				'args'                => array(),
+			)
+		);
 	}
 
 	/**
@@ -294,5 +305,98 @@ class Bookit_Wizard_API {
 		if ( ! isset( $update_data['service_duration'] ) || (int) $update_data['service_duration'] <= 0 ) {
 			$update_data['service_duration'] = (int) $row['duration'];
 		}
+	}
+
+	/**
+	 * Complete booking from wizard session (pay on arrival / package); returns redirect URL.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function complete_booking( $request ) {
+		$ip = Bookit_Rate_Limiter::get_client_ip();
+		if ( ! Bookit_Rate_Limiter::check( 'wizard_book', $ip, 10, HOUR_IN_SECONDS ) ) {
+			return new WP_Error(
+				'rate_limit_exceeded',
+				__( 'Too many requests. Please wait before trying again.', 'bookit-booking-system' ),
+				array( 'status' => 429 )
+			);
+		}
+
+		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
+		Bookit_Session_Manager::init();
+
+		if ( Bookit_Session_Manager::is_expired() ) {
+			return new WP_Error(
+				'session_expired',
+				__( 'Your session has expired. Please start again.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$session_data   = Bookit_Session_Manager::get_data();
+		$payment_method = isset( $session_data['payment_method'] )
+			? sanitize_text_field( $session_data['payment_method'] )
+			: '';
+
+		if ( empty( $session_data ) ) {
+			return new WP_Error(
+				'invalid_session',
+				__( 'No booking data found. Please start again.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// Step 5 stores package choice as use_package_{customer_package_id}; map for the processor.
+		if ( preg_match( '/^use_package_(\d+)$/', $payment_method, $pkg_match ) ) {
+			$session_data['customer_package_id'] = (int) $pkg_match[1];
+			$payment_method                      = 'use_package';
+		}
+
+		require_once BOOKIT_PLUGIN_DIR . 'includes/payment/class-payment-processor.php';
+		$processor = new Booking_System_Payment_Processor();
+
+		switch ( $payment_method ) {
+			case 'pay_on_arrival':
+			case 'person':
+				$result = $processor->process_pay_on_arrival( $session_data );
+				break;
+
+			case 'use_package':
+				$result = $processor->process_use_package( $session_data );
+				break;
+
+			case 'card':
+			case 'stripe':
+			case 'paypal':
+				return new WP_Error(
+					'payment_method_not_available',
+					__( 'Online payment is not yet available. Please select Pay in Person or use a package.', 'bookit-booking-system' ),
+					array( 'status' => 400 )
+				);
+
+			default:
+				return new WP_Error(
+					'invalid_payment_method',
+					__( 'Invalid payment method.', 'bookit-booking-system' ),
+					array( 'status' => 400 )
+				);
+		}
+
+		if ( is_wp_error( $result ) ) {
+			return new WP_Error(
+				$result->get_error_code(),
+				$result->get_error_message(),
+				array( 'status' => 400 )
+			);
+		}
+
+		return rest_ensure_response(
+			array(
+				'success'      => true,
+				'booking_id'   => $result['booking_id'],
+				'redirect_url' => $result['redirect_url'],
+			)
+		);
 	}
 }

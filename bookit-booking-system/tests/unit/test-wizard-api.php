@@ -31,6 +31,8 @@ class Test_Wizard_API extends WP_UnitTestCase {
 	public function setUp(): void {
 		parent::setUp();
 		Bookit_Session_Manager::clear();
+		$ip = Bookit_Rate_Limiter::get_client_ip();
+		delete_transient( Bookit_Rate_Limiter::KEY_PREFIX . 'wizard_book_' . md5( $ip ) );
 		do_action( 'rest_api_init' );
 	}
 
@@ -286,5 +288,164 @@ class Test_Wizard_API extends WP_UnitTestCase {
 		$this->assertEquals( 'test@example.com', $customer['email'] );
 		$this->assertEquals( '01234567890', $customer['phone'] );
 		$this->assertEquals( 'Some notes', $customer['notes'] );
+	}
+
+	/**
+	 * @covers Bookit_Wizard_API::register_routes
+	 */
+	public function test_complete_booking_endpoint_registered() {
+		$routes = rest_get_server()->get_routes();
+		$key    = '/' . $this->namespace . '/wizard/complete';
+		$this->assertArrayHasKey( $key, $routes );
+	}
+
+	/**
+	 * @covers Bookit_Wizard_API::complete_booking
+	 */
+	public function test_complete_booking_returns_400_on_empty_session() {
+		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
+		Bookit_Session_Manager::init();
+		$_SESSION['bookit_wizard'] = array();
+
+		$request = new WP_REST_Request( 'POST', '/' . $this->namespace . '/wizard/complete' );
+		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
+
+		$response = rest_get_server()->dispatch( $request );
+		$this->assertEquals( 400, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertArrayHasKey( 'code', $data );
+		$this->assertSame( 'invalid_session', $data['code'] );
+	}
+
+	/**
+	 * @covers Bookit_Wizard_API::complete_booking
+	 */
+	public function test_complete_booking_pay_on_arrival_returns_redirect_url() {
+		global $wpdb;
+
+		add_filter( 'bookit_send_email', '__return_false' );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_services',
+			array(
+				'name'           => 'Wizard API POA Test',
+				'duration'       => 60,
+				'price'          => 50.00,
+				'deposit_type'   => 'fixed',
+				'deposit_amount' => 10.00,
+				'is_active'      => 1,
+				'created_at'     => current_time( 'mysql' ),
+				'updated_at'     => current_time( 'mysql' ),
+			),
+			array( '%s', '%d', '%f', '%s', '%f', '%d', '%s', '%s' )
+		);
+		$service_id = (int) $wpdb->insert_id;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_staff',
+			array(
+				'first_name'    => 'Wizard',
+				'last_name'     => 'Tester',
+				'email'         => 'wizard-api-poa@example.com',
+				'password_hash' => wp_hash_password( 'x' ),
+				'is_active'     => 1,
+				'created_at'    => current_time( 'mysql' ),
+				'updated_at'    => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%s', '%s', '%d', '%s', '%s' )
+		);
+		$staff_id = (int) $wpdb->insert_id;
+
+		$booking_date = wp_date( 'Y-m-d', strtotime( '+30 days' ), wp_timezone() );
+
+		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
+		Bookit_Session_Manager::clear();
+		Bookit_Session_Manager::set_data(
+			array(
+				'current_step'              => 5,
+				'service_id'                => $service_id,
+				'staff_id'                  => $staff_id,
+				'date'                      => $booking_date,
+				'time'                      => '10:00',
+				'customer_first_name'       => 'Jane',
+				'customer_last_name'        => 'Doe',
+				'customer_email'            => 'jane-wizard-complete@example.com',
+				'customer_phone'            => '07700900456',
+				'customer_special_requests' => '',
+				'cooling_off_waiver'        => 1,
+				'payment_method'            => 'pay_on_arrival',
+				'wizard_version'            => 'v2',
+			)
+		);
+
+		$request = new WP_REST_Request( 'POST', '/' . $this->namespace . '/wizard/complete' );
+		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
+
+		$response = rest_get_server()->dispatch( $request );
+		remove_filter( 'bookit_send_email', '__return_false' );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertTrue( $data['success'] );
+		$this->assertArrayHasKey( 'redirect_url', $data );
+		$this->assertStringContainsString( 'booking-confirmed', $data['redirect_url'] );
+		$this->assertNotEmpty( $data['booking_id'] );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$wpdb->delete( $wpdb->prefix . 'bookings', array( 'service_id' => $service_id ), array( '%d' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$wpdb->delete( $wpdb->prefix . 'bookings_customers', array( 'email' => 'jane-wizard-complete@example.com' ), array( '%s' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$wpdb->delete( $wpdb->prefix . 'bookings_services', array( 'id' => $service_id ), array( '%d' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$wpdb->delete( $wpdb->prefix . 'bookings_staff', array( 'id' => $staff_id ), array( '%d' ) );
+	}
+
+	/**
+	 * @covers Bookit_Wizard_API::complete_booking
+	 */
+	public function test_complete_booking_card_returns_400() {
+		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
+		Bookit_Session_Manager::clear();
+		Bookit_Session_Manager::set_data(
+			array(
+				'current_step'   => 5,
+				'payment_method' => 'card',
+				'service_id'     => 1,
+			)
+		);
+
+		$request = new WP_REST_Request( 'POST', '/' . $this->namespace . '/wizard/complete' );
+		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
+
+		$response = rest_get_server()->dispatch( $request );
+		$this->assertEquals( 400, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertSame( 'payment_method_not_available', $data['code'] );
+	}
+
+	/**
+	 * @covers Bookit_Wizard_API::complete_booking
+	 */
+	public function test_complete_booking_invalid_method_returns_400() {
+		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
+		Bookit_Session_Manager::clear();
+		Bookit_Session_Manager::set_data(
+			array(
+				'current_step'   => 5,
+				'payment_method' => 'unknown',
+				'service_id'     => 1,
+			)
+		);
+
+		$request = new WP_REST_Request( 'POST', '/' . $this->namespace . '/wizard/complete' );
+		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
+
+		$response = rest_get_server()->dispatch( $request );
+		$this->assertEquals( 400, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertSame( 'invalid_payment_method', $data['code'] );
 	}
 }

@@ -408,8 +408,45 @@
 					current_step: 5,
 					payment_method: choice
 				} ).then( function() {
-					window.location.reload();
-				} );
+					var w = typeof bookitWizardV2 !== 'undefined' ? bookitWizardV2 : {};
+					var btn = document.getElementById( 'bookit-v2-cta-btn' );
+					if ( btn ) {
+						btn.disabled = true;
+						btn.textContent = 'Confirming\u2026';
+					}
+					return fetch( w.restUrl + 'bookit/v1/wizard/complete', {
+						method: 'POST',
+						credentials: 'same-origin',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-WP-Nonce': w.nonce,
+							'X-Bookit-Nonce': w.bookingNonce
+						},
+						body: JSON.stringify( {} )
+					} );
+				} )
+					.then( function( r ) { return r.json(); } )
+					.then( function( data ) {
+						if ( data && data.success && data.redirect_url ) {
+							window.location.href = data.redirect_url;
+						} else {
+							var msg = ( data && data.message ) ? data.message : 'Unable to complete booking. Please try again.';
+							alert( msg );
+							var btn = document.getElementById( 'bookit-v2-cta-btn' );
+							if ( btn ) {
+								btn.disabled = false;
+								updateCtaLabel( getPaymentChoiceValue() );
+							}
+						}
+					} )
+					.catch( function() {
+						alert( 'A network error occurred. Please try again.' );
+						var btn = document.getElementById( 'bookit-v2-cta-btn' );
+						if ( btn ) {
+							btn.disabled = false;
+							updateCtaLabel( getPaymentChoiceValue() );
+						}
+					} );
 			} );
 		}
 	}

@@ -3,7 +3,7 @@
         'name' => 'booking-system/wordpress-plugin',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '7bed5f2f2bd616acd330c753332f670b3c216caa',
+        'reference' => '67e31e2db5356a22575e02bfbe4e42b403b99d39',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         'booking-system/wordpress-plugin' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '7bed5f2f2bd616acd330c753332f670b3c216caa',
+            'reference' => '67e31e2db5356a22575e02bfbe4e42b403b99d39',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
