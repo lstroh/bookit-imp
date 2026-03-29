@@ -866,7 +866,6 @@
 
 .bookit-v2-wizard-container .bookit-v2-payment-row--disabled {
   opacity: 0.4;
-  pointer-events: none;
 }
 
 .bookit-v2-wizard-container .bookit-v2-payment-row input[type="radio"] {
