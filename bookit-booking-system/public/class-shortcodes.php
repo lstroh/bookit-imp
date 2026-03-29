@@ -25,6 +25,7 @@ class Bookit_Shortcodes {
 		add_shortcode( 'bookit_booking_wizard', array( $this, 'render_booking_wizard' ) );
 		add_shortcode( 'bookit_wizard_v2', array( $this, 'render_booking_wizard_v2' ) );
 		add_shortcode( 'bookit_booking_confirmation', array( $this, 'render_booking_confirmation' ) );
+		add_shortcode( 'bookit_booking_confirmed_v2', array( $this, 'render_booking_confirmed_v2' ) );
 		add_shortcode( 'bookit_confirmation', array( $this, 'bookit_confirmation_page_shortcode' ) );
 		add_shortcode( 'bookit_my_packages', array( $this, 'render_my_packages' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_wizard_assets' ) );
@@ -43,6 +44,7 @@ class Bookit_Shortcodes {
 		// Initialize session.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
 		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'wizard_version', 'v1' );
 
 		// Check if session expired.
 		if ( Bookit_Session_Manager::is_expired() ) {
@@ -90,6 +92,7 @@ class Bookit_Shortcodes {
 		// Initialize session.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
 		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'wizard_version', 'v2' );
 
 		// Check if session expired.
 		if ( Bookit_Session_Manager::is_expired() ) {
@@ -155,6 +158,22 @@ class Bookit_Shortcodes {
 	}
 
 	/**
+	 * Render V2 booking confirmation shortcode (parallel layout; used on /booking-confirmed-v2/ or similar).
+	 *
+	 * @param array  $atts Shortcode attributes.
+	 * @param string $content Shortcode content.
+	 * @return string Confirmation HTML.
+	 */
+	public function render_booking_confirmed_v2( $atts = array(), $content = '' ) {
+		require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
+		Bookit_Session_Manager::init();
+
+		ob_start();
+		Bookit_Template_Loader::get_template( 'booking-confirmed-v2.php' );
+		return ob_get_clean();
+	}
+
+	/**
 	 * Render my packages shortcode.
 	 *
 	 * @param array  $atts Shortcode attributes.
@@ -177,9 +196,10 @@ class Bookit_Shortcodes {
 		global $post;
 		$has_wizard = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_booking_wizard' );
 		$has_confirmation = is_a( $post, 'WP_Post' ) && ( has_shortcode( $post->post_content, 'bookit_booking_confirmation' ) || has_shortcode( $post->post_content, 'bookit_confirmation' ) );
+		$has_confirmation_v2 = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_booking_confirmed_v2' );
 		$has_my_packages = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_my_packages' );
 		$has_wizard_v2 = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_wizard_v2' );
-		if ( ! $has_wizard && ! $has_wizard_v2 && ! $has_confirmation && ! $has_my_packages ) {
+		if ( ! $has_wizard && ! $has_wizard_v2 && ! $has_confirmation && ! $has_confirmation_v2 && ! $has_my_packages ) {
 			return;
 		}
 
@@ -249,6 +269,16 @@ class Bookit_Shortcodes {
 				BOOKIT_PLUGIN_URL . 'public/assets/css/confirmation-page.css',
 				array(),
 				'1.0.0'
+			);
+		}
+
+		if ( $has_confirmation_v2 ) {
+			wp_enqueue_style(
+				'bookit-confirmation-v2',
+				BOOKIT_PLUGIN_URL . 'public/assets/css/confirmation-page-v2.css',
+				array( 'bookit-wizard' ),
+				BOOKIT_VERSION,
+				'all'
 			);
 		}
 
@@ -340,6 +370,8 @@ class Bookit_Shortcodes {
 					'currentStep'   => $current_step,
 					'depositAmount' => $v2_deposit_amount,
 					'totalAmount'   => $v2_total_amount,
+					// Default success redirect target; the WordPress page slug must match this path (or override via bookit_confirmed_v2_url).
+					'confirmed_v2_url' => home_url( '/booking-confirmed-v2/' ),
 				)
 			);
 		}

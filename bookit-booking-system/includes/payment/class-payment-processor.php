@@ -258,11 +258,21 @@ class Booking_System_Payment_Processor {
 			);
 		}
 
+		// Use V2 confirmation page if booking originated from wizard V2 (session snapshot before clear).
+		$confirmed_v2_url = isset( $session_data['wizard_version'] )
+			&& 'v2' === $session_data['wizard_version']
+			? rtrim( get_option( 'bookit_confirmed_v2_url', home_url( '/booking-confirmed-v2/' ) ), '/' )
+			: null;
+
+		$redirect_url = $confirmed_v2_url
+			? $confirmed_v2_url . '?booking_id=' . $booking_id
+			: home_url( '/booking-confirmed?booking_id=' . $booking_id );
+
 		// Return booking info for redirect.
 		return array(
 			'success'      => true,
 			'booking_id'   => $booking_id,
-			'redirect_url' => home_url( '/booking-confirmed?booking_id=' . $booking_id ),
+			'redirect_url' => $redirect_url,
 		);
 	}
 
@@ -437,10 +447,19 @@ class Booking_System_Payment_Processor {
 			$booking_retriever->clear_booking_session();
 		}
 
+		$confirmed_v2_url = isset( $session_data['wizard_version'] )
+			&& 'v2' === $session_data['wizard_version']
+			? rtrim( get_option( 'bookit_confirmed_v2_url', home_url( '/booking-confirmed-v2/' ) ), '/' )
+			: null;
+
+		$redirect_url = $confirmed_v2_url
+			? $confirmed_v2_url . '?booking_id=' . $booking_id
+			: home_url( '/booking-confirmed?booking_id=' . $booking_id );
+
 		return array(
 			'success'      => true,
 			'booking_id'   => $booking_id,
-			'redirect_url' => home_url( '/booking-confirmed?booking_id=' . $booking_id ),
+			'redirect_url' => $redirect_url,
 		);
 	}
 }

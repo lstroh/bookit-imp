@@ -480,11 +480,17 @@ class Booking_System_Stripe_Checkout {
 			),
 		);
 
+		$success_url = home_url( '/booking-confirmed?session_id={CHECKOUT_SESSION_ID}' );
+		if ( isset( $session_data['wizard_version'] ) && 'v2' === $session_data['wizard_version'] ) {
+			$v2_base = rtrim( get_option( 'bookit_confirmed_v2_url', home_url( '/booking-confirmed-v2/' ) ), '/' );
+			$success_url = $v2_base . '?session_id={CHECKOUT_SESSION_ID}';
+		}
+
 		return array(
 			'payment_method_types' => array( 'card' ),
 			'line_items'          => $line_items,
 			'mode'                => 'payment',
-			'success_url'         => home_url( '/booking-confirmed?session_id={CHECKOUT_SESSION_ID}' ),
+			'success_url'         => $success_url,
 			'cancel_url'          => home_url( '/book?step=5&cancelled=1' ),
 			'customer_email'     => $session_data['customer_email'],
 			'metadata'            => $metadata,
