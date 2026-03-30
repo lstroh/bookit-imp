@@ -139,6 +139,35 @@ class Bookit_Email_Queue {
 	}
 
 	/**
+	 * Reset items stuck in 'processing' back to 'pending'.
+	 *
+	 * Protects against PHP process kills (timeout / memory limit)
+	 * on shared hosting that leave items permanently in 'processing'.
+	 * Any item that has been in 'processing' for more than 5 minutes
+	 * is considered stuck and is re-queued for retry.
+	 *
+	 * @param int $stale_minutes Items older than this are reset. Default 5.
+	 * @return int Number of rows reset.
+	 */
+	public static function rescue_stuck_processing( int $stale_minutes = 5 ): int {
+		global $wpdb;
+
+		$cutoff = gmdate( 'Y-m-d H:i:s', time() - ( $stale_minutes * 60 ) );
+
+		$rows_affected = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$wpdb->prefix}bookit_email_queue
+				 SET status = 'pending'
+				 WHERE status = 'processing'
+				   AND updated_at <= %s",
+				$cutoff
+			)
+		);
+
+		return is_int( $rows_affected ) ? $rows_affected : 0;
+	}
+
+	/**
 	 * Cancel all pending rows for a booking.
 	 *
 	 * @param int $booking_id Booking ID.

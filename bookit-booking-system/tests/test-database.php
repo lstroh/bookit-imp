@@ -13,7 +13,7 @@ use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 class Test_Database extends TestCase {
 
 	/**
-	 * Test all 10 tables exist.
+	 * Test core plugin tables exist (legacy wp_bookings_working_hours removed in migration 0011).
 	 */
 	public function test_all_tables_exist() {
 		global $wpdb;
@@ -27,7 +27,7 @@ class Test_Database extends TestCase {
 			'bookings_customers',
 			'bookings',
 			'bookings_payments',
-			'bookings_working_hours',
+			'bookings_staff_working_hours',
 			'bookings_settings',
 		);
 

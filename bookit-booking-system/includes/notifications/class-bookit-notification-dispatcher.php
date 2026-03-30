@@ -42,6 +42,8 @@ class Bookit_Notification_Dispatcher {
 	 * @return void
 	 */
 	public static function process_email_queue_item( int $queue_id ): void {
+		Bookit_Email_Queue::rescue_stuck_processing();
+
 		$row = Bookit_Email_Queue::get_row( $queue_id );
 		if ( null === $row || 'pending' !== (string) $row['status'] ) {
 			return;

@@ -4,8 +4,14 @@
  * This file documents the complete database schema for reference.
  * DO NOT run this file directly - tables are created via Bookit_Database class.
  * 
- * Total Tables: 17
- * Last Updated: 2026-03-08
+ * Total Tables: 16
+ * Last Updated: 2026-03-30
+ *
+ * Migration 11: Drop legacy working hours table
+ * Sprint: DB-Audit-Fixes-2
+ * Dropped table: wp_bookings_working_hours (superseded by
+ *   wp_bookings_staff_working_hours)
+ * Migration file: database/migrations/0011-drop-working-hours-table.php
  */
 
 -- ============================================
@@ -209,25 +215,7 @@ CREATE TABLE wp_bookings_payments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- TABLE 9: wp_bookings_working_hours
--- ============================================
-CREATE TABLE wp_bookings_working_hours (
-	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	staff_id BIGINT UNSIGNED NOT NULL,
-	day_of_week TINYINT UNSIGNED NOT NULL COMMENT '0=Sunday, 6=Saturday',
-	start_time TIME NOT NULL,
-	end_time TIME NOT NULL,
-	is_active TINYINT(1) DEFAULT 1,
-	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-	PRIMARY KEY (id),
-	KEY idx_staff_id (staff_id),
-	KEY idx_day_of_week (day_of_week),
-	KEY idx_is_active (is_active)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- ============================================
--- TABLE 10: wp_bookings_settings (Key-Value Store)
+-- TABLE 9: wp_bookings_settings (Key-Value Store)
 -- ============================================
 CREATE TABLE wp_bookings_settings (
 	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -243,7 +231,7 @@ CREATE TABLE wp_bookings_settings (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- TABLE 11: wp_bookings_staff_working_hours
+-- TABLE 10: wp_bookings_staff_working_hours
 -- ============================================
 -- Extended working hours with breaks, exceptions, and date-specific overrides.
 -- Created via migration: database/migrations/migration-add-staff-working-hours.php
@@ -270,7 +258,7 @@ CREATE TABLE wp_bookings_staff_working_hours (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- TABLE 12: wp_bookings_idempotency
+-- TABLE 11: wp_bookings_idempotency
 -- ============================================
 -- Tracks idempotency keys to prevent duplicate operations
 -- (Stripe checkouts, emails, webhooks). Sprint 2, Task 6.
@@ -292,7 +280,7 @@ CREATE TABLE wp_bookings_idempotency (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- TABLE 13: wp_bookings_email_templates
+-- TABLE 12: wp_bookings_email_templates
 -- ============================================
 -- Email templates for booking notifications.
 -- Created via class-bookit-activator.php on activation.
@@ -310,7 +298,7 @@ CREATE TABLE wp_bookings_email_templates (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- TABLE 14: wp_bookings_audit_log
+-- TABLE 13: wp_bookings_audit_log
 -- ============================================
 -- Immutable audit trail for admin/system actions and GDPR traceability.
 -- Created via migration: database/migrations/0002-add-audit-log.php
@@ -333,7 +321,7 @@ CREATE TABLE wp_bookings_audit_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- TABLE 15: wp_bookings_package_types
+-- TABLE 14: wp_bookings_package_types
 -- ============================================
 -- Created via migration: database/migrations/0005-create-package-types-table.php
 CREATE TABLE wp_bookings_package_types (
@@ -355,7 +343,7 @@ CREATE TABLE wp_bookings_package_types (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- TABLE 16: wp_bookings_customer_packages
+-- TABLE 15: wp_bookings_customer_packages
 -- ============================================
 -- Created via migration: database/migrations/0006-create-customer-packages-table.php
 CREATE TABLE wp_bookings_customer_packages (
@@ -385,7 +373,7 @@ CREATE TABLE wp_bookings_customer_packages (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- TABLE 17: wp_bookings_package_redemptions
+-- TABLE 16: wp_bookings_package_redemptions
 -- ============================================
 -- Created via migration: database/migrations/0007-create-package-redemptions-table.php
 CREATE TABLE wp_bookings_package_redemptions (

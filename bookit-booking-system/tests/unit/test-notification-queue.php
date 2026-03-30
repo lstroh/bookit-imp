@@ -225,6 +225,106 @@ class Test_Notification_Queue extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @covers Bookit_Email_Queue::rescue_stuck_processing
+	 */
+	public function test_rescue_stuck_processing_resets_stale_items() {
+		global $wpdb;
+
+		$id = $this->insert_minimal_queue_row();
+
+		$wpdb->update(
+			$wpdb->prefix . 'bookit_email_queue',
+			array(
+				'status'     => 'processing',
+				'updated_at' => gmdate( 'Y-m-d H:i:s', time() - 600 ),
+			),
+			array( 'id' => $id ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
+
+		Bookit_Email_Queue::rescue_stuck_processing( 5 );
+
+		$row = Bookit_Email_Queue::get_row( $id );
+		$this->assertSame( 'pending', $row['status'] );
+	}
+
+	/**
+	 * @covers Bookit_Email_Queue::rescue_stuck_processing
+	 */
+	public function test_rescue_stuck_processing_ignores_recent_processing_items() {
+		global $wpdb;
+
+		$id = $this->insert_minimal_queue_row();
+
+		$now = gmdate( 'Y-m-d H:i:s' );
+		$wpdb->update(
+			$wpdb->prefix . 'bookit_email_queue',
+			array(
+				'status'     => 'processing',
+				'updated_at' => $now,
+			),
+			array( 'id' => $id ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
+
+		Bookit_Email_Queue::rescue_stuck_processing( 5 );
+
+		$row = Bookit_Email_Queue::get_row( $id );
+		$this->assertSame( 'processing', $row['status'] );
+	}
+
+	/**
+	 * @covers Bookit_Email_Queue::rescue_stuck_processing
+	 */
+	public function test_rescue_stuck_processing_returns_count() {
+		global $wpdb;
+
+		$id_1 = (int) Bookit_Email_Queue::insert(
+			array(
+				'email_type'      => 'customer_confirmation',
+				'recipient_email' => 'stale1@example.com',
+				'html_body'       => '<p>A</p>',
+				'scheduled_at'    => gmdate( 'Y-m-d H:i:s', time() - 60 ),
+			)
+		);
+		$id_2 = (int) Bookit_Email_Queue::insert(
+			array(
+				'email_type'      => 'customer_confirmation',
+				'recipient_email' => 'stale2@example.com',
+				'html_body'       => '<p>B</p>',
+				'scheduled_at'    => gmdate( 'Y-m-d H:i:s', time() - 60 ),
+			)
+		);
+
+		$stale = gmdate( 'Y-m-d H:i:s', time() - 600 );
+		$wpdb->update(
+			$wpdb->prefix . 'bookit_email_queue',
+			array(
+				'status'     => 'processing',
+				'updated_at' => $stale,
+			),
+			array( 'id' => $id_1 ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
+		$wpdb->update(
+			$wpdb->prefix . 'bookit_email_queue',
+			array(
+				'status'     => 'processing',
+				'updated_at' => $stale,
+			),
+			array( 'id' => $id_2 ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
+
+		$count = Bookit_Email_Queue::rescue_stuck_processing( 5 );
+		$this->assertSame( 2, $count );
+	}
+
+	/**
 	 * Ensure queue table exists for unit tests.
 	 *
 	 * @return void

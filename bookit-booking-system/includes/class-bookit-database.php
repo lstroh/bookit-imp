@@ -63,7 +63,6 @@ class Bookit_Database {
 			self::create_customers_table( $table_prefix, $charset_collate );
 			self::create_bookings_table( $table_prefix, $charset_collate );
 			self::create_payments_table( $table_prefix, $charset_collate );
-			self::create_working_hours_table( $table_prefix, $charset_collate );
 			self::create_settings_table( $table_prefix, $charset_collate );
 
 			// Sprint 2: Idempotency table (Task 6).
@@ -75,7 +74,7 @@ class Bookit_Database {
 			Bookit_Logger::info(
 				'Database tables created successfully',
 				array(
-					'tables_created' => 11,
+					'tables_created' => 10,
 				)
 			);
 		} else {
@@ -281,6 +280,7 @@ class Bookit_Database {
 
 		$sql = "CREATE TABLE $table_name (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			booking_reference VARCHAR(12) NULL COMMENT 'Human-readable booking reference (BKYYMM-XXXX)',
 			customer_id BIGINT UNSIGNED NOT NULL,
 			service_id BIGINT UNSIGNED NOT NULL,
 			staff_id BIGINT UNSIGNED NOT NULL,
@@ -309,6 +309,7 @@ class Bookit_Database {
 			deleted_at DATETIME NULL DEFAULT NULL,
 			PRIMARY KEY (id),
 			UNIQUE KEY unique_booking_slot (staff_id, booking_date, start_time),
+			UNIQUE KEY uq_booking_reference (booking_reference),
 			KEY idx_customer_id (customer_id),
 			KEY idx_service_id (service_id),
 			KEY idx_staff_id (staff_id),
@@ -362,6 +363,11 @@ class Bookit_Database {
 	}
 
 	/**
+	 * @deprecated Superseded by wp_bookings_staff_working_hours
+	 * (migration-add-staff-working-hours.php). Table removed via
+	 * migration 0011-drop-working-hours-table.php. Method retained
+	 * to avoid breaking any subclasses.
+	 *
 	 * Create wp_bookings_working_hours table.
 	 *
 	 * @param string $table_prefix    WordPress table prefix.
@@ -467,7 +473,6 @@ class Bookit_Database {
 			$table_prefix . 'bookings_payments',
 			$table_prefix . 'bookings',
 			$table_prefix . 'bookings_staff_working_hours',
-			$table_prefix . 'bookings_working_hours',
 			$table_prefix . 'bookings_customers',
 			$table_prefix . 'bookings_settings',
 			// Part 1 tables (existing).
