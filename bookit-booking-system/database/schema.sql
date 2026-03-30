@@ -153,6 +153,8 @@ CREATE TABLE wp_bookings (
 	customer_package_id BIGINT UNSIGNED NULL COMMENT 'Optional link to redeemed customer package',
 	stripe_session_id VARCHAR(255) NULL DEFAULT NULL COMMENT 'Stripe Checkout session ID for lookup after payment',
 	special_requests TEXT NULL COMMENT 'Special requests from customer during booking',
+	cooling_off_waiver_given TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Consumer Contracts Regulations 2013 — customer waived 14-day cooling-off right',
+	cooling_off_waiver_at DATETIME NULL COMMENT 'UTC timestamp when waiver was accepted',
 	staff_notes TEXT NULL COMMENT 'Internal staff notes',
 	cancellation_reason TEXT NULL,
 	cancelled_at DATETIME NULL,

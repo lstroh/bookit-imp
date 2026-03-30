@@ -401,6 +401,7 @@ class Bookit_Database {
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			setting_key VARCHAR(100) NOT NULL,
 			setting_value LONGTEXT NULL,
+			setting_type ENUM('string','integer','boolean','json') DEFAULT 'string',
 			autoload TINYINT(1) DEFAULT 1 COMMENT 'Load on plugin init like wp_options',
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

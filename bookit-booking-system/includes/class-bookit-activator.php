@@ -191,19 +191,6 @@ class Bookit_Activator {
 		}
 		global $wpdb;  // Declare global first
 
-		// Add setting_type column to settings table if missing.
-		$column_exists = $wpdb->get_results(
-			"SHOW COLUMNS FROM {$wpdb->prefix}bookings_settings LIKE 'setting_type'"
-		);
-
-		if ( empty( $column_exists ) ) {
-			$wpdb->query(
-				"ALTER TABLE {$wpdb->prefix}bookings_settings
-				ADD COLUMN setting_type ENUM('string', 'integer', 'boolean', 'json') DEFAULT 'string'
-				AFTER setting_value"
-			);
-		}
-
 		// Seed dashboard branding defaults if missing.
 		$branding_defaults = array(
 			'branding_logo_url'           => array(
