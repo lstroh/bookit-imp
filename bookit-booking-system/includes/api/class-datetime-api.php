@@ -30,6 +30,26 @@ class Bookit_DateTime_API {
 	 * @return void
 	 */
 	public function register_routes() {
+		$timeslots_args = array(
+			'date'       => array(
+				'required'          => true,
+				'type'              => 'string',
+				'format'            => 'YYYY-MM-DD',
+				'validate_callback' => array( $this, 'validate_date_param' ),
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'service_id' => array(
+				'required'          => false,
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+			),
+			'staff_id'   => array(
+				'required'          => false,
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+			),
+		);
+
 		register_rest_route(
 			'bookit/v1',
 			'/timeslots',
@@ -37,15 +57,7 @@ class Bookit_DateTime_API {
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( $this, 'get_timeslots' ),
 				'permission_callback' => '__return_true',
-				'args'                => array(
-					'date' => array(
-						'required'          => true,
-						'type'              => 'string',
-						'format'            => 'YYYY-MM-DD',
-						'validate_callback' => array( $this, 'validate_date_param' ),
-						'sanitize_callback' => 'sanitize_text_field',
-					),
-				),
+				'args'                => $timeslots_args,
 			)
 		);
 
@@ -56,15 +68,7 @@ class Bookit_DateTime_API {
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( $this, 'get_timeslots' ),
 				'permission_callback' => '__return_true',
-				'args'                => array(
-					'date' => array(
-						'required'          => true,
-						'type'              => 'string',
-						'format'            => 'YYYY-MM-DD',
-						'validate_callback' => array( $this, 'validate_date_param' ),
-						'sanitize_callback' => 'sanitize_text_field',
-					),
-				),
+				'args'                => $timeslots_args,
 			)
 		);
 
@@ -174,10 +178,19 @@ class Bookit_DateTime_API {
 			);
 		}
 
-		Bookit_Session_Manager::init();
-		$wizard_data = Bookit_Session_Manager::get_data();
-		$service_id  = isset( $wizard_data['service_id'] ) ? absint( $wizard_data['service_id'] ) : 0;
-		$staff_id    = isset( $wizard_data['staff_id'] ) ? absint( $wizard_data['staff_id'] ) : 0;
+		$service_id = (int) $request->get_param( 'service_id' );
+		$staff_id   = (int) $request->get_param( 'staff_id' );
+
+		if ( $service_id <= 0 || $staff_id <= 0 ) {
+			Bookit_Session_Manager::init();
+			$wizard_data = Bookit_Session_Manager::get_data();
+			if ( $service_id <= 0 ) {
+				$service_id = isset( $wizard_data['service_id'] ) ? absint( $wizard_data['service_id'] ) : 0;
+			}
+			if ( $staff_id <= 0 ) {
+				$staff_id = isset( $wizard_data['staff_id'] ) ? absint( $wizard_data['staff_id'] ) : 0;
+			}
+		}
 
 		if ( ! $service_id ) {
 			return new WP_Error(

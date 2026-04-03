@@ -17,7 +17,7 @@ global $wpdb;
 $booking = $wpdb->get_row(
 	$wpdb->prepare(
 		"SELECT b.id, b.booking_reference, b.booking_date, b.start_time,
-				b.end_time, b.status, b.magic_link_token,
+				b.end_time, b.status, b.magic_link_token, b.service_id, b.staff_id,
 				s.name AS service_name,
 				st.first_name AS staff_first_name,
 				st.last_name AS staff_last_name
@@ -105,7 +105,59 @@ $staff_label   = trim(
 	trim( (string) ( $booking['staff_first_name'] ?? '' ) ) . ' ' . trim( (string) ( $booking['staff_last_name'] ?? '' ) )
 );
 
-$min_date = date( 'Y-m-d', strtotime( '+1 day' ) );
+$booking_service_id = isset( $booking['service_id'] ) ? absint( $booking['service_id'] ) : 0;
+$booking_staff_id   = isset( $booking['staff_id'] ) ? absint( $booking['staff_id'] ) : 0;
+
+$dow_labels = array( 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' );
+$day_cells  = array();
+$display_month = '';
+
+if ( ! $within_window ) {
+	// For the calendar: current month (same grid logic as booking-wizard-v2-step-3.php).
+	$today         = new DateTime( 'now', $tz );
+	$display_month = $today->format( 'Y-m' );
+	$cal_year      = (int) $today->format( 'Y' );
+	$cal_month     = (int) $today->format( 'm' );
+
+	require_once BOOKIT_PLUGIN_DIR . 'includes/models/class-datetime-model.php';
+	$datetime_model = new Bookit_DateTime_Model();
+
+	$view_year          = $cal_year;
+	$view_month_num     = $cal_month;
+	$first_day_of_month = mktime( 0, 0, 0, $view_month_num, 1, $view_year );
+	$days_in_month      = (int) date( 't', $first_day_of_month );
+	$first_dow          = (int) date( 'N', $first_day_of_month );
+	$today_str          = date( 'Y-m-d' );
+
+	$pad_count = $first_dow - 1;
+	for ( $i = 0; $i < $pad_count; $i++ ) {
+		$day_cells[] = array( 'type' => 'pad' );
+	}
+	for ( $day = 1; $day <= $days_in_month; $day++ ) {
+		$date_str = sprintf( '%04d-%02d-%02d', $view_year, $view_month_num, $day );
+		$classes  = array( 'bookit-v2-day' );
+		$is_past  = $datetime_model->is_past_date( $date_str );
+		$is_bank  = $datetime_model->is_bank_holiday( $date_str );
+		$disabled = $is_past || $is_bank;
+
+		if ( $date_str === $today_str ) {
+			$classes[] = 'bookit-v2-day--today';
+		}
+		if ( $disabled ) {
+			$classes[] = 'bookit-v2-day--disabled';
+		} else {
+			$classes[] = 'bookit-v2-day--available';
+		}
+
+		$day_cells[] = array(
+			'type'     => 'day',
+			'day'      => $day,
+			'date_str' => $date_str,
+			'classes'  => $classes,
+			'disabled' => $disabled,
+		);
+	}
+}
 ?>
 <div class="bookit-confirmation-page bookit-magic-link-page">
 	<div class="bookit-confirmation-card">
@@ -171,35 +223,60 @@ $min_date = date( 'Y-m-d', strtotime( '+1 day' ) );
 		<div class="bookit-magic-action" id="bookit-reschedule-action">
 			<h3><?php esc_html_e( 'Choose a new date and time', 'bookit-booking-system' ); ?></h3>
 
-			<div class="bookit-magic-message" id="bookit-reschedule-message" style="display:none;" role="status" aria-live="polite"></div>
+			<div class="bookit-magic-message" id="bookit-reschedule-message"
+				style="display:none;" role="status" aria-live="polite"></div>
 
-			<div class="bookit-form-row">
-				<label for="bookit-new-date">
-					<?php esc_html_e( 'New Date', 'bookit-booking-system' ); ?>
-				</label>
-				<input type="date"
-					id="bookit-new-date"
-					class="bookit-input"
-					min="<?php echo esc_attr( $min_date ); ?>">
-			</div>
+			<div class="bookit-v2-wizard-container">
+				<!-- Calendar — same PHP grid pattern as booking-wizard-v2-step-3.php (single month, no nav). -->
+				<div class="bookit-v2-calendar" id="bookit-reschedule-calendar"
+					data-staff-id="<?php echo esc_attr( (string) $booking_staff_id ); ?>"
+					data-service-id="<?php echo esc_attr( (string) $booking_service_id ); ?>"
+					data-timeslots-url="<?php echo esc_url( rest_url( 'bookit/v1/wizard/timeslots' ) ); ?>">
 
-			<div class="bookit-form-row">
-				<label for="bookit-new-time">
-					<?php esc_html_e( 'New Time (HH:MM)', 'bookit-booking-system' ); ?>
-				</label>
-				<input type="time"
-					id="bookit-new-time"
-					class="bookit-input">
-			</div>
+					<div class="bookit-v2-calendar-header">
+						<span class="bookit-v2-calendar-nav bookit-v2-calendar-nav--hidden" aria-hidden="true"></span>
+						<span class="bookit-v2-calendar-title"><?php echo esc_html( date_i18n( 'F Y', strtotime( $display_month . '-01' ) ) ); ?></span>
+						<span class="bookit-v2-calendar-nav bookit-v2-calendar-nav--hidden" aria-hidden="true"></span>
+					</div>
+					<div class="bookit-v2-calendar-grid" role="grid" aria-label="<?php esc_attr_e( 'Calendar', 'bookit-booking-system' ); ?>">
+						<?php foreach ( $dow_labels as $dow_label ) : ?>
+							<div class="bookit-v2-calendar-dow"><?php echo esc_html( $dow_label ); ?></div>
+						<?php endforeach; ?>
+						<?php foreach ( $day_cells as $cell ) : ?>
+							<?php if ( 'pad' === $cell['type'] ) : ?>
+								<span class="bookit-v2-day-empty"></span>
+							<?php else : ?>
+								<button
+									type="button"
+									class="<?php echo esc_attr( implode( ' ', $cell['classes'] ) ); ?>"
+									data-date="<?php echo esc_attr( $cell['date_str'] ); ?>"
+									<?php echo $cell['disabled'] ? ' disabled aria-disabled="true"' : ''; ?>
+								><?php echo esc_html( (string) $cell['day'] ); ?></button>
+							<?php endif; ?>
+						<?php endforeach; ?>
+					</div>
+				</div><!-- .bookit-v2-calendar -->
+
+				<div class="bookit-v2-slots" id="bookit-reschedule-slots" style="display:none;">
+					<p class="bookit-v2-slots__loading" id="bookit-reschedule-slots-loading">
+						<?php esc_html_e( 'Loading available times…', 'bookit-booking-system' ); ?>
+					</p>
+					<div class="bookit-v2-slots-grid bookit-v2-slots__list" id="bookit-reschedule-slots-list"></div>
+					<p class="bookit-v2-slots__empty" id="bookit-reschedule-slots-empty"
+						style="display:none;">
+						<?php esc_html_e( 'No available times on this date. Please choose another day.', 'bookit-booking-system' ); ?>
+					</p>
+				</div>
+			</div><!-- .bookit-v2-wizard-container -->
 
 			<button
 				type="button"
 				class="bookit-btn-primary"
 				id="bookit-reschedule-confirm"
+				disabled
 				data-booking-id="<?php echo esc_attr( (string) $booking_id ); ?>"
 				data-token="<?php echo esc_attr( $token ); ?>"
 				data-rest-url="<?php echo esc_url( $rest_url . 'reschedule' ); ?>"
-				data-busy-label="<?php esc_attr_e( 'Rescheduling…', 'bookit-booking-system' ); ?>"
 			>
 				<?php esc_html_e( 'Confirm Reschedule', 'bookit-booking-system' ); ?>
 			</button>
@@ -208,63 +285,164 @@ $min_date = date( 'Y-m-d', strtotime( '+1 day' ) );
 
 	</div>
 </div>
+	<?php if ( ! $within_window ) : ?>
 <script>
 (function () {
-	var btn = document.getElementById('bookit-reschedule-confirm');
-	if (!btn) return;
+	var calendar    = document.getElementById('bookit-reschedule-calendar');
+	var slotsWrap   = document.getElementById('bookit-reschedule-slots');
+	var slotsList   = document.getElementById('bookit-reschedule-slots-list');
+	var slotsEmpty  = document.getElementById('bookit-reschedule-slots-empty');
+	var slotsLoading= document.getElementById('bookit-reschedule-slots-loading');
+	var confirmBtn  = document.getElementById('bookit-reschedule-confirm');
+	var msgEl       = document.getElementById('bookit-reschedule-message');
 
-	var defaultLabel = '<?php echo esc_js( __( 'Confirm Reschedule', 'bookit-booking-system' ) ); ?>';
+	if (!calendar || !confirmBtn) return;
 
-	btn.addEventListener('click', function () {
-		var newDate = document.getElementById('bookit-new-date').value;
-		var newTime = document.getElementById('bookit-new-time').value;
-		var msg     = document.getElementById('bookit-reschedule-message');
+	var staffId     = calendar.dataset.staffId;
+	var serviceId   = calendar.dataset.serviceId;
+	var timeslotsUrl= calendar.dataset.timeslotsUrl;
+	var selectedDate= null;
+	var selectedTime= null;
+	var emptySlotsDefault = slotsEmpty ? slotsEmpty.textContent : '';
 
-		if (!newDate || !newTime) {
-			msg.style.display   = 'block';
-			msg.className       = 'bookit-magic-message bookit-magic-message--error';
-			msg.textContent     = '<?php echo esc_js( __( 'Please select a date and time.', 'bookit-booking-system' ) ); ?>';
-			return;
+	function flattenSlotsPayload(data) {
+		if (!data) return [];
+		if (Array.isArray(data)) return data;
+		var raw = data.slots;
+		if (!raw) return [];
+		if (Array.isArray(raw)) return raw;
+		var out = [];
+		if (raw.morning) out = out.concat(raw.morning);
+		if (raw.afternoon) out = out.concat(raw.afternoon);
+		if (raw.evening) out = out.concat(raw.evening);
+		return out;
+	}
+
+	function formatSlotLabel(slot) {
+		var t = typeof slot === 'string' ? slot : (slot && slot.time ? slot.time : '');
+		if (!t) return '';
+		var parts = t.split(':');
+		if (parts.length >= 2) return parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
+		return t;
+	}
+
+	function normalizeTimeForApi(slot) {
+		var t = typeof slot === 'string' ? slot : (slot && slot.time ? slot.time : '');
+		if (!t) return '';
+		var parts = t.split(':');
+		if (parts.length === 2) return parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
+		if (parts.length >= 3) return parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0') + ':' + parts[2].padStart(2, '0');
+		return t;
+	}
+
+	calendar.addEventListener('click', function (e) {
+		var day = e.target.closest('[data-date]');
+		if (!day || day.classList.contains('bookit-v2-day--disabled')) return;
+
+		calendar.querySelectorAll('.bookit-v2-day--selected')
+			.forEach(function (d) { d.classList.remove('bookit-v2-day--selected'); });
+		day.classList.add('bookit-v2-day--selected');
+
+		selectedDate = day.dataset.date;
+		selectedTime = null;
+		confirmBtn.disabled = true;
+
+		slotsWrap.style.display   = 'block';
+		slotsLoading.style.display= 'block';
+		slotsList.innerHTML       = '';
+		slotsEmpty.style.display  = 'none';
+		if (slotsEmpty && emptySlotsDefault) {
+			slotsEmpty.textContent = emptySlotsDefault;
 		}
 
-		btn.disabled    = true;
-		btn.textContent = btn.getAttribute('data-busy-label') || 'Rescheduling\u2026';
+		var url = timeslotsUrl
+			+ '?staff_id=' + encodeURIComponent(staffId)
+			+ '&service_id=' + encodeURIComponent(serviceId)
+			+ '&date=' + encodeURIComponent(selectedDate);
 
-		fetch(btn.dataset.restUrl, {
+		fetch(url, { credentials: 'same-origin' })
+			.then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+			.then(function (result) {
+				slotsLoading.style.display = 'none';
+				var data = result.body;
+				if (!result.ok && data && data.code) {
+					slotsEmpty.style.display = 'block';
+					slotsEmpty.textContent = (data.message) || '<?php echo esc_js( __( 'No available times on this date. Please choose another day.', 'bookit-booking-system' ) ); ?>';
+					return;
+				}
+				var slots = flattenSlotsPayload(data);
+				if (!slots.length) {
+					slotsEmpty.style.display = 'block';
+					return;
+				}
+				slots.forEach(function (slot) {
+					var timeVal = normalizeTimeForApi(slot);
+					var label   = formatSlotLabel(slot);
+					var btn     = document.createElement('button');
+					btn.type      = 'button';
+					btn.className = 'bookit-v2-slot bookit-v2-slot--available';
+					btn.textContent = label;
+					btn.dataset.time = timeVal;
+
+					btn.addEventListener('click', function () {
+						slotsList.querySelectorAll('.bookit-v2-slot--selected')
+							.forEach(function (s) { s.classList.remove('bookit-v2-slot--selected'); });
+						btn.classList.add('bookit-v2-slot--selected');
+						selectedTime = timeVal;
+						confirmBtn.disabled = false;
+					});
+
+					slotsList.appendChild(btn);
+				});
+			})
+			.catch(function () {
+				slotsLoading.style.display = 'none';
+				slotsEmpty.style.display   = 'block';
+				slotsEmpty.textContent     = '<?php echo esc_js( __( 'Could not load available times. Please try again.', 'bookit-booking-system' ) ); ?>';
+			});
+	});
+
+	confirmBtn.addEventListener('click', function () {
+		if (!selectedDate || !selectedTime) return;
+
+		confirmBtn.disabled    = true;
+		confirmBtn.textContent = '<?php echo esc_js( __( 'Rescheduling…', 'bookit-booking-system' ) ); ?>';
+
+		fetch(confirmBtn.dataset.restUrl, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
-				booking_id: parseInt(btn.dataset.bookingId, 10),
-				token:      btn.dataset.token,
-				new_date:   newDate,
-				new_time:   newTime
+				booking_id: parseInt(confirmBtn.dataset.bookingId, 10),
+				token:      confirmBtn.dataset.token,
+				new_date:   selectedDate,
+				new_time:   selectedTime
 			})
 		})
-		.then(function (r) { return r.json(); })
-		.then(function (data) {
-			msg.style.display = 'block';
-			if (data.success) {
-				msg.className   = 'bookit-magic-message bookit-magic-message--success';
-				msg.textContent = '<?php echo esc_js( __( 'Your booking has been rescheduled to ', 'bookit-booking-system' ) ); ?>'
-					+ (data.new_date || '') + ' <?php echo esc_js( __( 'at', 'bookit-booking-system' ) ); ?> ' + (data.new_time || '') + '.';
-				var actionEl = document.getElementById('bookit-reschedule-action');
-				if (actionEl) {
-					actionEl.querySelectorAll('input, button').forEach(function (el) { el.disabled = true; });
+			.then(function (r) { return r.json(); })
+			.then(function (data) {
+				msgEl.style.display = 'block';
+				if (data.success) {
+					msgEl.className   = 'bookit-magic-message bookit-magic-message--success';
+					msgEl.textContent = '<?php echo esc_js( __( 'Your booking has been rescheduled to ', 'bookit-booking-system' ) ); ?>'
+						+ (data.new_date || '') + ' <?php echo esc_js( __( 'at', 'bookit-booking-system' ) ); ?> ' + (data.new_time || '') + '.';
+					document.getElementById('bookit-reschedule-action')
+						.querySelectorAll('button, .bookit-v2-day')
+						.forEach(function (el) { el.style.pointerEvents = 'none'; });
+				} else {
+					msgEl.className      = 'bookit-magic-message bookit-magic-message--error';
+					msgEl.textContent    = (data.message) || '<?php echo esc_js( __( 'Something went wrong. Please try again.', 'bookit-booking-system' ) ); ?>';
+					confirmBtn.disabled  = false;
+					confirmBtn.textContent = '<?php echo esc_js( __( 'Confirm Reschedule', 'bookit-booking-system' ) ); ?>';
 				}
-			} else {
-				msg.className   = 'bookit-magic-message bookit-magic-message--error';
-				msg.textContent = (data.message) || '<?php echo esc_js( __( 'Something went wrong. Please try again.', 'bookit-booking-system' ) ); ?>';
-				btn.disabled    = false;
-				btn.textContent = defaultLabel;
-			}
-		})
-		.catch(function () {
-			msg.style.display = 'block';
-			msg.className     = 'bookit-magic-message bookit-magic-message--error';
-			msg.textContent   = '<?php echo esc_js( __( 'A network error occurred. Please try again.', 'bookit-booking-system' ) ); ?>';
-			btn.disabled      = false;
-			btn.textContent   = defaultLabel;
-		});
+			})
+			.catch(function () {
+				msgEl.style.display    = 'block';
+				msgEl.className        = 'bookit-magic-message bookit-magic-message--error';
+				msgEl.textContent      = '<?php echo esc_js( __( 'A network error occurred. Please try again.', 'bookit-booking-system' ) ); ?>';
+				confirmBtn.disabled    = false;
+				confirmBtn.textContent = '<?php echo esc_js( __( 'Confirm Reschedule', 'bookit-booking-system' ) ); ?>';
+			});
 	});
 }());
 </script>
+	<?php endif; ?>

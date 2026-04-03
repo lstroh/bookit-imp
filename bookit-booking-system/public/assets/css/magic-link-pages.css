@@ -226,6 +226,22 @@
 	margin: 0 0 1rem;
 }
 
+/* Reschedule calendar (inherits .bookit-v2-* from booking-wizard-v2.css via .bookit-v2-wizard-container) */
+.bookit-magic-link-page .bookit-v2-wizard-container {
+	max-width: 420px;
+}
+
+.bookit-magic-link-page .bookit-v2-slots {
+	margin-top: 0.5rem;
+}
+
+.bookit-magic-link-page .bookit-v2-slots__loading,
+.bookit-magic-link-page .bookit-v2-slots__empty {
+	font-size: 0.8125rem;
+	color: var(--bookit-text-muted);
+	margin: 0 0 0.75rem;
+}
+
 @media (max-width: 500px) {
 	.bookit-magic-link-page .bookit-confirmation-card {
 		padding: 1.125rem 1rem;
