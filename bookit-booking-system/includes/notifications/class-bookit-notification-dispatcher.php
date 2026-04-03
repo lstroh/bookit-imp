@@ -80,6 +80,7 @@ class Bookit_Notification_Dispatcher {
 		if ( ! is_array( $params ) ) {
 			$params = array();
 		}
+		$params['email_type'] = (string) ( $row['email_type'] ?? '' );
 
 		$result = $provider->send(
 			$recipient,

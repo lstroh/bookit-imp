@@ -52,6 +52,34 @@ class Test_Notification_Settings_API extends WP_UnitTestCase {
 	 * @covers Bookit_Dashboard_Bookings_API::update_settings
 	 * @covers Bookit_Dashboard_Bookings_API::get_settings
 	 */
+	public function test_template_id_settings_are_saved_and_retrieved() {
+		$admin = $this->create_test_staff( array( 'role' => 'admin' ) );
+		$this->login_as( $admin, 'admin' );
+
+		$update_request = new WP_REST_Request( 'POST', '/' . $this->namespace . '/dashboard/settings' );
+		$update_request->set_body_params(
+			array(
+				'settings' => array(
+					'brevo_template_booking_confirmed' => '42',
+				),
+			)
+		);
+		$update_response = rest_get_server()->dispatch( $update_request );
+		$this->assertEquals( 200, $update_response->get_status() );
+
+		$get_request = new WP_REST_Request( 'GET', '/' . $this->namespace . '/dashboard/settings' );
+		$get_request->set_param( 'keys', 'brevo_template_booking_confirmed' );
+		$get_response = rest_get_server()->dispatch( $get_request );
+		$get_data     = $get_response->get_data();
+
+		$this->assertEquals( 200, $get_response->get_status() );
+		$this->assertSame( '42', $get_data['settings']['brevo_template_booking_confirmed'] );
+	}
+
+	/**
+	 * @covers Bookit_Dashboard_Bookings_API::update_settings
+	 * @covers Bookit_Dashboard_Bookings_API::get_settings
+	 */
 	public function test_email_provider_setting_is_saved_and_retrieved() {
 		$admin = $this->create_test_staff( array( 'role' => 'admin' ) );
 		$this->login_as( $admin, 'admin' );

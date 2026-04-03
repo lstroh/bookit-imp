@@ -7,6 +7,27 @@
  */
 
 /**
+ * Test double that captures SendTransacEmailRequest without calling the Brevo API.
+ */
+class Bookit_Brevo_Email_Provider_TestDouble extends Bookit_Brevo_Email_Provider {
+
+	/**
+	 * Last request passed to invoke_brevo_send.
+	 *
+	 * @var \Brevo\TransactionalEmails\Requests\SendTransacEmailRequest|null
+	 */
+	public $last_request = null;
+
+	/**
+	 * {@inheritdoc}
+	 */
+	protected function invoke_brevo_send( string $api_key, \Brevo\TransactionalEmails\Requests\SendTransacEmailRequest $request ): bool|\WP_Error {
+		$this->last_request = $request;
+		return true;
+	}
+}
+
+/**
  * Test Brevo email provider configuration and send guardrails.
  */
 class Test_Brevo_Email_Provider extends WP_UnitTestCase {
@@ -81,6 +102,55 @@ class Test_Brevo_Email_Provider extends WP_UnitTestCase {
 	public function test_get_slug_returns_brevo() {
 		$provider = new Bookit_Brevo_Email_Provider();
 		$this->assertSame( 'brevo', $provider->get_slug() );
+	}
+
+	/**
+	 * @covers Bookit_Brevo_Email_Provider::send
+	 */
+	public function test_brevo_provider_uses_template_id_when_set() {
+		$this->set_setting( 'brevo_api_key', 'sk_test_brevo_key' );
+		$this->set_setting( 'brevo_template_booking_confirmed', '42' );
+
+		$provider = new Bookit_Brevo_Email_Provider_TestDouble();
+		$result   = $provider->send(
+			array(
+				'email' => 'test@example.com',
+				'name'  => 'Test',
+			),
+			'Subject Line',
+			'<p>HTML body</p>',
+			array( 'email_type' => 'customer_confirmation' )
+		);
+
+		$this->assertTrue( $result );
+		$this->assertNotNull( $provider->last_request );
+		$this->assertSame( 42, $provider->last_request->templateId );
+		$this->assertNull( $provider->last_request->htmlContent );
+		$this->assertNull( $provider->last_request->subject );
+	}
+
+	/**
+	 * @covers Bookit_Brevo_Email_Provider::send
+	 */
+	public function test_brevo_provider_falls_back_to_html_when_no_template_id() {
+		$this->set_setting( 'brevo_api_key', 'sk_test_brevo_key' );
+
+		$provider = new Bookit_Brevo_Email_Provider_TestDouble();
+		$result   = $provider->send(
+			array(
+				'email' => 'test@example.com',
+				'name'  => 'Test',
+			),
+			'Subject Line',
+			'<p>HTML body</p>',
+			array( 'email_type' => 'customer_confirmation' )
+		);
+
+		$this->assertTrue( $result );
+		$this->assertNotNull( $provider->last_request );
+		$this->assertNull( $provider->last_request->templateId );
+		$this->assertSame( '<p>HTML body</p>', $provider->last_request->htmlContent );
+		$this->assertSame( 'Subject Line', $provider->last_request->subject );
 	}
 
 	/**

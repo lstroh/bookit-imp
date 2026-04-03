@@ -3,6 +3,8 @@
  * Brevo transactional email provider.
  *
  * Uses the getbrevo/brevo-php v4 SDK to send transactional emails.
+ * Request shape: \Brevo\TransactionalEmails\Requests\SendTransacEmailRequest
+ * (see vendor/getbrevo/brevo-php/src/TransactionalEmails/Requests/SendTransacEmailRequest.php).
  *
  * @package Bookit_Booking_System
  * @since   1.0.0
@@ -47,6 +49,33 @@ class Bookit_Brevo_Email_Provider implements Bookit_Email_Provider_Interface {
 	}
 
 	/**
+	 * Map notification email_type to a Brevo template ID setting (wp_bookings_settings).
+	 *
+	 * @param string $email_type Internal email type slug.
+	 * @return int Positive template ID, or 0 when unset / invalid.
+	 */
+	private function get_template_id_for_email_type( string $email_type ): int {
+		$map = array(
+			'customer_confirmation'       => 'brevo_template_booking_confirmed',
+			'booking_confirmed'           => 'brevo_template_booking_confirmed',
+			'booking_cancelled'           => 'brevo_template_booking_cancelled',
+			'booking_rescheduled'         => 'brevo_template_booking_rescheduled',
+			'magic_link_cancel'           => 'brevo_template_magic_link_cancel',
+			'magic_link_reschedule'       => 'brevo_template_magic_link_reschedule',
+			'business_notification'       => 'brevo_template_business_notification',
+		);
+
+		$setting_key = $map[ $email_type ] ?? '';
+		if ( empty( $setting_key ) ) {
+			return 0;
+		}
+
+		$value = self::get_setting( $setting_key );
+		$id    = (int) $value;
+		return $id > 0 ? $id : 0;
+	}
+
+	/**
 	 * {@inheritdoc}
 	 *
 	 * Returns true when brevo_api_key is set in wp_bookings_settings.
@@ -75,34 +104,55 @@ class Bookit_Brevo_Email_Provider implements Bookit_Email_Provider_Interface {
 			);
 		}
 
-		try {
-			$brevo = new \Brevo\Brevo( (string) $api_key );
+		$email_type = (string) ( $params['email_type'] ?? '' );
 
-			$request_values = [
-				'sender'     => new \Brevo\TransactionalEmails\Types\SendTransacEmailRequestSender(
-					[
-						'email' => sanitize_email( (string) $from_email ),
-						'name'  => sanitize_text_field( (string) $from_name ),
-					]
+		$template_id = ! empty( $params['template_id'] )
+			? (int) $params['template_id']
+			: $this->get_template_id_for_email_type( $email_type );
+
+		if ( $template_id <= 0 ) {
+			$template_id = 0;
+		}
+
+		$request_values = array(
+			'sender' => new \Brevo\TransactionalEmails\Types\SendTransacEmailRequestSender(
+				array(
+					'email' => sanitize_email( (string) $from_email ),
+					'name'  => sanitize_text_field( (string) $from_name ),
+				)
+			),
+			'to'     => array(
+				new \Brevo\TransactionalEmails\Types\SendTransacEmailRequestToItem(
+					array(
+						'email' => sanitize_email( (string) ( $to['email'] ?? '' ) ),
+						'name'  => sanitize_text_field( (string) ( $to['name'] ?? '' ) ),
+					)
 				),
-				'to'         => [
-					new \Brevo\TransactionalEmails\Types\SendTransacEmailRequestToItem(
-						[
-							'email' => sanitize_email( (string) ( $to['email'] ?? '' ) ),
-							'name'  => sanitize_text_field( (string) ( $to['name'] ?? '' ) ),
-						]
-					),
-				],
-				'subject'     => $subject,
-				'htmlContent' => $html_body,
-			];
+			),
+		);
 
-			// Optional template ID override from $params.
-			if ( ! empty( $params['template_id'] ) ) {
-				$request_values['templateId'] = (int) $params['template_id'];
-			}
+		if ( $template_id > 0 ) {
+			$request_values['templateId'] = $template_id;
+		} else {
+			$request_values['subject']     = $subject;
+			$request_values['htmlContent'] = $html_body;
+		}
 
-			$request = new \Brevo\TransactionalEmails\Requests\SendTransacEmailRequest( $request_values );
+		$request = new \Brevo\TransactionalEmails\Requests\SendTransacEmailRequest( $request_values );
+
+		return $this->invoke_brevo_send( (string) $api_key, $request );
+	}
+
+	/**
+	 * Perform the Brevo API send (extracted for tests).
+	 *
+	 * @param string                                                                      $api_key API key.
+	 * @param \Brevo\TransactionalEmails\Requests\SendTransacEmailRequest $request Request payload.
+	 * @return bool|\WP_Error
+	 */
+	protected function invoke_brevo_send( string $api_key, \Brevo\TransactionalEmails\Requests\SendTransacEmailRequest $request ): bool|\WP_Error {
+		try {
+			$brevo = new \Brevo\Brevo( $api_key );
 
 			$brevo->transactionalEmails->sendTransacEmail( $request );
 

@@ -785,7 +785,7 @@ class Bookit_Wizard_API {
 			)
 		);
 
-		$this->enqueue_magic_link_email( 'booking_cancelled', $booking_id );
+		$this->enqueue_magic_link_email( 'magic_link_cancel', $booking_id );
 
 		return rest_ensure_response(
 			array(
@@ -953,7 +953,7 @@ class Bookit_Wizard_API {
 			)
 		);
 
-		$this->enqueue_magic_link_email( 'booking_rescheduled', $booking_id );
+		$this->enqueue_magic_link_email( 'magic_link_reschedule', $booking_id );
 
 		return rest_ensure_response(
 			array(
@@ -1073,7 +1073,7 @@ class Bookit_Wizard_API {
 	/**
 	 * Queue a customer email for magic-link cancel/reschedule.
 	 *
-	 * @param string $email_type booking_cancelled|booking_rescheduled.
+	 * @param string $email_type magic_link_cancel|magic_link_reschedule.
 	 * @param int    $booking_id Booking ID.
 	 * @return void
 	 */
@@ -1103,7 +1103,7 @@ class Bookit_Wizard_API {
 			'name'  => trim( (string) ( $row['first_name'] ?? '' ) . ' ' . (string) ( $row['last_name'] ?? '' ) ),
 		);
 
-		if ( 'booking_cancelled' === $email_type ) {
+		if ( 'magic_link_cancel' === $email_type ) {
 			$subject   = __( 'Booking cancelled', 'bookit-booking-system' );
 			$html_body = '<p>' . __( 'Your booking has been cancelled.', 'bookit-booking-system' ) . '</p>';
 		} else {

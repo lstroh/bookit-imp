@@ -85,6 +85,89 @@
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
+
+            <div class="pt-4 border-t border-gray-200 space-y-4">
+              <div>
+                <h3 class="text-base font-semibold text-gray-900">Brevo Email Templates</h3>
+                <p class="text-sm text-gray-500 mt-1">
+                  Enter the numeric template ID from your Brevo dashboard for each
+                  notification type. Leave blank to use the default HTML email.
+                </p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Customer booking confirmation</label>
+                <input
+                  v-model="settings.brevo_template_booking_confirmed"
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder=""
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+                <p class="text-xs text-gray-500 mt-1">Brevo template ID for booking confirmations</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Customer cancellation confirmation</label>
+                <input
+                  v-model="settings.brevo_template_booking_cancelled"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+                <p class="text-xs text-gray-500 mt-1">Brevo template ID for cancellation confirmations</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Customer reschedule confirmation</label>
+                <input
+                  v-model="settings.brevo_template_booking_rescheduled"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+                <p class="text-xs text-gray-500 mt-1">Brevo template ID for reschedule confirmations</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Magic link cancellation email</label>
+                <input
+                  v-model="settings.brevo_template_magic_link_cancel"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+                <p class="text-xs text-gray-500 mt-1">Brevo template ID for magic link cancellation emails</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Magic link reschedule email</label>
+                <input
+                  v-model="settings.brevo_template_magic_link_reschedule"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+                <p class="text-xs text-gray-500 mt-1">Brevo template ID for magic link reschedule emails</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Business/staff new booking alert</label>
+                <input
+                  v-model="settings.brevo_template_business_notification"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+                <p class="text-xs text-gray-500 mt-1">Brevo template ID for business new-booking alerts</p>
+              </div>
+            </div>
           </div>
 
           <div class="flex justify-end pt-4 border-t border-gray-200">
@@ -438,10 +521,16 @@ const settings = ref({
   smtp_username: '',
   smtp_password: '',
   smtp_from_name: '',
-  smtp_from_email: ''
+  smtp_from_email: '',
+  brevo_template_booking_confirmed: '',
+  brevo_template_booking_cancelled: '',
+  brevo_template_booking_rescheduled: '',
+  brevo_template_magic_link_cancel: '',
+  brevo_template_magic_link_reschedule: '',
+  brevo_template_business_notification: ''
 })
 
-const SETTING_KEYS = 'smtp_enabled,smtp_host,smtp_port,smtp_encryption,smtp_username,smtp_password,smtp_from_name,smtp_from_email,email_provider,brevo_api_key,brevo_from_name,brevo_from_email,sms_provider,brevo_sms_api_key'
+const SETTING_KEYS = 'smtp_enabled,smtp_host,smtp_port,smtp_encryption,smtp_username,smtp_password,smtp_from_name,smtp_from_email,email_provider,brevo_api_key,brevo_from_name,brevo_from_email,brevo_template_booking_confirmed,brevo_template_booking_cancelled,brevo_template_booking_rescheduled,brevo_template_magic_link_cancel,brevo_template_magic_link_reschedule,brevo_template_business_notification,sms_provider,brevo_sms_api_key'
 
 const loadSettings = async () => {
   loading.value = true
