@@ -59,7 +59,7 @@ class Bookit_Brevo_Email_Provider implements Bookit_Email_Provider_Interface {
 	/**
 	 * {@inheritdoc}
 	 *
-	 * Sends via Brevo TransactionalEmailsApi using the v4 SDK.
+	 * Sends via Brevo TransactionalEmailsClient (getbrevo/brevo-php v4).
 	 *
 	 * @throws nothing all exceptions are caught and returned as WP_Error.
 	 */
@@ -76,40 +76,39 @@ class Bookit_Brevo_Email_Provider implements Bookit_Email_Provider_Interface {
 		}
 
 		try {
-			$config = \Brevo\Client\Configuration::getDefaultConfiguration()
-				->setApiKey( 'api-key', (string) $api_key );
+			$brevo = new \Brevo\Brevo( (string) $api_key );
 
-			$api_instance = new \Brevo\Client\Api\TransactionalEmailsApi(
-				new \GuzzleHttp\Client(),
-				$config
-			);
-
-			$email = new \Brevo\Client\Model\SendSmtpEmail();
-			$email->setSender(
-				[
-					'email' => sanitize_email( (string) $from_email ),
-					'name'  => sanitize_text_field( (string) $from_name ),
-				]
-			);
-			$email->setTo(
-				[[
-					'email' => sanitize_email( (string) ( $to['email'] ?? '' ) ),
-					'name'  => sanitize_text_field( (string) ( $to['name'] ?? '' ) ),
-				]]
-			);
-			$email->setSubject( $subject );
-			$email->setHtmlContent( $html_body );
+			$request_values = [
+				'sender'     => new \Brevo\TransactionalEmails\Types\SendTransacEmailRequestSender(
+					[
+						'email' => sanitize_email( (string) $from_email ),
+						'name'  => sanitize_text_field( (string) $from_name ),
+					]
+				),
+				'to'         => [
+					new \Brevo\TransactionalEmails\Types\SendTransacEmailRequestToItem(
+						[
+							'email' => sanitize_email( (string) ( $to['email'] ?? '' ) ),
+							'name'  => sanitize_text_field( (string) ( $to['name'] ?? '' ) ),
+						]
+					),
+				],
+				'subject'     => $subject,
+				'htmlContent' => $html_body,
+			];
 
 			// Optional template ID override from $params.
 			if ( ! empty( $params['template_id'] ) ) {
-				$email->setTemplateId( (int) $params['template_id'] );
+				$request_values['templateId'] = (int) $params['template_id'];
 			}
 
-			$api_instance->sendTransacEmail( $email );
+			$request = new \Brevo\TransactionalEmails\Requests\SendTransacEmailRequest( $request_values );
+
+			$brevo->transactionalEmails->sendTransacEmail( $request );
 
 			return true;
 
-		} catch ( \Brevo\Client\ApiException $e ) {
+		} catch ( \Brevo\Exceptions\BrevoApiException $e ) {
 			// Distinguish rate-limit responses so the dispatcher can retry.
 			if ( 429 === $e->getCode() ) {
 				return new \WP_Error(
@@ -126,12 +125,21 @@ class Bookit_Brevo_Email_Provider implements Bookit_Email_Provider_Interface {
 					$e->getMessage()
 				)
 			);
-		} catch ( \Exception $e ) {
+		} catch ( \Brevo\Exceptions\BrevoException $e ) {
 			return new \WP_Error(
-				'brevo_send_exception',
+				'brevo_send_failed',
 				sprintf(
 					/* translators: %s: exception message */
-					__( 'Brevo unexpected error: %s', 'booking-system' ),
+					__( 'Brevo send failed: %s', 'booking-system' ),
+					$e->getMessage()
+				)
+			);
+		} catch ( \Throwable $e ) {
+			return new \WP_Error(
+				'brevo_send_failed',
+				sprintf(
+					/* translators: %s: exception message */
+					__( 'Brevo send failed: %s', 'booking-system' ),
 					$e->getMessage()
 				)
 			);
