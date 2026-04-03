@@ -350,9 +350,16 @@ class Bookit_Shortcodes {
 
 		if ( $has_cancel || $has_reschedule ) {
 			wp_enqueue_style(
+				'bookit-confirmation-v2',
+				BOOKIT_PLUGIN_URL . 'public/assets/css/confirmation-page-v2.css',
+				array( 'bookit-wizard' ),
+				BOOKIT_VERSION,
+				'all'
+			);
+			wp_enqueue_style(
 				'bookit-magic-link-pages',
 				BOOKIT_PLUGIN_URL . 'public/assets/css/magic-link-pages.css',
-				array( 'bookit-wizard' ),
+				array( 'bookit-confirmation-v2' ),
 				BOOKIT_VERSION,
 				'all'
 			);
