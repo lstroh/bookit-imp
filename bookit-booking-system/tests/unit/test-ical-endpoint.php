@@ -263,6 +263,80 @@ class Test_Ical_Endpoint extends WP_UnitTestCase {
 	}
 
 	/**
+	 * DESCRIPTION includes cancel page URL when magic link token is set.
+	 */
+	public function test_ical_description_contains_cancel_url() {
+		$staff    = $this->create_test_staff();
+		$service  = $this->create_test_service();
+		$customer = $this->create_test_customer();
+		$this->link_staff_to_service( $staff, $service );
+
+		$future = gmdate( 'Y-m-d', strtotime( '+5 days' ) );
+		$bid    = $this->create_test_booking(
+			array(
+				'staff_id'     => $staff,
+				'service_id'   => $service,
+				'customer_id'  => $customer,
+				'booking_date' => $future,
+				'start_time'   => '10:00:00',
+				'end_time'     => '11:00:00',
+				'status'       => 'confirmed',
+			)
+		);
+
+		global $wpdb;
+		$wpdb->update(
+			$wpdb->prefix . 'bookings',
+			array( 'magic_link_token' => 'token-cancel-url-test' ),
+			array( 'id' => $bid ),
+			array( '%s' ),
+			array( '%d' )
+		);
+
+		$ics = $this->api_double->expose_build_ical_content( $bid, 'token-cancel-url-test' );
+		$this->assertIsString( $ics );
+		$this->assertStringContainsString( 'DESCRIPTION:', $ics );
+		$this->assertStringContainsString( 'bookit-cancel', $ics );
+	}
+
+	/**
+	 * DESCRIPTION includes reschedule page URL when magic link token is set.
+	 */
+	public function test_ical_description_contains_reschedule_url() {
+		$staff    = $this->create_test_staff();
+		$service  = $this->create_test_service();
+		$customer = $this->create_test_customer();
+		$this->link_staff_to_service( $staff, $service );
+
+		$future = gmdate( 'Y-m-d', strtotime( '+5 days' ) );
+		$bid    = $this->create_test_booking(
+			array(
+				'staff_id'     => $staff,
+				'service_id'   => $service,
+				'customer_id'  => $customer,
+				'booking_date' => $future,
+				'start_time'   => '10:00:00',
+				'end_time'     => '11:00:00',
+				'status'       => 'confirmed',
+			)
+		);
+
+		global $wpdb;
+		$wpdb->update(
+			$wpdb->prefix . 'bookings',
+			array( 'magic_link_token' => 'token-reschedule-url-test' ),
+			array( 'id' => $bid ),
+			array( '%s' ),
+			array( '%d' )
+		);
+
+		$ics = $this->api_double->expose_build_ical_content( $bid, 'token-reschedule-url-test' );
+		$this->assertIsString( $ics );
+		$this->assertStringContainsString( 'DESCRIPTION:', $ics );
+		$this->assertStringContainsString( 'bookit-reschedule', $ics );
+	}
+
+	/**
 	 * Soft-deleted booking is not returned (404).
 	 */
 	public function test_ical_endpoint_rejects_deleted_booking() {

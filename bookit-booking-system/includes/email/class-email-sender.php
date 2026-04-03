@@ -307,6 +307,67 @@ class Booking_System_Email_Sender {
 					}
 					?>
 
+					<?php
+					global $wpdb;
+					$booking_id       = (int) ( $booking['id'] ?? 0 );
+					$magic_link_token = isset( $booking['magic_link_token'] )
+						? $booking['magic_link_token']
+						: $wpdb->get_var(
+							$wpdb->prepare(
+								"SELECT magic_link_token FROM {$wpdb->prefix}bookings WHERE id = %d",
+								$booking_id
+							)
+						);
+					if ( ! empty( $magic_link_token ) ) {
+						$cancel_url     = add_query_arg(
+							array(
+								'booking_id' => $booking_id,
+								'token'      => $magic_link_token,
+							),
+							home_url( '/bookit-cancel/' )
+						);
+						$reschedule_url = add_query_arg(
+							array(
+								'booking_id' => $booking_id,
+								'token'      => $magic_link_token,
+							),
+							home_url( '/bookit-reschedule/' )
+						);
+						?>
+					<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0;">
+						<tr>
+							<td style="padding: 24px 0 8px; border-top: 1px solid #E5E7EB;">
+								<p style="margin: 0 0 12px; font-size: 14px; color: #6B7280; font-family: Arial, sans-serif;">
+									<?php esc_html_e( 'Need to make changes?', 'bookit-booking-system' ); ?>
+								</p>
+								<table cellpadding="0" cellspacing="0" border="0">
+									<tr>
+										<td style="padding-right: 12px;">
+											<a href="<?php echo esc_url( $reschedule_url ); ?>"
+												style="display:inline-block; padding: 10px 20px; background-color: #005FB8;
+													color: #ffffff; text-decoration: none; border-radius: 4px;
+													font-size: 14px; font-family: Arial, sans-serif; font-weight: 600;">
+												<?php esc_html_e( 'Reschedule', 'bookit-booking-system' ); ?>
+											</a>
+										</td>
+										<td>
+											<a href="<?php echo esc_url( $cancel_url ); ?>"
+												style="display:inline-block; padding: 10px 20px; background-color: #ffffff;
+													color: #374151; text-decoration: none; border-radius: 4px;
+													font-size: 14px; font-family: Arial, sans-serif; font-weight: 600;
+													border: 1px solid #D1D5DB;">
+												<?php esc_html_e( 'Cancel Booking', 'bookit-booking-system' ); ?>
+											</a>
+										</td>
+									</tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+						<?php
+					}
+					?>
+
 					<p><?php esc_html_e( 'We look forward to seeing you!', 'booking-system' ); ?></p>
 				</div>
 

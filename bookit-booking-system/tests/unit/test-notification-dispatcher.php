@@ -110,6 +110,20 @@ class Test_Notification_Dispatcher extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @covers Booking_System_Email_Sender::generate_customer_email
+	 */
+	public function test_confirmation_email_contains_cancel_link() {
+		$email_sender = new Booking_System_Email_Sender();
+		$booking      = $this->build_minimal_booking();
+		$booking['magic_link_token'] = 'email-test-magic-token';
+
+		$html = $email_sender->generate_customer_email( $booking );
+
+		$this->assertStringContainsString( 'bookit-cancel', $html );
+		$this->assertStringContainsString( 'bookit-reschedule', $html );
+	}
+
+	/**
 	 * @covers Bookit_Notification_Dispatcher::process_email_queue_item
 	 * @covers Bookit_WP_Mail_Fallback_Provider::send
 	 */

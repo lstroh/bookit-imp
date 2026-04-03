@@ -631,8 +631,26 @@ class Bookit_Wizard_API {
 		$ics .= 'DTSTART;TZID=' . $tz->getName() . ':' . $dt_start->format( 'Ymd\THis' ) . "\r\n";
 		$ics .= 'DTEND;TZID=' . $tz->getName() . ':' . $dt_end->format( 'Ymd\THis' ) . "\r\n";
 		$ics .= 'SUMMARY:' . $this->ical_escape( $summary ) . "\r\n";
+
+		$cancel_url     = add_query_arg(
+			array(
+				'booking_id' => (int) $booking->id,
+				'token'      => (string) $booking->magic_link_token,
+			),
+			home_url( '/bookit-cancel/' )
+		);
+		$reschedule_url = add_query_arg(
+			array(
+				'booking_id' => (int) $booking->id,
+				'token'      => (string) $booking->magic_link_token,
+			),
+			home_url( '/bookit-reschedule/' )
+		);
+
 		$description  = 'Booking reference: ' . $ref_for_uid;
 		$description .= "\n" . (string) $business_name;
+		$description .= "\nCancel: " . $cancel_url;
+		$description .= "\nReschedule: " . $reschedule_url;
 		$ics .= 'DESCRIPTION:' . $this->ical_escape( $description ) . "\r\n";
 		$ics .= 'LOCATION:' . $this->ical_escape( (string) $business_address ) . "\r\n";
 		$ics .= "STATUS:CONFIRMED\r\n";
