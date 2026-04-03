@@ -189,6 +189,30 @@ class Bookit_Activator {
 				)
 			);
 		}
+
+		if ( ! get_page_by_path( 'bookit-cancel' ) ) {
+			wp_insert_post(
+				array(
+					'post_title'   => 'Cancel Booking',
+					'post_name'    => 'bookit-cancel',
+					'post_content' => '[bookit_cancel_booking]',
+					'post_status'  => 'publish',
+					'post_type'    => 'page',
+				)
+			);
+		}
+
+		if ( ! get_page_by_path( 'bookit-reschedule' ) ) {
+			wp_insert_post(
+				array(
+					'post_title'   => 'Reschedule Booking',
+					'post_name'    => 'bookit-reschedule',
+					'post_content' => '[bookit_reschedule_booking]',
+					'post_status'  => 'publish',
+					'post_type'    => 'page',
+				)
+			);
+		}
 		global $wpdb;  // Declare global first
 
 		// Seed dashboard branding defaults if missing.

@@ -107,6 +107,71 @@ class Bookit_Wizard_API {
 				'args'                => array(),
 			)
 		);
+
+		register_rest_route(
+			'bookit/v1',
+			'/wizard/cancel',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'cancel_booking_magic_link' ),
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'booking_id' => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param ) && (int) $param > 0;
+						},
+						'sanitize_callback' => 'absint',
+					),
+					'token'        => array(
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'reason'       => array(
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_textarea_field',
+						'default'           => '',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			'bookit/v1',
+			'/wizard/reschedule',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'reschedule_booking_magic_link' ),
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'booking_id' => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param ) && (int) $param > 0;
+						},
+						'sanitize_callback' => 'absint',
+					),
+					'token'      => array(
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'new_date'   => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return (bool) preg_match( '/^\d{4}-\d{2}-\d{2}$/', $param );
+						},
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'new_time'   => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return (bool) preg_match( '/^\d{2}:\d{2}(:\d{2})?$/', $param );
+						},
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -397,6 +462,448 @@ class Bookit_Wizard_API {
 				'booking_id'   => $result['booking_id'],
 				'redirect_url' => $result['redirect_url'],
 			)
+		);
+	}
+
+	/**
+	 * Cancel a booking using the magic link token (no login).
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function cancel_booking_magic_link( WP_REST_Request $request ) {
+		$ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '' ) );
+		if ( ! Bookit_Rate_Limiter::check( 'magic_cancel', $ip, 10, HOUR_IN_SECONDS ) ) {
+			return Bookit_Error_Registry::to_wp_error(
+				'E6001',
+				array( 'action' => 'magic_cancel' )
+			);
+		}
+
+		global $wpdb;
+		$booking_id = (int) $request->get_param( 'booking_id' );
+		$token      = (string) $request->get_param( 'token' );
+		$reason     = (string) $request->get_param( 'reason' );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$booking = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, status, booking_date, start_time, customer_id, magic_link_token
+				FROM {$wpdb->prefix}bookings
+				WHERE id = %d AND deleted_at IS NULL",
+				$booking_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $booking ) {
+			return Bookit_Error_Registry::to_wp_error(
+				'E2002',
+				array( 'booking_id' => $booking_id )
+			);
+		}
+
+		if ( ! hash_equals( (string) $booking['magic_link_token'], $token ) ) {
+			return new WP_Error(
+				'invalid_token',
+				__( 'Invalid or expired link.', 'bookit-booking-system' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		$status = (string) $booking['status'];
+		if ( in_array( $status, array( 'cancelled', 'completed', 'no_show' ), true ) ) {
+			return Bookit_Error_Registry::to_wp_error(
+				'E2003',
+				array( 'booking_id' => $booking_id )
+			);
+		}
+
+		$policy_error = $this->magic_link_policy_window_error(
+			(string) $booking['booking_date'],
+			(string) $booking['start_time']
+		);
+		if ( is_wp_error( $policy_error ) ) {
+			return $policy_error;
+		}
+
+		$old_status = $status;
+
+		$result = $wpdb->update(
+			$wpdb->prefix . 'bookings',
+			array(
+				'status'                => 'cancelled',
+				'cancelled_by'          => 'customer',
+				'cancelled_at'          => current_time( 'mysql' ),
+				'cancellation_reason'   => $reason,
+				'updated_at'            => current_time( 'mysql' ),
+				'deleted_at'            => current_time( 'mysql' ),
+			),
+			array( 'id' => $booking_id ),
+			array( '%s', '%s', '%s', '%s', '%s', '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'cancellation_failed',
+				__( 'Could not cancel this booking.', 'bookit-booking-system' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		Bookit_Audit_Logger::log(
+			'booking.cancelled_by_customer',
+			'booking',
+			$booking_id,
+			array(
+				'old_status'    => $old_status,
+				'cancelled_via' => 'magic_link',
+			)
+		);
+
+		do_action(
+			'bookit_after_booking_cancelled',
+			$booking_id,
+			array(
+				'cancelled_by' => 'customer',
+				'via'          => 'magic_link',
+			)
+		);
+
+		$this->enqueue_magic_link_email( 'booking_cancelled', $booking_id );
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'message' => __( 'Your booking has been cancelled.', 'bookit-booking-system' ),
+			)
+		);
+	}
+
+	/**
+	 * Reschedule a booking using the magic link token (no login).
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function reschedule_booking_magic_link( WP_REST_Request $request ) {
+		$ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '' ) );
+		if ( ! Bookit_Rate_Limiter::check( 'magic_reschedule', $ip, 10, HOUR_IN_SECONDS ) ) {
+			return Bookit_Error_Registry::to_wp_error(
+				'E6001',
+				array( 'action' => 'magic_reschedule' )
+			);
+		}
+
+		global $wpdb;
+		$booking_id = (int) $request->get_param( 'booking_id' );
+		$token      = (string) $request->get_param( 'token' );
+		$new_date   = (string) $request->get_param( 'new_date' );
+		$new_time   = (string) $request->get_param( 'new_time' );
+
+		$new_time_norm = $this->normalize_time_his( $new_time );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$booking = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, status, booking_date AS old_date, start_time AS old_time, customer_id,
+					magic_link_token, service_id, staff_id
+				FROM {$wpdb->prefix}bookings
+				WHERE id = %d AND deleted_at IS NULL",
+				$booking_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $booking ) {
+			return Bookit_Error_Registry::to_wp_error(
+				'E2002',
+				array( 'booking_id' => $booking_id )
+			);
+		}
+
+		if ( ! hash_equals( (string) $booking['magic_link_token'], $token ) ) {
+			return new WP_Error(
+				'invalid_token',
+				__( 'Invalid or expired link.', 'bookit-booking-system' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		$status = (string) $booking['status'];
+		if ( in_array( $status, array( 'cancelled', 'completed', 'no_show' ), true ) ) {
+			return Bookit_Error_Registry::to_wp_error(
+				'E2003',
+				array( 'booking_id' => $booking_id )
+			);
+		}
+
+		$policy_error = $this->magic_link_policy_window_error(
+			(string) $booking['old_date'],
+			(string) $booking['old_time']
+		);
+		if ( is_wp_error( $policy_error ) ) {
+			return $policy_error;
+		}
+
+		$staff_id = (int) $booking['staff_id'];
+
+		$conflict_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings
+				WHERE staff_id = %d
+					AND booking_date = %s
+					AND start_time = %s
+					AND id != %d
+					AND deleted_at IS NULL
+					AND status != 'cancelled'",
+				$staff_id,
+				$new_date,
+				$new_time_norm,
+				$booking_id
+			)
+		);
+
+		if ( $conflict_id ) {
+			return Bookit_Error_Registry::to_wp_error(
+				'E2001',
+				array(
+					'staff_id' => $staff_id,
+					'date'     => $new_date,
+					'time'     => $new_time_norm,
+				)
+			);
+		}
+
+		$service_id = (int) $booking['service_id'];
+		$duration   = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT duration FROM {$wpdb->prefix}bookings_services WHERE id = %d",
+				$service_id
+			)
+		);
+
+		if ( $duration <= 0 ) {
+			return new WP_Error(
+				'invalid_service',
+				__( 'Could not determine service duration.', 'bookit-booking-system' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		$new_end_time = $this->add_minutes_to_time_string( $new_time_norm, $duration );
+
+		$update_result = $wpdb->update(
+			$wpdb->prefix . 'bookings',
+			array(
+				'booking_date' => $new_date,
+				'start_time'   => $new_time_norm,
+				'end_time'     => $new_end_time,
+				'updated_at'   => current_time( 'mysql' ),
+			),
+			array( 'id' => $booking_id ),
+			array( '%s', '%s', '%s', '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $update_result ) {
+			return new WP_Error(
+				'reschedule_failed',
+				__( 'Could not reschedule this booking.', 'bookit-booking-system' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		Bookit_Audit_Logger::log(
+			'booking.rescheduled_by_customer',
+			'booking',
+			$booking_id,
+			array(
+				'old_date' => (string) $booking['old_date'],
+				'old_time' => (string) $booking['old_time'],
+				'new_date' => $new_date,
+				'new_time' => $new_time_norm,
+				'via'      => 'magic_link',
+			)
+		);
+
+		do_action(
+			'bookit_booking_rescheduled',
+			$booking_id,
+			array(
+				'new_date'       => $new_date,
+				'new_time'       => $new_time_norm,
+				'rescheduled_by' => 'customer',
+				'via'            => 'magic_link',
+			)
+		);
+
+		$this->enqueue_magic_link_email( 'booking_rescheduled', $booking_id );
+
+		return rest_ensure_response(
+			array(
+				'success'   => true,
+				'new_date'  => $new_date,
+				'new_time'  => $new_time_norm,
+			)
+		);
+	}
+
+	/**
+	 * Hours notice required before appointment for online cancel/reschedule (settings key: cancellation_window_hours).
+	 *
+	 * @return int
+	 */
+	private function get_cancellation_notice_hours(): int {
+		global $wpdb;
+		// Stored key matches dashboard cancellation policy (see Bookit_Dashboard_Bookings_API settings).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$value = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s LIMIT 1",
+				'cancellation_window_hours'
+			)
+		);
+		if ( null === $value || '' === $value ) {
+			return 24;
+		}
+		$hours = absint( $value );
+		return $hours > 0 ? $hours : 24;
+	}
+
+	/**
+	 * Whether the appointment is too soon for online cancel/reschedule.
+	 *
+	 * @param string $booking_date Y-m-d.
+	 * @param string $start_time   H:i:s or H:i.
+	 * @return true|WP_Error True if allowed; WP_Error if inside policy window.
+	 */
+	private function magic_link_policy_window_error( string $booking_date, string $start_time ) {
+		$notice_hours = $this->get_cancellation_notice_hours();
+
+		$tz_string = get_option( 'timezone_string' );
+		if ( ! empty( $tz_string ) ) {
+			try {
+				$tz = new \DateTimeZone( $tz_string );
+			} catch ( \Exception $e ) {
+				$tz = wp_timezone();
+			}
+		} else {
+			$tz = wp_timezone();
+		}
+
+		$time_for_parse = $this->normalize_time_his( $start_time );
+		try {
+			$appt = new \DateTimeImmutable( $booking_date . ' ' . $time_for_parse, $tz );
+			$now  = new \DateTimeImmutable( 'now', $tz );
+		} catch ( \Exception $e ) {
+			return new WP_Error(
+				'invalid_booking_datetime',
+				__( 'Could not read this booking\'s date and time.', 'bookit-booking-system' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		$seconds_remaining = $appt->getTimestamp() - $now->getTimestamp();
+		$hours_remaining   = $seconds_remaining / HOUR_IN_SECONDS;
+
+		if ( $hours_remaining < (float) $notice_hours ) {
+			return new WP_Error(
+				'within_cancellation_window',
+				__( 'Online cancellation is not available this close to your appointment. Please contact us directly.', 'bookit-booking-system' ),
+				array(
+					'status'         => 422,
+					'hours_required' => (int) $notice_hours,
+				)
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Normalize a time string to H:i:s.
+	 *
+	 * @param string $time User-supplied or DB time.
+	 * @return string
+	 */
+	private function normalize_time_his( string $time ): string {
+		$time = trim( $time );
+		if ( preg_match( '/^(\d{2}):(\d{2}):(\d{2})$/', $time, $m ) ) {
+			return sprintf( '%02d:%02d:%02d', (int) $m[1], (int) $m[2], (int) $m[3] );
+		}
+		if ( preg_match( '/^(\d{2}):(\d{2})$/', $time, $m ) ) {
+			return sprintf( '%02d:%02d:00', (int) $m[1], (int) $m[2] );
+		}
+		return '00:00:00';
+	}
+
+	/**
+	 * Add minutes to a H:i:s time, returning H:i:s.
+	 *
+	 * @param string $time_his Start time.
+	 * @param int    $minutes  Duration in minutes.
+	 * @return string
+	 */
+	private function add_minutes_to_time_string( string $time_his, int $minutes ): string {
+		$tz  = new \DateTimeZone( 'UTC' );
+		$dt  = \DateTimeImmutable::createFromFormat( 'H:i:s', $time_his, $tz );
+		if ( ! $dt ) {
+			return $time_his;
+		}
+		$end = $dt->add( new \DateInterval( 'PT' . max( 0, $minutes ) . 'M' ) );
+		return $end->format( 'H:i:s' );
+	}
+
+	/**
+	 * Queue a customer email for magic-link cancel/reschedule.
+	 *
+	 * @param string $email_type booking_cancelled|booking_rescheduled.
+	 * @param int    $booking_id Booking ID.
+	 * @return void
+	 */
+	private function enqueue_magic_link_email( string $email_type, int $booking_id ): void {
+		if ( ! class_exists( 'Bookit_Notification_Dispatcher' ) ) {
+			require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-notification-dispatcher.php';
+		}
+
+		global $wpdb;
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT c.email, c.first_name, c.last_name
+				FROM {$wpdb->prefix}bookings b
+				INNER JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
+				WHERE b.id = %d",
+				$booking_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $row || empty( $row['email'] ) ) {
+			return;
+		}
+
+		$recipient = array(
+			'email' => sanitize_email( $row['email'] ),
+			'name'  => trim( (string) ( $row['first_name'] ?? '' ) . ' ' . (string) ( $row['last_name'] ?? '' ) ),
+		);
+
+		if ( 'booking_cancelled' === $email_type ) {
+			$subject   = __( 'Booking cancelled', 'bookit-booking-system' );
+			$html_body = '<p>' . __( 'Your booking has been cancelled.', 'bookit-booking-system' ) . '</p>';
+		} else {
+			$subject   = __( 'Booking rescheduled', 'bookit-booking-system' );
+			$html_body = '<p>' . __( 'Your booking has been rescheduled.', 'bookit-booking-system' ) . '</p>';
+		}
+
+		Bookit_Notification_Dispatcher::enqueue_email(
+			$email_type,
+			$recipient,
+			$subject,
+			$html_body,
+			$booking_id,
+			array()
 		);
 	}
 }

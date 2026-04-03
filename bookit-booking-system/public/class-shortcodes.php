@@ -26,6 +26,8 @@ class Bookit_Shortcodes {
 		add_shortcode( 'bookit_wizard_v2', array( $this, 'render_booking_wizard_v2' ) );
 		add_shortcode( 'bookit_booking_confirmation', array( $this, 'render_booking_confirmation' ) );
 		add_shortcode( 'bookit_booking_confirmed_v2', array( $this, 'render_booking_confirmed_v2' ) );
+		add_shortcode( 'bookit_cancel_booking', array( $this, 'render_cancel_booking' ) );
+		add_shortcode( 'bookit_reschedule_booking', array( $this, 'render_reschedule_booking' ) );
 		add_shortcode( 'bookit_confirmation', array( $this, 'bookit_confirmation_page_shortcode' ) );
 		add_shortcode( 'bookit_my_packages', array( $this, 'render_my_packages' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_wizard_assets' ) );
@@ -174,6 +176,68 @@ class Bookit_Shortcodes {
 	}
 
 	/**
+	 * Magic-link cancel page shortcode (templates: 5A-3b).
+	 *
+	 * @param array  $atts Shortcode attributes.
+	 * @param string $content Shortcode content.
+	 * @return string
+	 */
+	public function render_cancel_booking( $atts = array(), $content = '' ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$booking_id = isset( $_GET['booking_id'] ) ? absint( $_GET['booking_id'] ) : 0;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$token = isset( $_GET['token'] ) ? sanitize_text_field( wp_unslash( $_GET['token'] ) ) : '';
+
+		if ( $booking_id <= 0 || '' === $token ) {
+			return '<p class="bookit-error">' . esc_html__( 'Invalid booking link.', 'bookit-booking-system' ) . '</p>';
+		}
+
+		$rest_url = rest_url( 'bookit/v1/wizard/' );
+
+		ob_start();
+		Bookit_Template_Loader::get_template(
+			'cancel-booking.php',
+			array(
+				'booking_id' => $booking_id,
+				'token'      => $token,
+				'rest_url'   => $rest_url,
+			)
+		);
+		return ob_get_clean();
+	}
+
+	/**
+	 * Magic-link reschedule page shortcode (templates: 5A-3b).
+	 *
+	 * @param array  $atts Shortcode attributes.
+	 * @param string $content Shortcode content.
+	 * @return string
+	 */
+	public function render_reschedule_booking( $atts = array(), $content = '' ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$booking_id = isset( $_GET['booking_id'] ) ? absint( $_GET['booking_id'] ) : 0;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$token = isset( $_GET['token'] ) ? sanitize_text_field( wp_unslash( $_GET['token'] ) ) : '';
+
+		if ( $booking_id <= 0 || '' === $token ) {
+			return '<p class="bookit-error">' . esc_html__( 'Invalid booking link.', 'bookit-booking-system' ) . '</p>';
+		}
+
+		$rest_url = rest_url( 'bookit/v1/wizard/' );
+
+		ob_start();
+		Bookit_Template_Loader::get_template(
+			'reschedule-booking.php',
+			array(
+				'booking_id' => $booking_id,
+				'token'      => $token,
+				'rest_url'   => $rest_url,
+			)
+		);
+		return ob_get_clean();
+	}
+
+	/**
 	 * Render my packages shortcode.
 	 *
 	 * @param array  $atts Shortcode attributes.
@@ -197,9 +261,11 @@ class Bookit_Shortcodes {
 		$has_wizard = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_booking_wizard' );
 		$has_confirmation = is_a( $post, 'WP_Post' ) && ( has_shortcode( $post->post_content, 'bookit_booking_confirmation' ) || has_shortcode( $post->post_content, 'bookit_confirmation' ) );
 		$has_confirmation_v2 = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_booking_confirmed_v2' );
+		$has_cancel          = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_cancel_booking' );
+		$has_reschedule      = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_reschedule_booking' );
 		$has_my_packages = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_my_packages' );
 		$has_wizard_v2 = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'bookit_wizard_v2' );
-		if ( ! $has_wizard && ! $has_wizard_v2 && ! $has_confirmation && ! $has_confirmation_v2 && ! $has_my_packages ) {
+		if ( ! $has_wizard && ! $has_wizard_v2 && ! $has_confirmation && ! $has_confirmation_v2 && ! $has_my_packages && ! $has_cancel && ! $has_reschedule ) {
 			return;
 		}
 
@@ -276,6 +342,16 @@ class Bookit_Shortcodes {
 			wp_enqueue_style(
 				'bookit-confirmation-v2',
 				BOOKIT_PLUGIN_URL . 'public/assets/css/confirmation-page-v2.css',
+				array( 'bookit-wizard' ),
+				BOOKIT_VERSION,
+				'all'
+			);
+		}
+
+		if ( $has_cancel || $has_reschedule ) {
+			wp_enqueue_style(
+				'bookit-magic-link-pages',
+				BOOKIT_PLUGIN_URL . 'public/assets/css/magic-link-pages.css',
 				array( 'bookit-wizard' ),
 				BOOKIT_VERSION,
 				'all'
