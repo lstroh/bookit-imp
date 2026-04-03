@@ -243,7 +243,8 @@ const reportsNavigation = [
   { name: 'bookingAnalytics', path: '/reports/bookings', icon: '📈', label: 'Bookings' },
   { name: 'staffPerformance', path: '/reports/staff', icon: '👥', label: 'Staff Performance' },
   { name: 'customers', path: '/customers', icon: '👤', label: 'Customers' },
-  { name: 'packages', path: '/packages', icon: '🎟️', label: 'Packages' }
+  { name: 'packages', path: '/packages', icon: '🎟️', label: 'Packages' },
+  { name: 'emailQueue', path: '/email-queue', icon: '📧', label: 'Email Queue' }
 ]
 
 const extensionNavigation = ref([])

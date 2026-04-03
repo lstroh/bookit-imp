@@ -135,6 +135,8 @@ class Bookit_Loader {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-dashboard-bookings-api.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-audit-log-api.php';
 		new Bookit_Audit_Log_API();
+		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-email-queue-api.php';
+		new Bookit_Email_Queue_API();
 
 		// Extensions API.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-extensions-api.php';

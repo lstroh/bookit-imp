@@ -116,6 +116,12 @@ export default [
     meta: { title: 'Packages', requiresAdmin: true }
   },
   {
+    path: '/email-queue',
+    name: 'EmailQueue',
+    component: () => import('../views/EmailQueue.vue'),
+    meta: { title: 'Email Queue', requiresAdmin: true }
+  },
+  {
     path: '/settings/email',
     name: 'EmailSettings',
     component: () => import('../views/EmailSettings.vue'),

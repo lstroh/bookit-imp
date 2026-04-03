@@ -60,6 +60,7 @@
             <file>./tests/unit/test-reference-generator.php</file>
             <file>./tests/unit/test-extension-registry.php</file>
             <file>./tests/unit/test-audit-log-api.php</file>
+            <file>./tests/unit/test-email-queue-api.php</file>
             <file>./tests/unit/test-setup-guide-api.php</file>
             <file>./tests/unit/test-cooling-off-waiver.php</file>
             <file>./tests/unit/test-team-calendar-api.php</file>
