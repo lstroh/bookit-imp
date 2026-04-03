@@ -243,8 +243,7 @@ $bookit_meeting_section_html = apply_filters(
 		?>
 
 		<div class="bookit-confirmed-actions">
-			<!-- Primary: Add to calendar — Sprint 5 placeholder -->
-			<a href="<?php echo esc_url( home_url( '/book/ical?booking_id=' . (int) $booking['id'] ) ); ?>" class="bookit-confirmed-btn-primary">
+			<a href="<?php echo esc_url( add_query_arg( array( 'booking_id' => (int) $booking['id'], 'token' => isset( $booking['magic_link_token'] ) ? (string) $booking['magic_link_token'] : '' ), rest_url( 'bookit/v1/wizard/ical' ) ) ); ?>" class="bookit-confirmed-btn-primary">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 					<rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" fill="none"/>
 					<line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
@@ -253,7 +252,6 @@ $bookit_meeting_section_html = apply_filters(
 				</svg>
 				<?php esc_html_e( 'Add to calendar', 'bookit-booking-system' ); ?>
 			</a>
-			<!-- NOTE: .ics endpoint is a Sprint 5 task. URL is a placeholder. -->
 			<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="bookit-confirmed-btn-secondary">
 				<?php esc_html_e( 'Back to home', 'bookit-booking-system' ); ?>
 			</a>

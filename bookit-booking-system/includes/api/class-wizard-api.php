@@ -172,6 +172,29 @@ class Bookit_Wizard_API {
 				),
 			)
 		);
+
+		register_rest_route(
+			'bookit/v1',
+			'/wizard/ical',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'get_ical' ),
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'booking_id' => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param ) && (int) $param > 0;
+						},
+						'sanitize_callback' => 'absint',
+					),
+					'token'        => array(
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -463,6 +486,179 @@ class Bookit_Wizard_API {
 				'redirect_url' => $result['redirect_url'],
 			)
 		);
+	}
+
+	/**
+	 * GET /wizard/ical — download booking as .ics (magic link token required).
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_ical( WP_REST_Request $request ) {
+		$booking_id = absint( $request->get_param( 'booking_id' ) );
+		$token      = sanitize_text_field( (string) $request->get_param( 'token' ) );
+
+		$payload = $this->fetch_and_build_ical( $booking_id, $token );
+		if ( is_wp_error( $payload ) ) {
+			return $payload;
+		}
+
+		$ics                = $payload['ics'];
+		$booking_ref_file   = $payload['booking_reference'];
+		$filename           = 'booking-' . $booking_ref_file . '.ics';
+
+		add_filter(
+			'rest_pre_serve_request',
+			function ( $served ) use ( $ics, $filename ) {
+				if ( ! $served ) {
+					if ( defined( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH' ) || defined( 'WP_TESTS_DIR' ) ) {
+						return true;
+					}
+					header( 'Content-Type: text/calendar; charset=utf-8' );
+					header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+					header( 'Cache-Control: no-cache, no-store, must-revalidate' );
+					header( 'Content-Length: ' . strlen( $ics ) );
+					echo $ics; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				}
+				return true;
+			}
+		);
+
+		return new WP_REST_Response( null, 200 );
+	}
+
+	/**
+	 * Build .ics body for a booking after token validation (for tests and internal use).
+	 *
+	 * @param int    $booking_id Booking ID.
+	 * @param string $token      Magic link token.
+	 * @return string|WP_Error Raw iCalendar string or error.
+	 */
+	protected function build_ical_content( int $booking_id, string $token ) {
+		$result = $this->fetch_and_build_ical( $booking_id, $token );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		return $result['ics'];
+	}
+
+	/**
+	 * Load booking, validate token, build .ics and reference for Content-Disposition.
+	 *
+	 * @param int    $booking_id Booking ID.
+	 * @param string $token      Magic link token.
+	 * @return array{ics: string, booking_reference: string}|WP_Error
+	 */
+	private function fetch_and_build_ical( int $booking_id, string $token ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$booking = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT b.id, b.booking_reference, b.booking_date, b.start_time,
+					b.end_time, b.magic_link_token, b.status,
+					s.name AS service_name,
+					st.first_name AS staff_first_name,
+					st.last_name AS staff_last_name
+				FROM {$wpdb->prefix}bookings b
+				LEFT JOIN {$wpdb->prefix}bookings_services s ON s.id = b.service_id
+				LEFT JOIN {$wpdb->prefix}bookings_staff st ON st.id = b.staff_id
+				WHERE b.id = %d AND b.deleted_at IS NULL",
+				$booking_id
+			)
+		);
+
+		if ( ! $booking ) {
+			return Bookit_Error_Registry::to_wp_error(
+				'E2002',
+				array( 'booking_id' => $booking_id )
+			);
+		}
+
+		if ( ! hash_equals( (string) $booking->magic_link_token, (string) $token ) ) {
+			return new WP_Error(
+				'invalid_token',
+				__( 'Invalid or expired link.', 'bookit-booking-system' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$settings_rows = $wpdb->get_results(
+			"SELECT setting_key, setting_value FROM {$wpdb->prefix}bookings_settings
+			WHERE setting_key IN ('business_name','business_address')",
+			ARRAY_A
+		);
+		$settings         = array_column( $settings_rows, 'setting_value', 'setting_key' );
+		$business_name    = $settings['business_name'] ?? get_bloginfo( 'name' );
+		$business_address = $settings['business_address'] ?? '';
+
+		$tz_string = get_option( 'timezone_string' );
+		$tz_name   = $tz_string ? $tz_string : 'Europe/London';
+		try {
+			$tz = new \DateTimeZone( $tz_name );
+		} catch ( \Exception $e ) {
+			$tz = new \DateTimeZone( 'Europe/London' );
+		}
+
+		$start_his = $this->normalize_time_his( (string) $booking->start_time );
+		$end_his   = $this->normalize_time_his( (string) $booking->end_time );
+
+		$dt_start = new \DateTime( $booking->booking_date . ' ' . $start_his, $tz );
+		$dt_end   = new \DateTime( $booking->booking_date . ' ' . $end_his, $tz );
+		$dt_now   = new \DateTime( 'now', new \DateTimeZone( 'UTC' ) );
+
+		$staff_name = trim( (string) $booking->staff_first_name . ' ' . (string) $booking->staff_last_name );
+		$service_label = (string) $booking->service_name;
+		$summary       = $service_label . ' with ' . $staff_name;
+
+		$ref_for_uid = (string) $booking->booking_reference;
+		if ( '' === $ref_for_uid ) {
+			$ref_for_uid = 'BK-' . str_pad( (string) $booking->id, 8, '0', STR_PAD_LEFT );
+		}
+		$host = parse_url( home_url(), PHP_URL_HOST );
+		$host = is_string( $host ) && '' !== $host ? $host : 'localhost';
+		$uid  = $ref_for_uid . '@bookit.' . $host;
+
+		$ics  = "BEGIN:VCALENDAR\r\n";
+		$ics .= "VERSION:2.0\r\n";
+		$ics .= "PRODID:-//Bookit Booking System//EN\r\n";
+		$ics .= "CALSCALE:GREGORIAN\r\n";
+		$ics .= "METHOD:PUBLISH\r\n";
+		$ics .= "BEGIN:VEVENT\r\n";
+		$ics .= 'UID:' . $this->ical_escape( $uid ) . "\r\n";
+		$ics .= 'DTSTAMP:' . $dt_now->format( 'Ymd\THis\Z' ) . "\r\n";
+		$ics .= 'DTSTART;TZID=' . $tz->getName() . ':' . $dt_start->format( 'Ymd\THis' ) . "\r\n";
+		$ics .= 'DTEND;TZID=' . $tz->getName() . ':' . $dt_end->format( 'Ymd\THis' ) . "\r\n";
+		$ics .= 'SUMMARY:' . $this->ical_escape( $summary ) . "\r\n";
+		$description  = 'Booking reference: ' . $ref_for_uid;
+		$description .= "\n" . (string) $business_name;
+		$ics .= 'DESCRIPTION:' . $this->ical_escape( $description ) . "\r\n";
+		$ics .= 'LOCATION:' . $this->ical_escape( (string) $business_address ) . "\r\n";
+		$ics .= "STATUS:CONFIRMED\r\n";
+		$ics .= "END:VEVENT\r\n";
+		$ics .= "END:VCALENDAR\r\n";
+
+		$booking_ref_file = $ref_for_uid;
+
+		return array(
+			'ics'               => $ics,
+			'booking_reference' => $booking_ref_file,
+		);
+	}
+
+	/**
+	 * Escape text for iCalendar property values (RFC 5545).
+	 *
+	 * @param string $text Raw text.
+	 * @return string
+	 */
+	private function ical_escape( string $text ): string {
+		$text = str_replace( '\\', '\\\\', $text );
+		$text = str_replace( ';', '\\;', $text );
+		$text = str_replace( ',', '\\,', $text );
+		$text = str_replace( "\n", '\\n', $text );
+		return $text;
 	}
 
 	/**

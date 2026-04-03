@@ -30,6 +30,7 @@
             <file>./tests/unit/test-booking-wizard-v2.php</file>
             <file>./tests/unit/test-booking-confirmed-v2.php</file>
             <file>./tests/unit/test-wizard-api.php</file>
+            <file>./tests/unit/test-ical-endpoint.php</file>
             <file>./tests/unit/test-magic-link-flows.php</file>
             <file>./tests/unit/test-wizard-navigation.php</file>
             <file>./tests/unit/test-service-model.php</file>

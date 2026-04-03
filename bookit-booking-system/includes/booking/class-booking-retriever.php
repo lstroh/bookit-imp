@@ -44,6 +44,7 @@ class Booking_System_Booking_Retriever {
 				b.special_requests,
 				b.cooling_off_waiver_given,
 				b.cooling_off_waiver_at,
+				b.magic_link_token,
 				b.created_at,
 				c.id AS customer_id,
 				c.first_name AS customer_first_name,
