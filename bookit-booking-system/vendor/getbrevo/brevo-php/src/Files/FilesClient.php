@@ -65,11 +65,11 @@ class FilesClient implements FilesClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return array<FileData>
+     * @return ?array<FileData>
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getAllFiles(GetCrmFilesRequest $request = new GetCrmFilesRequest(), ?array $options = null): array
+    public function getAllFiles(GetCrmFilesRequest $request = new GetCrmFilesRequest(), ?array $options = null): ?array
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -107,6 +107,9 @@ class FilesClient implements FilesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return JsonDecoder::decodeArray($json, [FileData::class]); // @phpstan-ignore-line
             }
         } catch (JsonException $e) {
@@ -130,11 +133,11 @@ class FilesClient implements FilesClientInterface
      *   headers?: array<string, string>,
      *   queryParameters?: array<string, mixed>,
      * } $options
-     * @return FileData
+     * @return ?FileData
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function uploadAFile(PostCrmFilesRequest $request, ?array $options = null): FileData
+    public function uploadAFile(PostCrmFilesRequest $request, ?array $options = null): ?FileData
     {
         $options = array_merge($this->options, $options ?? []);
         $body = new MultipartFormData();
@@ -161,6 +164,9 @@ class FilesClient implements FilesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return FileData::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -185,11 +191,11 @@ class FilesClient implements FilesClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetCrmFilesIdResponse
+     * @return ?GetCrmFilesIdResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function downloadAFile(string $id, ?array $options = null): GetCrmFilesIdResponse
+    public function downloadAFile(string $id, ?array $options = null): ?GetCrmFilesIdResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -204,6 +210,9 @@ class FilesClient implements FilesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetCrmFilesIdResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -267,11 +276,11 @@ class FilesClient implements FilesClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return FileData
+     * @return ?FileData
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getFileDetails(string $id, ?array $options = null): FileData
+    public function getFileDetails(string $id, ?array $options = null): ?FileData
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -286,6 +295,9 @@ class FilesClient implements FilesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return FileData::fromJson($json);
             }
         } catch (JsonException $e) {

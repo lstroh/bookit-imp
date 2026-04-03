@@ -43,9 +43,9 @@ interface CustomObjectsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return UpsertrecordsResponse
+     * @return ?UpsertrecordsResponse
      */
-    public function upsertrecords(string $objectType, UpsertrecordsRequest $request, ?array $options = null): UpsertrecordsResponse;
+    public function upsertrecords(string $objectType, UpsertrecordsRequest $request, ?array $options = null): ?UpsertrecordsResponse;
 
     /**
      * <Note title="Enterprise access only">Custom objects are only available to Enterprise plans.
@@ -62,9 +62,9 @@ interface CustomObjectsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetrecordsResponse
+     * @return ?GetrecordsResponse
      */
-    public function getrecords(string $objectType, GetrecordsRequest $request, ?array $options = null): GetrecordsResponse;
+    public function getrecords(string $objectType, GetrecordsRequest $request, ?array $options = null): ?GetrecordsResponse;
 
     /**
      * Use this endpoint to delete multiple object records of the same object-type in one request.
@@ -81,7 +81,7 @@ interface CustomObjectsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return BatchDeleteObjectRecordsResponse
+     * @return ?BatchDeleteObjectRecordsResponse
      */
-    public function batchDeleteObjectRecords(string $objectType, BatchDeleteObjectRecordsRequest $request = new BatchDeleteObjectRecordsRequest(), ?array $options = null): BatchDeleteObjectRecordsResponse;
+    public function batchDeleteObjectRecords(string $objectType, BatchDeleteObjectRecordsRequest $request = new BatchDeleteObjectRecordsRequest(), ?array $options = null): ?BatchDeleteObjectRecordsResponse;
 }

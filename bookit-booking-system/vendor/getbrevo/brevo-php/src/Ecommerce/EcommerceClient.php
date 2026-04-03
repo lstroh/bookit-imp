@@ -88,11 +88,11 @@ class EcommerceClient implements EcommerceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetCategoriesResponse
+     * @return ?GetCategoriesResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getCategories(GetCategoriesRequest $request = new GetCategoriesRequest(), ?array $options = null): GetCategoriesResponse
+    public function getCategories(GetCategoriesRequest $request = new GetCategoriesRequest(), ?array $options = null): ?GetCategoriesResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -133,6 +133,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetCategoriesResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -157,11 +160,11 @@ class EcommerceClient implements EcommerceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateUpdateCategoryResponse
+     * @return ?CreateUpdateCategoryResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createUpdateCategory(CreateUpdateCategoryRequest $request, ?array $options = null): CreateUpdateCategoryResponse
+    public function createUpdateCategory(CreateUpdateCategoryRequest $request, ?array $options = null): ?CreateUpdateCategoryResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -177,6 +180,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateUpdateCategoryResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -201,11 +207,11 @@ class EcommerceClient implements EcommerceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateUpdateBatchCategoryResponse
+     * @return ?CreateUpdateBatchCategoryResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createUpdateBatchCategory(CreateUpdateBatchCategoryRequest $request, ?array $options = null): CreateUpdateBatchCategoryResponse
+    public function createUpdateBatchCategory(CreateUpdateBatchCategoryRequest $request, ?array $options = null): ?CreateUpdateBatchCategoryResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -221,6 +227,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateUpdateBatchCategoryResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -245,11 +254,11 @@ class EcommerceClient implements EcommerceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetCategoryDetails
+     * @return ?GetCategoryDetails
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getCategoryInfo(string $id, ?array $options = null): GetCategoryDetails
+    public function getCategoryInfo(string $id, ?array $options = null): ?GetCategoryDetails
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -264,6 +273,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetCategoryDetails::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -328,11 +340,11 @@ class EcommerceClient implements EcommerceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetEcommerceAttributionMetricsResponse
+     * @return ?GetEcommerceAttributionMetricsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getAttributionMetricsForOneOrMoreBrevoCampaignsOrWorkflows(GetEcommerceAttributionMetricsRequest $request = new GetEcommerceAttributionMetricsRequest(), ?array $options = null): GetEcommerceAttributionMetricsResponse
+    public function getAttributionMetricsForOneOrMoreBrevoCampaignsOrWorkflows(GetEcommerceAttributionMetricsRequest $request = new GetEcommerceAttributionMetricsRequest(), ?array $options = null): ?GetEcommerceAttributionMetricsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -367,6 +379,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetEcommerceAttributionMetricsResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -392,11 +407,11 @@ class EcommerceClient implements EcommerceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetEcommerceAttributionMetricsConversionSourceConversionSourceIdResponse
+     * @return ?GetEcommerceAttributionMetricsConversionSourceConversionSourceIdResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getDetailedAttributionMetricsForASingleBrevoCampaignOrWorkflow(string $conversionSource, string $conversionSourceId, ?array $options = null): GetEcommerceAttributionMetricsConversionSourceConversionSourceIdResponse
+    public function getDetailedAttributionMetricsForASingleBrevoCampaignOrWorkflow(string $conversionSource, string $conversionSourceId, ?array $options = null): ?GetEcommerceAttributionMetricsConversionSourceConversionSourceIdResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -411,6 +426,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetEcommerceAttributionMetricsConversionSourceConversionSourceIdResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -436,11 +454,11 @@ class EcommerceClient implements EcommerceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetEcommerceAttributionProductsConversionSourceConversionSourceIdResponse
+     * @return ?GetEcommerceAttributionProductsConversionSourceConversionSourceIdResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getAttributedProductSalesForASingleBrevoCampaignOrWorkflow(string $conversionSource, string $conversionSourceId, ?array $options = null): GetEcommerceAttributionProductsConversionSourceConversionSourceIdResponse
+    public function getAttributedProductSalesForASingleBrevoCampaignOrWorkflow(string $conversionSource, string $conversionSourceId, ?array $options = null): ?GetEcommerceAttributionProductsConversionSourceConversionSourceIdResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -455,6 +473,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetEcommerceAttributionProductsConversionSourceConversionSourceIdResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -478,11 +499,11 @@ class EcommerceClient implements EcommerceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetEcommerceConfigDisplayCurrencyResponse
+     * @return ?GetEcommerceConfigDisplayCurrencyResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getTheIso4217CompliantDisplayCurrencyCodeForYourBrevoAccount(?array $options = null): GetEcommerceConfigDisplayCurrencyResponse
+    public function getTheIso4217CompliantDisplayCurrencyCodeForYourBrevoAccount(?array $options = null): ?GetEcommerceConfigDisplayCurrencyResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -497,6 +518,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetEcommerceConfigDisplayCurrencyResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -521,11 +545,11 @@ class EcommerceClient implements EcommerceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return SetConfigDisplayCurrencyResponse
+     * @return ?SetConfigDisplayCurrencyResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function setConfigDisplayCurrency(SetConfigDisplayCurrencyRequest $request, ?array $options = null): SetConfigDisplayCurrencyResponse
+    public function setConfigDisplayCurrency(SetConfigDisplayCurrencyRequest $request, ?array $options = null): ?SetConfigDisplayCurrencyResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -541,6 +565,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return SetConfigDisplayCurrencyResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -603,6 +630,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return JsonDecoder::decodeMixed($json);
             }
         } catch (JsonException $e) {
@@ -671,11 +701,11 @@ class EcommerceClient implements EcommerceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateBatchOrderResponse
+     * @return ?CreateBatchOrderResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createBatchOrder(CreateBatchOrderRequest $request, ?array $options = null): CreateBatchOrderResponse
+    public function createBatchOrder(CreateBatchOrderRequest $request, ?array $options = null): ?CreateBatchOrderResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -691,6 +721,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateBatchOrderResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -715,11 +748,11 @@ class EcommerceClient implements EcommerceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetProductsResponse
+     * @return ?GetProductsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getProducts(GetProductsRequest $request = new GetProductsRequest(), ?array $options = null): GetProductsResponse
+    public function getProducts(GetProductsRequest $request = new GetProductsRequest(), ?array $options = null): ?GetProductsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -781,6 +814,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetProductsResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -805,11 +841,11 @@ class EcommerceClient implements EcommerceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateUpdateProductResponse
+     * @return ?CreateUpdateProductResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createUpdateProduct(CreateUpdateProductRequest $request, ?array $options = null): CreateUpdateProductResponse
+    public function createUpdateProduct(CreateUpdateProductRequest $request, ?array $options = null): ?CreateUpdateProductResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -825,6 +861,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateUpdateProductResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -849,11 +888,11 @@ class EcommerceClient implements EcommerceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateUpdateBatchProductsResponse
+     * @return ?CreateUpdateBatchProductsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createUpdateBatchProducts(CreateUpdateBatchProductsRequest $request, ?array $options = null): CreateUpdateBatchProductsResponse
+    public function createUpdateBatchProducts(CreateUpdateBatchProductsRequest $request, ?array $options = null): ?CreateUpdateBatchProductsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -869,6 +908,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateUpdateBatchProductsResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -893,11 +935,11 @@ class EcommerceClient implements EcommerceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetProductDetails
+     * @return ?GetProductDetails
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getProductInfo(string $id, ?array $options = null): GetProductDetails
+    public function getProductInfo(string $id, ?array $options = null): ?GetProductDetails
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -912,6 +954,9 @@ class EcommerceClient implements EcommerceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetProductDetails::fromJson($json);
             }
         } catch (JsonException $e) {

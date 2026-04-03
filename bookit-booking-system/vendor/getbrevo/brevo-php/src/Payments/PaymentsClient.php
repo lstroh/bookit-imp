@@ -61,11 +61,11 @@ class PaymentsClient implements PaymentsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreatePaymentRequestResponse
+     * @return ?CreatePaymentRequestResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createPaymentRequest(CreatePaymentRequestRequest $request, ?array $options = null): CreatePaymentRequestResponse
+    public function createPaymentRequest(CreatePaymentRequestRequest $request, ?array $options = null): ?CreatePaymentRequestResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -81,6 +81,9 @@ class PaymentsClient implements PaymentsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreatePaymentRequestResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -105,11 +108,11 @@ class PaymentsClient implements PaymentsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetPaymentRequestResponse
+     * @return ?GetPaymentRequestResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getPaymentRequest(string $id, ?array $options = null): GetPaymentRequestResponse
+    public function getPaymentRequest(string $id, ?array $options = null): ?GetPaymentRequestResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -124,6 +127,9 @@ class PaymentsClient implements PaymentsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetPaymentRequestResponse::fromJson($json);
             }
         } catch (JsonException $e) {

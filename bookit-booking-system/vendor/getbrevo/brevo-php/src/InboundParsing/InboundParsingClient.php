@@ -63,11 +63,11 @@ class InboundParsingClient implements InboundParsingClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetInboundEmailEventsResponse
+     * @return ?GetInboundEmailEventsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getInboundEmailEvents(GetInboundEmailEventsRequest $request = new GetInboundEmailEventsRequest(), ?array $options = null): GetInboundEmailEventsResponse
+    public function getInboundEmailEvents(GetInboundEmailEventsRequest $request = new GetInboundEmailEventsRequest(), ?array $options = null): ?GetInboundEmailEventsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -102,6 +102,9 @@ class InboundParsingClient implements InboundParsingClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetInboundEmailEventsResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -128,11 +131,11 @@ class InboundParsingClient implements InboundParsingClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetInboundEmailEventsByUuidResponse
+     * @return ?GetInboundEmailEventsByUuidResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getInboundEmailEventsByUuid(string $uuid, ?array $options = null): GetInboundEmailEventsByUuidResponse
+    public function getInboundEmailEventsByUuid(string $uuid, ?array $options = null): ?GetInboundEmailEventsByUuidResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -147,6 +150,9 @@ class InboundParsingClient implements InboundParsingClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetInboundEmailEventsByUuidResponse::fromJson($json);
             }
         } catch (JsonException $e) {

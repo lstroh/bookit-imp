@@ -69,11 +69,11 @@ class WhatsAppCampaignsClient implements WhatsAppCampaignsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetWhatsAppCampaignsResponse
+     * @return ?GetWhatsAppCampaignsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getWhatsAppCampaigns(GetWhatsAppCampaignsRequest $request = new GetWhatsAppCampaignsRequest(), ?array $options = null): GetWhatsAppCampaignsResponse
+    public function getWhatsAppCampaigns(GetWhatsAppCampaignsRequest $request = new GetWhatsAppCampaignsRequest(), ?array $options = null): ?GetWhatsAppCampaignsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -105,6 +105,9 @@ class WhatsAppCampaignsClient implements WhatsAppCampaignsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetWhatsAppCampaignsResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -135,11 +138,11 @@ class WhatsAppCampaignsClient implements WhatsAppCampaignsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateWhatsAppCampaignResponse
+     * @return ?CreateWhatsAppCampaignResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createWhatsAppCampaign(CreateWhatsAppCampaignRequest $request, ?array $options = null): CreateWhatsAppCampaignResponse
+    public function createWhatsAppCampaign(CreateWhatsAppCampaignRequest $request, ?array $options = null): ?CreateWhatsAppCampaignResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -155,6 +158,9 @@ class WhatsAppCampaignsClient implements WhatsAppCampaignsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateWhatsAppCampaignResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -181,11 +187,11 @@ class WhatsAppCampaignsClient implements WhatsAppCampaignsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetWhatsAppConfigResponse
+     * @return ?GetWhatsAppConfigResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getWhatsAppConfig(?array $options = null): GetWhatsAppConfigResponse
+    public function getWhatsAppConfig(?array $options = null): ?GetWhatsAppConfigResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -200,6 +206,9 @@ class WhatsAppCampaignsClient implements WhatsAppCampaignsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetWhatsAppConfigResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -227,11 +236,11 @@ class WhatsAppCampaignsClient implements WhatsAppCampaignsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateWhatsAppTemplateResponse
+     * @return ?CreateWhatsAppTemplateResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createWhatsAppTemplate(CreateWhatsAppTemplateRequest $request, ?array $options = null): CreateWhatsAppTemplateResponse
+    public function createWhatsAppTemplate(CreateWhatsAppTemplateRequest $request, ?array $options = null): ?CreateWhatsAppTemplateResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -247,6 +256,9 @@ class WhatsAppCampaignsClient implements WhatsAppCampaignsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateWhatsAppTemplateResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -271,11 +283,11 @@ class WhatsAppCampaignsClient implements WhatsAppCampaignsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetWhatsAppTemplatesResponse
+     * @return ?GetWhatsAppTemplatesResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getWhatsAppTemplates(GetWhatsAppTemplatesRequest $request = new GetWhatsAppTemplatesRequest(), ?array $options = null): GetWhatsAppTemplatesResponse
+    public function getWhatsAppTemplates(GetWhatsAppTemplatesRequest $request = new GetWhatsAppTemplatesRequest(), ?array $options = null): ?GetWhatsAppTemplatesResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -310,6 +322,9 @@ class WhatsAppCampaignsClient implements WhatsAppCampaignsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetWhatsAppTemplatesResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -382,11 +397,11 @@ class WhatsAppCampaignsClient implements WhatsAppCampaignsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetWhatsAppCampaignResponse
+     * @return ?GetWhatsAppCampaignResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getWhatsAppCampaign(int $campaignId, ?array $options = null): GetWhatsAppCampaignResponse
+    public function getWhatsAppCampaign(int $campaignId, ?array $options = null): ?GetWhatsAppCampaignResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -401,6 +416,9 @@ class WhatsAppCampaignsClient implements WhatsAppCampaignsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetWhatsAppCampaignResponse::fromJson($json);
             }
         } catch (JsonException $e) {

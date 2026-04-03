@@ -108,11 +108,11 @@ class ConversationsClient implements ConversationsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return ConversationsMessage
+     * @return ?ConversationsMessage
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function sendAMessageAsAnAgent(PostConversationsMessagesRequest $request, ?array $options = null): ConversationsMessage
+    public function sendAMessageAsAnAgent(PostConversationsMessagesRequest $request, ?array $options = null): ?ConversationsMessage
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -128,6 +128,9 @@ class ConversationsClient implements ConversationsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return ConversationsMessage::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -152,11 +155,11 @@ class ConversationsClient implements ConversationsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return ConversationsMessage
+     * @return ?ConversationsMessage
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getAMessage(string $id, ?array $options = null): ConversationsMessage
+    public function getAMessage(string $id, ?array $options = null): ?ConversationsMessage
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -171,6 +174,9 @@ class ConversationsClient implements ConversationsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return ConversationsMessage::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -198,11 +204,11 @@ class ConversationsClient implements ConversationsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return ConversationsMessage
+     * @return ?ConversationsMessage
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function updateAMessageSentByAnAgent(string $id, PutConversationsMessagesIdRequest $request, ?array $options = null): ConversationsMessage
+    public function updateAMessageSentByAnAgent(string $id, PutConversationsMessagesIdRequest $request, ?array $options = null): ?ConversationsMessage
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -218,6 +224,9 @@ class ConversationsClient implements ConversationsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return ConversationsMessage::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -285,11 +294,11 @@ class ConversationsClient implements ConversationsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return ConversationsMessage
+     * @return ?ConversationsMessage
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function sendAnAutomatedMessageToAVisitor(PostConversationsPushedMessagesRequest $request, ?array $options = null): ConversationsMessage
+    public function sendAnAutomatedMessageToAVisitor(PostConversationsPushedMessagesRequest $request, ?array $options = null): ?ConversationsMessage
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -305,6 +314,9 @@ class ConversationsClient implements ConversationsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return ConversationsMessage::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -329,11 +341,11 @@ class ConversationsClient implements ConversationsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return ConversationsMessage
+     * @return ?ConversationsMessage
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getAnAutomatedMessage(string $id, ?array $options = null): ConversationsMessage
+    public function getAnAutomatedMessage(string $id, ?array $options = null): ?ConversationsMessage
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -348,6 +360,9 @@ class ConversationsClient implements ConversationsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return ConversationsMessage::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -373,11 +388,11 @@ class ConversationsClient implements ConversationsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return ConversationsMessage
+     * @return ?ConversationsMessage
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function updateAnAutomatedMessage(string $id, PutConversationsPushedMessagesIdRequest $request, ?array $options = null): ConversationsMessage
+    public function updateAnAutomatedMessage(string $id, PutConversationsPushedMessagesIdRequest $request, ?array $options = null): ?ConversationsMessage
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -393,6 +408,9 @@ class ConversationsClient implements ConversationsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return ConversationsMessage::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -458,11 +476,11 @@ class ConversationsClient implements ConversationsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return PutConversationsVisitorGroupResponse
+     * @return ?PutConversationsVisitorGroupResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function setVisitorGroupAssignment(PutConversationsVisitorGroupRequest $request, ?array $options = null): PutConversationsVisitorGroupResponse
+    public function setVisitorGroupAssignment(PutConversationsVisitorGroupRequest $request, ?array $options = null): ?PutConversationsVisitorGroupResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -478,6 +496,9 @@ class ConversationsClient implements ConversationsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return PutConversationsVisitorGroupResponse::fromJson($json);
             }
         } catch (JsonException $e) {

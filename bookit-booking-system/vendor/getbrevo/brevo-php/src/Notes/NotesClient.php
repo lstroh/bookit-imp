@@ -64,11 +64,11 @@ class NotesClient implements NotesClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return array<Note>
+     * @return ?array<Note>
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getAllNotes(GetCrmNotesRequest $request = new GetCrmNotesRequest(), ?array $options = null): array
+    public function getAllNotes(GetCrmNotesRequest $request = new GetCrmNotesRequest(), ?array $options = null): ?array
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -106,6 +106,9 @@ class NotesClient implements NotesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return JsonDecoder::decodeArray($json, [Note::class]); // @phpstan-ignore-line
             }
         } catch (JsonException $e) {
@@ -130,11 +133,11 @@ class NotesClient implements NotesClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return PostCrmNotesResponse
+     * @return ?PostCrmNotesResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createANote(NoteData $request, ?array $options = null): PostCrmNotesResponse
+    public function createANote(NoteData $request, ?array $options = null): ?PostCrmNotesResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -150,6 +153,9 @@ class NotesClient implements NotesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return PostCrmNotesResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -174,11 +180,11 @@ class NotesClient implements NotesClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return Note
+     * @return ?Note
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getANote(string $id, ?array $options = null): Note
+    public function getANote(string $id, ?array $options = null): ?Note
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -193,6 +199,9 @@ class NotesClient implements NotesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return Note::fromJson($json);
             }
         } catch (JsonException $e) {

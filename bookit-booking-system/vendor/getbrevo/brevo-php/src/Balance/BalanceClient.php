@@ -22,9 +22,11 @@ use Brevo\Balance\Requests\UpdateBalanceDefinitionRequest;
 use Brevo\Balance\Requests\CreateBalanceLimitRequest;
 use Brevo\Balance\Requests\GetBalanceLimitRequest;
 use Brevo\Balance\Requests\UpdateBalanceLimitRequest;
+use Brevo\Balance\Requests\GetContactBalancesRequest;
 use Brevo\Balance\Types\GetContactBalancesResponse;
 use Brevo\Balance\Requests\CreateBalanceOrderRequest;
 use Brevo\Balance\Types\CreateBalanceOrderResponse;
+use Brevo\Balance\Requests\GetSubscriptionBalancesRequest;
 use Brevo\Balance\Types\GetSubscriptionBalancesResponse;
 use Brevo\Balance\Requests\PostLoyaltyBalanceProgramsPidSubscriptionsCidBalancesRequest;
 use Brevo\Balance\Types\PostLoyaltyBalanceProgramsPidSubscriptionsCidBalancesResponse;
@@ -82,11 +84,11 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return BalanceLimit
+     * @return ?BalanceLimit
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getActiveBalancesApi(string $pid, GetLoyaltyBalanceProgramsPidActiveBalanceRequest $request, ?array $options = null): BalanceLimit
+    public function getActiveBalancesApi(string $pid, GetLoyaltyBalanceProgramsPidActiveBalanceRequest $request, ?array $options = null): ?BalanceLimit
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -104,6 +106,9 @@ class BalanceClient implements BalanceClientInterface
         if ($request->sort != null) {
             $query['sort'] = $request->sort;
         }
+        if ($request->includeInternal != null) {
+            $query['includeInternal'] = $request->includeInternal;
+        }
         try {
             $response = $this->client->sendRequest(
                 new JsonApiRequest(
@@ -117,6 +122,9 @@ class BalanceClient implements BalanceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return BalanceLimit::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -144,11 +152,11 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetBalanceDefinitionListResponse
+     * @return ?GetBalanceDefinitionListResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getBalanceDefinitionList(string $pid, GetBalanceDefinitionListRequest $request = new GetBalanceDefinitionListRequest(), ?array $options = null): GetBalanceDefinitionListResponse
+    public function getBalanceDefinitionList(string $pid, GetBalanceDefinitionListRequest $request = new GetBalanceDefinitionListRequest(), ?array $options = null): ?GetBalanceDefinitionListResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -180,6 +188,9 @@ class BalanceClient implements BalanceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetBalanceDefinitionListResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -207,11 +218,11 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return BalanceDefinition
+     * @return ?BalanceDefinition
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createBalanceDefinition(string $pid, PostLoyaltyBalanceProgramsPidBalanceDefinitionsRequest $request, ?array $options = null): BalanceDefinition
+    public function createBalanceDefinition(string $pid, PostLoyaltyBalanceProgramsPidBalanceDefinitionsRequest $request, ?array $options = null): ?BalanceDefinition
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -227,6 +238,9 @@ class BalanceClient implements BalanceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return BalanceDefinition::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -255,11 +269,11 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return BalanceDefinition
+     * @return ?BalanceDefinition
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getBalanceDefinition(string $pid, string $bdid, GetBalanceDefinitionRequest $request = new GetBalanceDefinitionRequest(), ?array $options = null): BalanceDefinition
+    public function getBalanceDefinition(string $pid, string $bdid, GetBalanceDefinitionRequest $request = new GetBalanceDefinitionRequest(), ?array $options = null): ?BalanceDefinition
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -279,6 +293,9 @@ class BalanceClient implements BalanceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return BalanceDefinition::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -307,11 +324,11 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return BalanceDefinition
+     * @return ?BalanceDefinition
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function updateBalanceDefinition(string $pid, string $bdid, UpdateBalanceDefinitionRequest $request, ?array $options = null): BalanceDefinition
+    public function updateBalanceDefinition(string $pid, string $bdid, UpdateBalanceDefinitionRequest $request, ?array $options = null): ?BalanceDefinition
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -327,6 +344,9 @@ class BalanceClient implements BalanceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return BalanceDefinition::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -397,11 +417,11 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return BalanceLimit
+     * @return ?BalanceLimit
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createBalanceLimit(string $pid, string $bdid, CreateBalanceLimitRequest $request, ?array $options = null): BalanceLimit
+    public function createBalanceLimit(string $pid, string $bdid, CreateBalanceLimitRequest $request, ?array $options = null): ?BalanceLimit
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -417,6 +437,9 @@ class BalanceClient implements BalanceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return BalanceLimit::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -446,11 +469,11 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return BalanceLimit
+     * @return ?BalanceLimit
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getBalanceLimit(string $pid, string $bdid, string $blid, GetBalanceLimitRequest $request = new GetBalanceLimitRequest(), ?array $options = null): BalanceLimit
+    public function getBalanceLimit(string $pid, string $bdid, string $blid, GetBalanceLimitRequest $request = new GetBalanceLimitRequest(), ?array $options = null): ?BalanceLimit
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -470,6 +493,9 @@ class BalanceClient implements BalanceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return BalanceLimit::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -499,11 +525,11 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return BalanceLimit
+     * @return ?BalanceLimit
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function updateBalanceLimit(string $pid, string $bdid, string $blid, UpdateBalanceLimitRequest $request, ?array $options = null): BalanceLimit
+    public function updateBalanceLimit(string $pid, string $bdid, string $blid, UpdateBalanceLimitRequest $request, ?array $options = null): ?BalanceLimit
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -519,6 +545,9 @@ class BalanceClient implements BalanceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return BalanceLimit::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -580,6 +609,7 @@ class BalanceClient implements BalanceClientInterface
      * Returns balance list
      *
      * @param string $pid Loyalty Program Id
+     * @param GetContactBalancesRequest $request
      * @param ?array{
      *   baseUrl?: string,
      *   maxRetries?: int,
@@ -588,25 +618,33 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetContactBalancesResponse
+     * @return ?GetContactBalancesResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getContactBalances(string $pid, ?array $options = null): GetContactBalancesResponse
+    public function getContactBalances(string $pid, GetContactBalancesRequest $request = new GetContactBalancesRequest(), ?array $options = null): ?GetContactBalancesResponse
     {
         $options = array_merge($this->options, $options ?? []);
+        $query = [];
+        if ($request->includeInternal != null) {
+            $query['includeInternal'] = $request->includeInternal;
+        }
         try {
             $response = $this->client->sendRequest(
                 new JsonApiRequest(
                     baseUrl: $options['baseUrl'] ?? $this->client->options['baseUrl'] ?? Environments::Default_->value,
                     path: "loyalty/balance/programs/{$pid}/contact-balances",
                     method: HttpMethod::GET,
+                    query: $query,
                 ),
                 $options,
             );
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetContactBalancesResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -634,11 +672,11 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateBalanceOrderResponse
+     * @return ?CreateBalanceOrderResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createBalanceOrder(string $pid, CreateBalanceOrderRequest $request, ?array $options = null): CreateBalanceOrderResponse
+    public function createBalanceOrder(string $pid, CreateBalanceOrderRequest $request, ?array $options = null): ?CreateBalanceOrderResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -654,6 +692,9 @@ class BalanceClient implements BalanceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateBalanceOrderResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -673,6 +714,7 @@ class BalanceClient implements BalanceClientInterface
      *
      * @param string $pid Loyalty Program Id
      * @param string $cid Contact Id
+     * @param GetSubscriptionBalancesRequest $request
      * @param ?array{
      *   baseUrl?: string,
      *   maxRetries?: int,
@@ -681,25 +723,33 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetSubscriptionBalancesResponse
+     * @return ?GetSubscriptionBalancesResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getSubscriptionBalances(string $pid, string $cid, ?array $options = null): GetSubscriptionBalancesResponse
+    public function getSubscriptionBalances(string $pid, string $cid, GetSubscriptionBalancesRequest $request = new GetSubscriptionBalancesRequest(), ?array $options = null): ?GetSubscriptionBalancesResponse
     {
         $options = array_merge($this->options, $options ?? []);
+        $query = [];
+        if ($request->includeInternal != null) {
+            $query['includeInternal'] = $request->includeInternal;
+        }
         try {
             $response = $this->client->sendRequest(
                 new JsonApiRequest(
                     baseUrl: $options['baseUrl'] ?? $this->client->options['baseUrl'] ?? Environments::Default_->value,
                     path: "loyalty/balance/programs/{$pid}/subscriptions/{$cid}/balances",
                     method: HttpMethod::GET,
+                    query: $query,
                 ),
                 $options,
             );
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetSubscriptionBalancesResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -728,11 +778,11 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return PostLoyaltyBalanceProgramsPidSubscriptionsCidBalancesResponse
+     * @return ?PostLoyaltyBalanceProgramsPidSubscriptionsCidBalancesResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createSubscriptionBalances(string $pid, string $cid, PostLoyaltyBalanceProgramsPidSubscriptionsCidBalancesRequest $request, ?array $options = null): PostLoyaltyBalanceProgramsPidSubscriptionsCidBalancesResponse
+    public function createSubscriptionBalances(string $pid, string $cid, PostLoyaltyBalanceProgramsPidSubscriptionsCidBalancesRequest $request, ?array $options = null): ?PostLoyaltyBalanceProgramsPidSubscriptionsCidBalancesResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -748,6 +798,9 @@ class BalanceClient implements BalanceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return PostLoyaltyBalanceProgramsPidSubscriptionsCidBalancesResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -775,11 +828,11 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetLoyaltyBalanceProgramsPidTransactionHistoryResponse
+     * @return ?GetLoyaltyBalanceProgramsPidTransactionHistoryResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getTransactionHistoryApi(string $pid, GetLoyaltyBalanceProgramsPidTransactionHistoryRequest $request, ?array $options = null): GetLoyaltyBalanceProgramsPidTransactionHistoryResponse
+    public function getTransactionHistoryApi(string $pid, GetLoyaltyBalanceProgramsPidTransactionHistoryRequest $request, ?array $options = null): ?GetLoyaltyBalanceProgramsPidTransactionHistoryResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -800,6 +853,12 @@ class BalanceClient implements BalanceClientInterface
         if ($request->filters != null) {
             $query['filters'] = $request->filters;
         }
+        if ($request->status != null) {
+            $query['status'] = $request->status;
+        }
+        if ($request->transactionType != null) {
+            $query['transactionType'] = $request->transactionType;
+        }
         try {
             $response = $this->client->sendRequest(
                 new JsonApiRequest(
@@ -813,6 +872,9 @@ class BalanceClient implements BalanceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetLoyaltyBalanceProgramsPidTransactionHistoryResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -840,11 +902,11 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return Transaction
+     * @return ?Transaction
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function beginTransaction(string $pid, BeginTransactionRequest $request, ?array $options = null): Transaction
+    public function beginTransaction(string $pid, BeginTransactionRequest $request, ?array $options = null): ?Transaction
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -860,6 +922,9 @@ class BalanceClient implements BalanceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return Transaction::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -887,11 +952,11 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return Transaction
+     * @return ?Transaction
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function cancelTransaction(string $pid, string $tid, ?array $options = null): Transaction
+    public function cancelTransaction(string $pid, string $tid, ?array $options = null): ?Transaction
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -906,6 +971,9 @@ class BalanceClient implements BalanceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return Transaction::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -933,11 +1001,11 @@ class BalanceClient implements BalanceClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return Transaction
+     * @return ?Transaction
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function completeTransaction(string $pid, string $tid, ?array $options = null): Transaction
+    public function completeTransaction(string $pid, string $tid, ?array $options = null): ?Transaction
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -952,6 +1020,9 @@ class BalanceClient implements BalanceClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return Transaction::fromJson($json);
             }
         } catch (JsonException $e) {

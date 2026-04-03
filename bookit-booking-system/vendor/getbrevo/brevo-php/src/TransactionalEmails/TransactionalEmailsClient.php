@@ -88,11 +88,11 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetTransacBlockedContactsResponse
+     * @return ?GetTransacBlockedContactsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getTransacBlockedContacts(GetTransacBlockedContactsRequest $request = new GetTransacBlockedContactsRequest(), ?array $options = null): GetTransacBlockedContactsResponse
+    public function getTransacBlockedContacts(GetTransacBlockedContactsRequest $request = new GetTransacBlockedContactsRequest(), ?array $options = null): ?GetTransacBlockedContactsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -127,6 +127,9 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetTransacBlockedContactsResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -191,11 +194,11 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetBlockedDomainsResponse
+     * @return ?GetBlockedDomainsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getBlockedDomains(?array $options = null): GetBlockedDomainsResponse
+    public function getBlockedDomains(?array $options = null): ?GetBlockedDomainsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -210,6 +213,9 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetBlockedDomainsResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -359,11 +365,11 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return SendTransacEmailResponse
+     * @return ?SendTransacEmailResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function sendTransacEmail(SendTransacEmailRequest $request = new SendTransacEmailRequest(), ?array $options = null): SendTransacEmailResponse
+    public function sendTransacEmail(SendTransacEmailRequest $request = new SendTransacEmailRequest(), ?array $options = null): ?SendTransacEmailResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -379,6 +385,9 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return SendTransacEmailResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -450,11 +459,11 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
      * @return (
      *    GetScheduledEmailByIdResponseBatches
      *   |GetScheduledEmailByIdResponseCreatedAt
-     * )
+     * )|null
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getScheduledEmailById(string $identifier, GetScheduledEmailByIdRequest $request = new GetScheduledEmailByIdRequest(), ?array $options = null): GetScheduledEmailByIdResponseBatches|GetScheduledEmailByIdResponseCreatedAt
+    public function getScheduledEmailById(string $identifier, GetScheduledEmailByIdRequest $request = new GetScheduledEmailByIdRequest(), ?array $options = null): GetScheduledEmailByIdResponseBatches|GetScheduledEmailByIdResponseCreatedAt|null
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -489,6 +498,9 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return JsonDecoder::decodeUnion($json, new Union(GetScheduledEmailByIdResponseBatches::class, GetScheduledEmailByIdResponseCreatedAt::class)); // @phpstan-ignore-line
             }
         } catch (JsonException $e) {
@@ -515,11 +527,11 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetTransacEmailsListResponse
+     * @return ?GetTransacEmailsListResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getTransacEmailsList(GetTransacEmailsListRequest $request = new GetTransacEmailsListRequest(), ?array $options = null): GetTransacEmailsListResponse
+    public function getTransacEmailsList(GetTransacEmailsListRequest $request = new GetTransacEmailsListRequest(), ?array $options = null): ?GetTransacEmailsListResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -560,6 +572,9 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetTransacEmailsListResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -588,11 +603,11 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetTransacEmailContentResponse
+     * @return ?GetTransacEmailContentResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getTransacEmailContent(string $uuid, ?array $options = null): GetTransacEmailContentResponse
+    public function getTransacEmailContent(string $uuid, ?array $options = null): ?GetTransacEmailContentResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -607,6 +622,9 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetTransacEmailContentResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -672,11 +690,11 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetAggregatedSmtpReportResponse
+     * @return ?GetAggregatedSmtpReportResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getAggregatedSmtpReport(GetAggregatedSmtpReportRequest $request = new GetAggregatedSmtpReportRequest(), ?array $options = null): GetAggregatedSmtpReportResponse
+    public function getAggregatedSmtpReport(GetAggregatedSmtpReportRequest $request = new GetAggregatedSmtpReportRequest(), ?array $options = null): ?GetAggregatedSmtpReportResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -705,6 +723,9 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetAggregatedSmtpReportResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -731,11 +752,11 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetEmailEventReportResponse
+     * @return ?GetEmailEventReportResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getEmailEventReport(GetEmailEventReportRequest $request = new GetEmailEventReportRequest(), ?array $options = null): GetEmailEventReportResponse
+    public function getEmailEventReport(GetEmailEventReportRequest $request = new GetEmailEventReportRequest(), ?array $options = null): ?GetEmailEventReportResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -785,6 +806,9 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetEmailEventReportResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -809,11 +833,11 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetSmtpReportResponse
+     * @return ?GetSmtpReportResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getSmtpReport(GetSmtpReportRequest $request = new GetSmtpReportRequest(), ?array $options = null): GetSmtpReportResponse
+    public function getSmtpReport(GetSmtpReportRequest $request = new GetSmtpReportRequest(), ?array $options = null): ?GetSmtpReportResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -851,6 +875,9 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetSmtpReportResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -875,11 +902,11 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return PostPreviewSmtpEmailTemplatesResponse
+     * @return ?PostPreviewSmtpEmailTemplatesResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function postPreviewSmtpEmailTemplates(mixed $request, ?array $options = null): PostPreviewSmtpEmailTemplatesResponse
+    public function postPreviewSmtpEmailTemplates(mixed $request, ?array $options = null): ?PostPreviewSmtpEmailTemplatesResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -895,6 +922,9 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return PostPreviewSmtpEmailTemplatesResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -919,11 +949,11 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetSmtpTemplatesResponse
+     * @return ?GetSmtpTemplatesResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getSmtpTemplates(GetSmtpTemplatesRequest $request = new GetSmtpTemplatesRequest(), ?array $options = null): GetSmtpTemplatesResponse
+    public function getSmtpTemplates(GetSmtpTemplatesRequest $request = new GetSmtpTemplatesRequest(), ?array $options = null): ?GetSmtpTemplatesResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -952,6 +982,9 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetSmtpTemplatesResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -976,11 +1009,11 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateSmtpTemplateResponse
+     * @return ?CreateSmtpTemplateResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createSmtpTemplate(CreateSmtpTemplateRequest $request, ?array $options = null): CreateSmtpTemplateResponse
+    public function createSmtpTemplate(CreateSmtpTemplateRequest $request, ?array $options = null): ?CreateSmtpTemplateResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -996,6 +1029,9 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateSmtpTemplateResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -1020,11 +1056,11 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetSmtpTemplateOverview
+     * @return ?GetSmtpTemplateOverview
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getSmtpTemplate(int $templateId, ?array $options = null): GetSmtpTemplateOverview
+    public function getSmtpTemplate(int $templateId, ?array $options = null): ?GetSmtpTemplateOverview
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -1039,6 +1075,9 @@ class TransactionalEmailsClient implements TransactionalEmailsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetSmtpTemplateOverview::fromJson($json);
             }
         } catch (JsonException $e) {

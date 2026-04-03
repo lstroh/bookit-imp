@@ -75,11 +75,11 @@ class CompaniesClient implements CompaniesClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetCompaniesResponse
+     * @return ?GetCompaniesResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getAllCompanies(GetCompaniesRequest $request = new GetCompaniesRequest(), ?array $options = null): GetCompaniesResponse
+    public function getAllCompanies(GetCompaniesRequest $request = new GetCompaniesRequest(), ?array $options = null): ?GetCompaniesResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -123,6 +123,9 @@ class CompaniesClient implements CompaniesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetCompaniesResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -147,11 +150,11 @@ class CompaniesClient implements CompaniesClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return PostCompaniesResponse
+     * @return ?PostCompaniesResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createACompany(PostCompaniesRequest $request, ?array $options = null): PostCompaniesResponse
+    public function createACompany(PostCompaniesRequest $request, ?array $options = null): ?PostCompaniesResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -167,6 +170,9 @@ class CompaniesClient implements CompaniesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return PostCompaniesResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -192,11 +198,11 @@ class CompaniesClient implements CompaniesClientInterface
      *   headers?: array<string, string>,
      *   queryParameters?: array<string, mixed>,
      * } $options
-     * @return PostCompaniesImportResponse
+     * @return ?PostCompaniesImportResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function importCompaniesCreationAndUpdation(PostCompaniesImportRequest $request = new PostCompaniesImportRequest(), ?array $options = null): PostCompaniesImportResponse
+    public function importCompaniesCreationAndUpdation(PostCompaniesImportRequest $request = new PostCompaniesImportRequest(), ?array $options = null): ?PostCompaniesImportResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $body = new MultipartFormData();
@@ -219,6 +225,9 @@ class CompaniesClient implements CompaniesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return PostCompaniesImportResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -284,11 +293,11 @@ class CompaniesClient implements CompaniesClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return Company
+     * @return ?Company
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getACompany(string $id, ?array $options = null): Company
+    public function getACompany(string $id, ?array $options = null): ?Company
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -303,6 +312,9 @@ class CompaniesClient implements CompaniesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return Company::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -367,11 +379,11 @@ class CompaniesClient implements CompaniesClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return Company
+     * @return ?Company
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function updateACompany(string $id, PatchCompaniesIdRequest $request = new PatchCompaniesIdRequest(), ?array $options = null): Company
+    public function updateACompany(string $id, PatchCompaniesIdRequest $request = new PatchCompaniesIdRequest(), ?array $options = null): ?Company
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -387,6 +399,9 @@ class CompaniesClient implements CompaniesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return Company::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -411,11 +426,11 @@ class CompaniesClient implements CompaniesClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return PostCrmAttributesResponse
+     * @return ?PostCrmAttributesResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createACompanyDealAttribute(PostCrmAttributesRequest $request, ?array $options = null): PostCrmAttributesResponse
+    public function createACompanyDealAttribute(PostCrmAttributesRequest $request, ?array $options = null): ?PostCrmAttributesResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -431,6 +446,9 @@ class CompaniesClient implements CompaniesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return PostCrmAttributesResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -534,11 +552,11 @@ class CompaniesClient implements CompaniesClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return array<GetCrmAttributesCompaniesResponseItem>
+     * @return ?array<GetCrmAttributesCompaniesResponseItem>
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getCompanyAttributes(?array $options = null): array
+    public function getCompanyAttributes(?array $options = null): ?array
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -553,6 +571,9 @@ class CompaniesClient implements CompaniesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return JsonDecoder::decodeArray($json, [GetCrmAttributesCompaniesResponseItem::class]); // @phpstan-ignore-line
             }
         } catch (JsonException $e) {

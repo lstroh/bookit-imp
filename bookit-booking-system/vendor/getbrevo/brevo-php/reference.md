@@ -1,6 +1,6 @@
 # Reference
 ## Account
-<details><summary><code>$client-&gt;account-&gt;getAccount() -> GetAccountResponse</code></summary>
+<details><summary><code>$client-&gt;account-&gt;getAccount() -> ?GetAccountResponse</code></summary>
 <dl>
 <dd>
 
@@ -65,7 +65,7 @@ $client->account->getAccount();
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;account-&gt;getAccountActivity($request) -> GetAccountActivityResponse</code></summary>
+<details><summary><code>$client-&gt;account-&gt;getAccountActivity($request) -> ?GetAccountActivityResponse</code></summary>
 <dl>
 <dd>
 
@@ -179,7 +179,7 @@ can be selected is one month.
 </details>
 
 ## MasterAccount
-<details><summary><code>$client-&gt;masterAccount-&gt;createANewGroupOfSubAccounts($request) -> PostCorporateGroupResponse</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;createANewGroupOfSubAccounts($request) -> ?PostCorporateGroupResponse</code></summary>
 <dl>
 <dd>
 
@@ -316,7 +316,7 @@ $client->masterAccount->deleteSubAccountFromGroup(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;getAGroupDetails($id) -> GetCorporateGroupIdResponse</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;getAGroupDetails($id) -> ?GetCorporateGroupIdResponse</code></summary>
 <dl>
 <dd>
 
@@ -505,7 +505,7 @@ $client->masterAccount->deleteAGroup(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;getSubAccountGroups() -> array</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;getSubAccountGroups() -> ?array</code></summary>
 <dl>
 <dd>
 
@@ -544,7 +544,7 @@ $client->masterAccount->getSubAccountGroups();
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;getCorporateInvitedUsersList($request) -> GetCorporateInvitedUsersListResponse</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;getCorporateInvitedUsersList($request) -> ?GetCorporateInvitedUsersListResponse</code></summary>
 <dl>
 <dd>
 
@@ -627,7 +627,7 @@ default limit is 20, but max allowed limit is 100.
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;listOfAllIPs() -> array</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;listOfAllIPs() -> ?array</code></summary>
 <dl>
 <dd>
 
@@ -667,7 +667,7 @@ $client->masterAccount->listOfAllIPs();
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;getTheDetailsOfRequestedMasterAccount() -> GetCorporateMasterAccountResponse</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;getTheDetailsOfRequestedMasterAccount() -> ?GetCorporateMasterAccountResponse</code></summary>
 <dl>
 <dd>
 
@@ -706,7 +706,7 @@ $client->masterAccount->getTheDetailsOfRequestedMasterAccount();
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;generateSsoTokenToAccessAdminAccount($request) -> GetSsoToken</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;generateSsoTokenToAccessAdminAccount($request) -> ?GetSsoToken</code></summary>
 <dl>
 <dd>
 
@@ -767,7 +767,7 @@ $client->masterAccount->generateSsoTokenToAccessAdminAccount(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;getTheListOfAllTheSubAccountsOfTheMasterAccount($request) -> GetCorporateSubAccountResponse</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;getTheListOfAllTheSubAccountsOfTheMasterAccount($request) -> ?GetCorporateSubAccountResponse</code></summary>
 <dl>
 <dd>
 
@@ -835,7 +835,7 @@ $client->masterAccount->getTheListOfAllTheSubAccountsOfTheMasterAccount(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;createANewSubAccountUnderAMasterAccount($request) -> PostCorporateSubAccountResponse</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;createANewSubAccountUnderAMasterAccount($request) -> ?PostCorporateSubAccountResponse</code></summary>
 <dl>
 <dd>
 
@@ -932,7 +932,7 @@ $client->masterAccount->createANewSubAccountUnderAMasterAccount(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;associateAnIpToSubAccounts($request) -> array</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;associateAnIpToSubAccounts($request) -> ?array</code></summary>
 <dl>
 <dd>
 
@@ -1080,7 +1080,7 @@ address
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;createAnApiKeyForASubAccount($request) -> PostCorporateSubAccountKeyResponse</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;createAnApiKeyForASubAccount($request) -> ?PostCorporateSubAccountKeyResponse</code></summary>
 <dl>
 <dd>
 
@@ -1147,7 +1147,7 @@ $client->masterAccount->createAnApiKeyForASubAccount(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;generateSsoTokenToAccessSubAccount($request) -> GetSsoToken</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;generateSsoTokenToAccessSubAccount($request) -> ?GetSsoToken</code></summary>
 <dl>
 <dd>
 
@@ -1245,7 +1245,7 @@ directly on this target URL after login
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;getSubAccountDetails($id) -> GetCorporateSubAccountIdResponse</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;getSubAccountDetails($id) -> ?GetCorporateSubAccountIdResponse</code></summary>
 <dl>
 <dd>
 
@@ -1724,7 +1724,7 @@ $client->masterAccount->updateSubAccountsPlan(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;inviteAdminUser($request) -> InviteAdminUserResponse</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;inviteAdminUser($request) -> ?InviteAdminUserResponse</code></summary>
 <dl>
 <dd>
 
@@ -1835,7 +1835,7 @@ $client->masterAccount->inviteAdminUser(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;resendCancelAdminUserInvitation($action, $email) -> PutCorporateUserInvitationActionEmailResponse</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;resendCancelAdminUserInvitation($action, $email) -> ?PutCorporateUserInvitationActionEmailResponse</code></summary>
 <dl>
 <dd>
 
@@ -1959,7 +1959,7 @@ $client->masterAccount->revokeAnAdminUser(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;masterAccount-&gt;getCorporateUserPermission($email) -> GetCorporateUserPermissionResponse</code></summary>
+<details><summary><code>$client-&gt;masterAccount-&gt;getCorporateUserPermission($email) -> ?GetCorporateUserPermissionResponse</code></summary>
 <dl>
 <dd>
 
@@ -2152,7 +2152,7 @@ $client->masterAccount->changeAdminUserPermissions(
 </details>
 
 ## User
-<details><summary><code>$client-&gt;user-&gt;getInvitedUsersList() -> GetInvitedUsersListResponse</code></summary>
+<details><summary><code>$client-&gt;user-&gt;getInvitedUsersList() -> ?GetInvitedUsersListResponse</code></summary>
 <dl>
 <dd>
 
@@ -2177,7 +2177,7 @@ $client->user->getInvitedUsersList();
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;user-&gt;putRevokeUserPermission($email) -> PutRevokeUserPermissionResponse</code></summary>
+<details><summary><code>$client-&gt;user-&gt;putRevokeUserPermission($email) -> ?PutRevokeUserPermissionResponse</code></summary>
 <dl>
 <dd>
 
@@ -2219,7 +2219,7 @@ $client->user->putRevokeUserPermission(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;user-&gt;inviteuser($request) -> InviteuserResponse</code></summary>
+<details><summary><code>$client-&gt;user-&gt;inviteuser($request) -> ?InviteuserResponse</code></summary>
 <dl>
 <dd>
 
@@ -2348,7 +2348,7 @@ $client->user->inviteuser(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;user-&gt;putresendcancelinvitation($action, $email) -> PutresendcancelinvitationResponse</code></summary>
+<details><summary><code>$client-&gt;user-&gt;putresendcancelinvitation($action, $email) -> ?PutresendcancelinvitationResponse</code></summary>
 <dl>
 <dd>
 
@@ -2399,7 +2399,7 @@ $client->user->putresendcancelinvitation(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;user-&gt;editUserPermission($request) -> EditUserPermissionResponse</code></summary>
+<details><summary><code>$client-&gt;user-&gt;editUserPermission($request) -> ?EditUserPermissionResponse</code></summary>
 <dl>
 <dd>
 
@@ -2527,7 +2527,7 @@ $client->user->editUserPermission(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;user-&gt;getUserPermission($email) -> GetUserPermissionResponse</code></summary>
+<details><summary><code>$client-&gt;user-&gt;getUserPermission($email) -> ?GetUserPermissionResponse</code></summary>
 <dl>
 <dd>
 
@@ -2570,7 +2570,7 @@ $client->user->getUserPermission(
 </details>
 
 ## Process
-<details><summary><code>$client-&gt;process-&gt;getProcesses($request) -> GetProcessesResponse</code></summary>
+<details><summary><code>$client-&gt;process-&gt;getProcesses($request) -> ?GetProcessesResponse</code></summary>
 <dl>
 <dd>
 
@@ -2668,7 +2668,7 @@ Default order is **descending** if `sort` is not passed
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;process-&gt;getProcess($processId) -> GetProcessResponse</code></summary>
+<details><summary><code>$client-&gt;process-&gt;getProcess($processId) -> ?GetProcessResponse</code></summary>
 <dl>
 <dd>
 
@@ -2747,7 +2747,7 @@ $client->process->getProcess(
 </details>
 
 ## Senders
-<details><summary><code>$client-&gt;senders-&gt;getSenders($request) -> GetSendersResponse</code></summary>
+<details><summary><code>$client-&gt;senders-&gt;getSenders($request) -> ?GetSendersResponse</code></summary>
 <dl>
 <dd>
 
@@ -2831,7 +2831,7 @@ $client->senders->getSenders(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;senders-&gt;createSender($request) -> CreateSenderResponse</code></summary>
+<details><summary><code>$client-&gt;senders-&gt;createSender($request) -> ?CreateSenderResponse</code></summary>
 <dl>
 <dd>
 
@@ -2930,7 +2930,7 @@ sender. Not required for standard accounts.
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;senders-&gt;getIps() -> GetIpsResponse</code></summary>
+<details><summary><code>$client-&gt;senders-&gt;getIps() -> ?GetIpsResponse</code></summary>
 <dl>
 <dd>
 
@@ -3142,7 +3142,7 @@ $client->senders->deleteSender(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;senders-&gt;getIpsFromSender($senderId) -> GetIpsFromSenderResponse</code></summary>
+<details><summary><code>$client-&gt;senders-&gt;getIpsFromSender($senderId) -> ?GetIpsFromSenderResponse</code></summary>
 <dl>
 <dd>
 
@@ -3287,7 +3287,7 @@ $client->senders->validateSenderByOtp(
 </details>
 
 ## Domains
-<details><summary><code>$client-&gt;domains-&gt;getDomains() -> GetDomainsResponse</code></summary>
+<details><summary><code>$client-&gt;domains-&gt;getDomains() -> ?GetDomainsResponse</code></summary>
 <dl>
 <dd>
 
@@ -3340,7 +3340,7 @@ $client->domains->getDomains();
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;domains-&gt;createDomain($request) -> CreateDomainResponse</code></summary>
+<details><summary><code>$client-&gt;domains-&gt;createDomain($request) -> ?CreateDomainResponse</code></summary>
 <dl>
 <dd>
 
@@ -3410,7 +3410,7 @@ $client->domains->createDomain(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;domains-&gt;getDomainConfiguration($domainName) -> GetDomainConfigurationResponse</code></summary>
+<details><summary><code>$client-&gt;domains-&gt;getDomainConfiguration($domainName) -> ?GetDomainConfigurationResponse</code></summary>
 <dl>
 <dd>
 
@@ -3541,7 +3541,7 @@ $client->domains->deleteDomain(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;domains-&gt;authenticateDomain($domainName) -> AuthenticateDomainResponse</code></summary>
+<details><summary><code>$client-&gt;domains-&gt;authenticateDomain($domainName) -> ?AuthenticateDomainResponse</code></summary>
 <dl>
 <dd>
 
@@ -3608,7 +3608,7 @@ $client->domains->authenticateDomain(
 </details>
 
 ## Webhooks
-<details><summary><code>$client-&gt;webhooks-&gt;getWebhooks($request) -> GetWebhooksResponse</code></summary>
+<details><summary><code>$client-&gt;webhooks-&gt;getWebhooks($request) -> ?GetWebhooksResponse</code></summary>
 <dl>
 <dd>
 
@@ -3686,7 +3686,7 @@ $client->webhooks->getWebhooks(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;webhooks-&gt;createWebhook($request) -> CreateWebhookResponse</code></summary>
+<details><summary><code>$client-&gt;webhooks-&gt;createWebhook($request) -> ?CreateWebhookResponse</code></summary>
 <dl>
 <dd>
 
@@ -3842,7 +3842,7 @@ type **Marketing**  channel **SMS** ####
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;webhooks-&gt;exportWebhooksHistory($request) -> ExportWebhooksHistoryResponse</code></summary>
+<details><summary><code>$client-&gt;webhooks-&gt;exportWebhooksHistory($request) -> ?ExportWebhooksHistoryResponse</code></summary>
 <dl>
 <dd>
 
@@ -3995,7 +3995,7 @@ Mandatory if endDate is used. Starting date of the history
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;webhooks-&gt;getWebhook($webhookId) -> GetWebhook</code></summary>
+<details><summary><code>$client-&gt;webhooks-&gt;getWebhook($webhookId) -> ?GetWebhook</code></summary>
 <dl>
 <dd>
 
@@ -4264,7 +4264,7 @@ $client->webhooks->deleteWebhook(
 </details>
 
 ## ExternalFeeds
-<details><summary><code>$client-&gt;externalFeeds-&gt;getAllExternalFeeds($request) -> GetAllExternalFeedsResponse</code></summary>
+<details><summary><code>$client-&gt;externalFeeds-&gt;getAllExternalFeeds($request) -> ?GetAllExternalFeedsResponse</code></summary>
 <dl>
 <dd>
 
@@ -4407,7 +4407,7 @@ Default order is **descending** if `sort` is not passed.
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;externalFeeds-&gt;createExternalFeed($request) -> CreateExternalFeedResponse</code></summary>
+<details><summary><code>$client-&gt;externalFeeds-&gt;createExternalFeed($request) -> ?CreateExternalFeedResponse</code></summary>
 <dl>
 <dd>
 
@@ -4553,7 +4553,7 @@ $client->externalFeeds->createExternalFeed(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;externalFeeds-&gt;getExternalFeedByUuid($uuid) -> GetExternalFeedByUuidResponse</code></summary>
+<details><summary><code>$client-&gt;externalFeeds-&gt;getExternalFeedByUuid($uuid) -> ?GetExternalFeedByUuidResponse</code></summary>
 <dl>
 <dd>
 
@@ -4852,7 +4852,7 @@ $client->externalFeeds->deleteExternalFeed(
 </details>
 
 ## CustomObjects
-<details><summary><code>$client-&gt;customObjects-&gt;upsertrecords($objectType, $request) -> UpsertrecordsResponse</code></summary>
+<details><summary><code>$client-&gt;customObjects-&gt;upsertrecords($objectType, $request) -> ?UpsertrecordsResponse</code></summary>
 <dl>
 <dd>
 
@@ -4940,7 +4940,7 @@ $client->customObjects->upsertrecords(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;customObjects-&gt;getrecords($objectType, $request) -> GetrecordsResponse</code></summary>
+<details><summary><code>$client-&gt;customObjects-&gt;getrecords($objectType, $request) -> ?GetrecordsResponse</code></summary>
 <dl>
 <dd>
 
@@ -5034,7 +5034,7 @@ $client->customObjects->getrecords(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;customObjects-&gt;batchDeleteObjectRecords($objectType, $request) -> BatchDeleteObjectRecordsResponse</code></summary>
+<details><summary><code>$client-&gt;customObjects-&gt;batchDeleteObjectRecords($objectType, $request) -> ?BatchDeleteObjectRecordsResponse</code></summary>
 <dl>
 <dd>
 
@@ -5108,7 +5108,7 @@ $client->customObjects->batchDeleteObjectRecords(
 </details>
 
 ## Contacts
-<details><summary><code>$client-&gt;contacts-&gt;getContacts($request) -> GetContacts</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;getContacts($request) -> ?GetContacts</code></summary>
 <dl>
 <dd>
 
@@ -5206,7 +5206,7 @@ $client->contacts->getContacts(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;createContact($request) -> CreateContactResponse</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;createContact($request) -> ?CreateContactResponse</code></summary>
 <dl>
 <dd>
 
@@ -5320,7 +5320,7 @@ $client->contacts->createContact(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;getAttributes() -> GetAttributesResponse</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;getAttributes() -> ?GetAttributesResponse</code></summary>
 <dl>
 <dd>
 
@@ -5769,7 +5769,7 @@ $client->contacts->createDoiContact(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;requestContactExport($request) -> RequestContactExportResponse</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;requestContactExport($request) -> ?RequestContactExportResponse</code></summary>
 <dl>
 <dd>
 
@@ -5883,7 +5883,7 @@ $client->contacts->requestContactExport(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;getFolders($request) -> GetFoldersResponse</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;getFolders($request) -> ?GetFoldersResponse</code></summary>
 <dl>
 <dd>
 
@@ -5959,7 +5959,7 @@ $client->contacts->getFolders(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;createFolder($request) -> CreateFolderResponse</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;createFolder($request) -> ?CreateFolderResponse</code></summary>
 <dl>
 <dd>
 
@@ -6001,7 +6001,7 @@ $client->contacts->createFolder(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;getFolder($folderId) -> GetFolder</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;getFolder($folderId) -> ?GetFolder</code></summary>
 <dl>
 <dd>
 
@@ -6154,7 +6154,7 @@ $client->contacts->deleteFolder(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;getFolderLists($folderId, $request) -> GetFolderListsResponse</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;getFolderLists($folderId, $request) -> ?GetFolderListsResponse</code></summary>
 <dl>
 <dd>
 
@@ -6237,7 +6237,7 @@ $client->contacts->getFolderLists(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;importContacts($request) -> ImportContactsResponse</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;importContacts($request) -> ?ImportContactsResponse</code></summary>
 <dl>
 <dd>
 
@@ -6373,7 +6373,7 @@ $client->contacts->importContacts(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;getLists($request) -> GetListsResponse</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;getLists($request) -> ?GetListsResponse</code></summary>
 <dl>
 <dd>
 
@@ -6447,7 +6447,7 @@ $client->contacts->getLists(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;createList($request) -> CreateListResponse</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;createList($request) -> ?CreateListResponse</code></summary>
 <dl>
 <dd>
 
@@ -6500,7 +6500,7 @@ $client->contacts->createList(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;getList($listId, $request) -> GetListResponse</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;getList($listId, $request) -> ?GetListResponse</code></summary>
 <dl>
 <dd>
 
@@ -6660,7 +6660,7 @@ $client->contacts->deleteList(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;getContactsFromList($listId, $request) -> GetContacts</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;getContactsFromList($listId, $request) -> ?GetContacts</code></summary>
 <dl>
 <dd>
 
@@ -6735,7 +6735,7 @@ $client->contacts->getContactsFromList(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;addContactToList($listId, $request) -> PostContactInfo</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;addContactToList($listId, $request) -> ?PostContactInfo</code></summary>
 <dl>
 <dd>
 
@@ -6793,7 +6793,7 @@ $client->contacts->addContactToList(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;removeContactFromList($listId, $request) -> PostContactInfo</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;removeContactFromList($listId, $request) -> ?PostContactInfo</code></summary>
 <dl>
 <dd>
 
@@ -6846,7 +6846,7 @@ $client->contacts->removeContactFromList(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;getSegments($request) -> GetSegmentsResponse</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;getSegments($request) -> ?GetSegmentsResponse</code></summary>
 <dl>
 <dd>
 
@@ -6904,7 +6904,7 @@ $client->contacts->getSegments(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;getContactInfo($identifier, $request) -> GetContactInfoResponse</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;getContactInfo($identifier, $request) -> ?GetContactInfoResponse</code></summary>
 <dl>
 <dd>
 
@@ -7000,7 +7000,7 @@ $client->contacts->getContactInfo(
 <dd>
 
 <Note>Follow this format when passing a "SMS" phone number as an attribute.
-Accepted Number Formats 91xxxxxxxxxx +91xxxxxxxxxx 0091xxxxxxxxxx</Note>
+Accepted Number Formats 91xxxxxxxxxx +91xxxxxxxxxx 0091xxxxxxxxxx <br><br> If a blocklisted contact's email address is updated, it is going to remove that blocklisting from the contact and they will be resubscribed.</Note>
 There are 2 ways to update a contact <br><br> Option 1- https://api.brevo.com/v3/contacts/{identifier} <br><br> Option 2- https://api.brevo.com/v3/contacts/{identifier}?identifierType={} <br> <br> Option 1 only works if identifierType is email_id (for EMAIL) or contact_id (for ID of the contact),where you can directly pass the value of EMAIL and ID of the contact.   <br><br> Option 2 works for all identifierType, use email_id for EMAIL attribute, contact_id for ID of the contact, ext_id for EXT_ID attribute, phone_id for SMS attribute, whatsapp_id for WHATSAPP attribute, landline_number_id for LANDLINE attribute
 </dd>
 </dl>
@@ -7175,7 +7175,7 @@ $client->contacts->deleteContact(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;contacts-&gt;getContactStats($identifier, $request) -> GetContactStatsResponse</code></summary>
+<details><summary><code>$client-&gt;contacts-&gt;getContactStats($identifier, $request) -> ?GetContactStatsResponse</code></summary>
 <dl>
 <dd>
 
@@ -7317,7 +7317,7 @@ $client->conversations->setsAgentsStatusToOnlineFor23Minutes(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;conversations-&gt;sendAMessageAsAnAgent($request) -> ConversationsMessage</code></summary>
+<details><summary><code>$client-&gt;conversations-&gt;sendAMessageAsAnAgent($request) -> ?ConversationsMessage</code></summary>
 <dl>
 <dd>
 
@@ -7403,7 +7403,7 @@ $client->conversations->sendAMessageAsAnAgent(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;conversations-&gt;getAMessage($id) -> ConversationsMessage</code></summary>
+<details><summary><code>$client-&gt;conversations-&gt;getAMessage($id) -> ?ConversationsMessage</code></summary>
 <dl>
 <dd>
 
@@ -7445,7 +7445,7 @@ $client->conversations->getAMessage(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;conversations-&gt;updateAMessageSentByAnAgent($id, $request) -> ConversationsMessage</code></summary>
+<details><summary><code>$client-&gt;conversations-&gt;updateAMessageSentByAnAgent($id, $request) -> ?ConversationsMessage</code></summary>
 <dl>
 <dd>
 
@@ -7568,7 +7568,7 @@ $client->conversations->deleteAMessageSentByAnAgent(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;conversations-&gt;sendAnAutomatedMessageToAVisitor($request) -> ConversationsMessage</code></summary>
+<details><summary><code>$client-&gt;conversations-&gt;sendAnAutomatedMessageToAVisitor($request) -> ?ConversationsMessage</code></summary>
 <dl>
 <dd>
 
@@ -7652,7 +7652,7 @@ $client->conversations->sendAnAutomatedMessageToAVisitor(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;conversations-&gt;getAnAutomatedMessage($id) -> ConversationsMessage</code></summary>
+<details><summary><code>$client-&gt;conversations-&gt;getAnAutomatedMessage($id) -> ?ConversationsMessage</code></summary>
 <dl>
 <dd>
 
@@ -7694,7 +7694,7 @@ $client->conversations->getAnAutomatedMessage(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;conversations-&gt;updateAnAutomatedMessage($id, $request) -> ConversationsMessage</code></summary>
+<details><summary><code>$client-&gt;conversations-&gt;updateAnAutomatedMessage($id, $request) -> ?ConversationsMessage</code></summary>
 <dl>
 <dd>
 
@@ -7789,7 +7789,7 @@ $client->conversations->deleteAnAutomatedMessage(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;conversations-&gt;setVisitorGroupAssignment($request) -> PutConversationsVisitorGroupResponse</code></summary>
+<details><summary><code>$client-&gt;conversations-&gt;setVisitorGroupAssignment($request) -> ?PutConversationsVisitorGroupResponse</code></summary>
 <dl>
 <dd>
 
@@ -7848,7 +7848,7 @@ $client->conversations->setVisitorGroupAssignment(
 </details>
 
 ## Ecommerce
-<details><summary><code>$client-&gt;ecommerce-&gt;getCategories($request) -> GetCategoriesResponse</code></summary>
+<details><summary><code>$client-&gt;ecommerce-&gt;getCategories($request) -> ?GetCategoriesResponse</code></summary>
 <dl>
 <dd>
 
@@ -7946,7 +7946,7 @@ $client->ecommerce->getCategories(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;ecommerce-&gt;createUpdateCategory($request) -> CreateUpdateCategoryResponse</code></summary>
+<details><summary><code>$client-&gt;ecommerce-&gt;createUpdateCategory($request) -> ?CreateUpdateCategoryResponse</code></summary>
 <dl>
 <dd>
 
@@ -8030,7 +8030,7 @@ $client->ecommerce->createUpdateCategory(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;ecommerce-&gt;createUpdateBatchCategory($request) -> CreateUpdateBatchCategoryResponse</code></summary>
+<details><summary><code>$client-&gt;ecommerce-&gt;createUpdateBatchCategory($request) -> ?CreateUpdateBatchCategoryResponse</code></summary>
 <dl>
 <dd>
 
@@ -8086,7 +8086,7 @@ $client->ecommerce->createUpdateBatchCategory(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;ecommerce-&gt;getCategoryInfo($id) -> GetCategoryDetails</code></summary>
+<details><summary><code>$client-&gt;ecommerce-&gt;getCategoryInfo($id) -> ?GetCategoryDetails</code></summary>
 <dl>
 <dd>
 
@@ -8167,7 +8167,7 @@ $client->ecommerce->activateTheECommerceApp();
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;ecommerce-&gt;getAttributionMetricsForOneOrMoreBrevoCampaignsOrWorkflows($request) -> GetEcommerceAttributionMetricsResponse</code></summary>
+<details><summary><code>$client-&gt;ecommerce-&gt;getAttributionMetricsForOneOrMoreBrevoCampaignsOrWorkflows($request) -> ?GetEcommerceAttributionMetricsResponse</code></summary>
 <dl>
 <dd>
 
@@ -8252,7 +8252,7 @@ $client->ecommerce->getAttributionMetricsForOneOrMoreBrevoCampaignsOrWorkflows(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;ecommerce-&gt;getDetailedAttributionMetricsForASingleBrevoCampaignOrWorkflow($conversionSource, $conversionSourceId) -> GetEcommerceAttributionMetricsConversionSourceConversionSourceIdResponse</code></summary>
+<details><summary><code>$client-&gt;ecommerce-&gt;getDetailedAttributionMetricsForASingleBrevoCampaignOrWorkflow($conversionSource, $conversionSourceId) -> ?GetEcommerceAttributionMetricsConversionSourceConversionSourceIdResponse</code></summary>
 <dl>
 <dd>
 
@@ -8303,7 +8303,7 @@ $client->ecommerce->getDetailedAttributionMetricsForASingleBrevoCampaignOrWorkfl
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;ecommerce-&gt;getAttributedProductSalesForASingleBrevoCampaignOrWorkflow($conversionSource, $conversionSourceId) -> GetEcommerceAttributionProductsConversionSourceConversionSourceIdResponse</code></summary>
+<details><summary><code>$client-&gt;ecommerce-&gt;getAttributedProductSalesForASingleBrevoCampaignOrWorkflow($conversionSource, $conversionSourceId) -> ?GetEcommerceAttributionProductsConversionSourceConversionSourceIdResponse</code></summary>
 <dl>
 <dd>
 
@@ -8354,7 +8354,7 @@ $client->ecommerce->getAttributedProductSalesForASingleBrevoCampaignOrWorkflow(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;ecommerce-&gt;getTheIso4217CompliantDisplayCurrencyCodeForYourBrevoAccount() -> GetEcommerceConfigDisplayCurrencyResponse</code></summary>
+<details><summary><code>$client-&gt;ecommerce-&gt;getTheIso4217CompliantDisplayCurrencyCodeForYourBrevoAccount() -> ?GetEcommerceConfigDisplayCurrencyResponse</code></summary>
 <dl>
 <dd>
 
@@ -8379,7 +8379,7 @@ $client->ecommerce->getTheIso4217CompliantDisplayCurrencyCodeForYourBrevoAccount
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;ecommerce-&gt;setConfigDisplayCurrency($request) -> SetConfigDisplayCurrencyResponse</code></summary>
+<details><summary><code>$client-&gt;ecommerce-&gt;setConfigDisplayCurrency($request) -> ?SetConfigDisplayCurrencyResponse</code></summary>
 <dl>
 <dd>
 
@@ -8579,7 +8579,7 @@ $client->ecommerce->createOrder(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;ecommerce-&gt;createBatchOrder($request) -> CreateBatchOrderResponse</code></summary>
+<details><summary><code>$client-&gt;ecommerce-&gt;createBatchOrder($request) -> ?CreateBatchOrderResponse</code></summary>
 <dl>
 <dd>
 
@@ -8667,7 +8667,7 @@ $client->ecommerce->createBatchOrder(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;ecommerce-&gt;getProducts($request) -> GetProductsResponse</code></summary>
+<details><summary><code>$client-&gt;ecommerce-&gt;getProducts($request) -> ?GetProductsResponse</code></summary>
 <dl>
 <dd>
 
@@ -8821,7 +8821,7 @@ $client->ecommerce->getProducts(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;ecommerce-&gt;createUpdateProduct($request) -> CreateUpdateProductResponse</code></summary>
+<details><summary><code>$client-&gt;ecommerce-&gt;createUpdateProduct($request) -> ?CreateUpdateProductResponse</code></summary>
 <dl>
 <dd>
 
@@ -8854,6 +8854,14 @@ $client->ecommerce->createUpdateProduct(
 <dl>
 <dd>
 
+**$brand:** `?string` — Brand of the product
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
 **$categories:** `?array` — Category ID-s of the product
     
 </dd>
@@ -8863,6 +8871,14 @@ $client->ecommerce->createUpdateProduct(
 <dd>
 
 **$deletedAt:** `?string` — UTC date-time (YYYY-MM-DDTHH:mm:ss.SSSZ) of the product deleted from the shop's database
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**$description:** `?string` — Description of the product
     
 </dd>
 </dl>
@@ -8894,7 +8910,7 @@ $client->ecommerce->createUpdateProduct(
 <dl>
 <dd>
 
-**$metaInfo:** `?array` — Meta data of product such as description, vendor, producer, stock level. The size of cumulative metaInfo shall not exceed **1000 KB**. Maximum length of metaInfo object can be 20.
+**$metaInfo:** `?array` — Meta data of product such as description, vendor, producer, stock level. The total characters of cumulative metaInfo shall not exceed **20000 characters**.
     
 </dd>
 </dl>
@@ -8962,7 +8978,7 @@ $client->ecommerce->createUpdateProduct(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;ecommerce-&gt;createUpdateBatchProducts($request) -> CreateUpdateBatchProductsResponse</code></summary>
+<details><summary><code>$client-&gt;ecommerce-&gt;createUpdateBatchProducts($request) -> ?CreateUpdateBatchProductsResponse</code></summary>
 <dl>
 <dd>
 
@@ -9019,7 +9035,7 @@ $client->ecommerce->createUpdateBatchProducts(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;ecommerce-&gt;getProductInfo($id) -> GetProductDetails</code></summary>
+<details><summary><code>$client-&gt;ecommerce-&gt;getProductInfo($id) -> ?GetProductDetails</code></summary>
 <dl>
 <dd>
 
@@ -9122,7 +9138,7 @@ $client->ecommerce->createProductAlert(
 </details>
 
 ## Coupons
-<details><summary><code>$client-&gt;coupons-&gt;getCouponCollections($request) -> GetCouponCollection</code></summary>
+<details><summary><code>$client-&gt;coupons-&gt;getCouponCollections($request) -> ?GetCouponCollection</code></summary>
 <dl>
 <dd>
 
@@ -9188,7 +9204,7 @@ $client->coupons->getCouponCollections(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;coupons-&gt;createCouponCollection($request) -> CreateCouponCollectionResponse</code></summary>
+<details><summary><code>$client-&gt;coupons-&gt;createCouponCollection($request) -> ?CreateCouponCollectionResponse</code></summary>
 <dl>
 <dd>
 
@@ -9265,7 +9281,7 @@ $client->coupons->createCouponCollection(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;coupons-&gt;getCouponCollection($id) -> GetCouponCollection</code></summary>
+<details><summary><code>$client-&gt;coupons-&gt;getCouponCollection($id) -> ?GetCouponCollection</code></summary>
 <dl>
 <dd>
 
@@ -9307,7 +9323,7 @@ $client->coupons->getCouponCollection(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;coupons-&gt;updateCouponCollection($id, $request) -> UpdateCouponCollectionResponse</code></summary>
+<details><summary><code>$client-&gt;coupons-&gt;updateCouponCollection($id, $request) -> ?UpdateCouponCollectionResponse</code></summary>
 <dl>
 <dd>
 
@@ -9438,7 +9454,7 @@ $client->coupons->createCoupons(
 </details>
 
 ## Payments
-<details><summary><code>$client-&gt;payments-&gt;createPaymentRequest($request) -> CreatePaymentRequestResponse</code></summary>
+<details><summary><code>$client-&gt;payments-&gt;createPaymentRequest($request) -> ?CreatePaymentRequestResponse</code></summary>
 <dl>
 <dd>
 
@@ -9527,7 +9543,7 @@ $client->payments->createPaymentRequest(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;payments-&gt;getPaymentRequest($id) -> GetPaymentRequestResponse</code></summary>
+<details><summary><code>$client-&gt;payments-&gt;getPaymentRequest($id) -> ?GetPaymentRequestResponse</code></summary>
 <dl>
 <dd>
 
@@ -9612,6 +9628,114 @@ $client->payments->deletePaymentRequest(
 </details>
 
 ## Event
+<details><summary><code>$client-&gt;event-&gt;getEvents($request) -> ?GetEventsList</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+<Note>
+This endpoint currently only supports custom events.
+</Note>
+
+Retrieve a list of events filtered by various criteria.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```php
+$client->event->getEvents(
+    new GetEventsRequest([]),
+);
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**$contactId:** `?int` — Filter by contact ID (repeatable)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**$eventName:** `?string` — Filter by event name (repeatable)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**$objectType:** `?string` — Filter by object type (repeatable)
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**$startDate:** `?string` — Mandatory if endDate is used. Start of date range (YYYY-MM-DD or RFC3339). Defaults to 6 months ago when omitted alongside endDate. Must be ≤ endDate.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**$endDate:** `?string` — Mandatory if startDate is used. End of date range (YYYY-MM-DD or RFC3339). Must be ≥ startDate.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**$limit:** `?int` — Max events to return. Default 100, min 1, max 10000.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**$offset:** `?int` — Events to skip for pagination. Default 0, min 0.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
 <details><summary><code>$client-&gt;event-&gt;createEvent($request)</code></summary>
 <dl>
 <dd>
@@ -9711,7 +9835,7 @@ $client->event->createEvent(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;event-&gt;createBatchEvents($request)</code></summary>
+<details><summary><code>$client-&gt;event-&gt;createBatchEvents($request) -> ?BatchAcceptedResponse</code></summary>
 <dl>
 <dd>
 
@@ -9773,7 +9897,7 @@ $client->event->createBatchEvents(
 </details>
 
 ## InboundParsing
-<details><summary><code>$client-&gt;inboundParsing-&gt;getInboundEmailEvents($request) -> GetInboundEmailEventsResponse</code></summary>
+<details><summary><code>$client-&gt;inboundParsing-&gt;getInboundEmailEvents($request) -> ?GetInboundEmailEventsResponse</code></summary>
 <dl>
 <dd>
 
@@ -9869,7 +9993,7 @@ $client->inboundParsing->getInboundEmailEvents(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;inboundParsing-&gt;getInboundEmailEventsByUuid($uuid) -> GetInboundEmailEventsByUuidResponse</code></summary>
+<details><summary><code>$client-&gt;inboundParsing-&gt;getInboundEmailEventsByUuid($uuid) -> ?GetInboundEmailEventsByUuidResponse</code></summary>
 <dl>
 <dd>
 
@@ -9982,7 +10106,7 @@ $client->inboundParsing->getInboundEmailAttachment(
 </details>
 
 ## Balance
-<details><summary><code>$client-&gt;balance-&gt;getActiveBalancesApi($pid, $request) -> BalanceLimit</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;getActiveBalancesApi($pid, $request) -> ?BalanceLimit</code></summary>
 <dl>
 <dd>
 
@@ -10082,6 +10206,14 @@ $client->balance->getActiveBalancesApi(
     
 </dd>
 </dl>
+
+<dl>
+<dd>
+
+**$includeInternal:** `?bool` — Include balances tied to internal definitions.
+    
+</dd>
+</dl>
 </dd>
 </dl>
 
@@ -10090,7 +10222,7 @@ $client->balance->getActiveBalancesApi(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;getBalanceDefinitionList($pid, $request) -> GetBalanceDefinitionListResponse</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;getBalanceDefinitionList($pid, $request) -> ?GetBalanceDefinitionListResponse</code></summary>
 <dl>
 <dd>
 
@@ -10187,7 +10319,7 @@ $client->balance->getBalanceDefinitionList(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;createBalanceDefinition($pid, $request) -> BalanceDefinition</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;createBalanceDefinition($pid, $request) -> ?BalanceDefinition</code></summary>
 <dl>
 <dd>
 
@@ -10339,7 +10471,7 @@ $client->balance->createBalanceDefinition(
 <dl>
 <dd>
 
-**$meta:** `?array` — Additional metadata for the balance definition.
+**$meta:** `?PostLoyaltyBalanceProgramsPidBalanceDefinitionsRequestMeta` — Additional metadata for the balance definition.
     
 </dd>
 </dl>
@@ -10375,7 +10507,7 @@ $client->balance->createBalanceDefinition(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;getBalanceDefinition($pid, $bdid, $request) -> BalanceDefinition</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;getBalanceDefinition($pid, $bdid, $request) -> ?BalanceDefinition</code></summary>
 <dl>
 <dd>
 
@@ -10449,7 +10581,7 @@ $client->balance->getBalanceDefinition(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;updateBalanceDefinition($pid, $bdid, $request) -> BalanceDefinition</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;updateBalanceDefinition($pid, $bdid, $request) -> ?BalanceDefinition</code></summary>
 <dl>
 <dd>
 
@@ -10610,7 +10742,7 @@ $client->balance->updateBalanceDefinition(
 <dl>
 <dd>
 
-**$meta:** `?array` — Optional metadata for the balance definition.
+**$meta:** `?UpdateBalanceDefinitionRequestMeta` — Optional metadata for the balance definition.
     
 </dd>
 </dl>
@@ -10711,7 +10843,7 @@ $client->balance->deleteBalanceDefinition(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;createBalanceLimit($pid, $bdid, $request) -> BalanceLimit</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;createBalanceLimit($pid, $bdid, $request) -> ?BalanceLimit</code></summary>
 <dl>
 <dd>
 
@@ -10831,7 +10963,7 @@ $client->balance->createBalanceLimit(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;getBalanceLimit($pid, $bdid, $blid, $request) -> BalanceLimit</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;getBalanceLimit($pid, $bdid, $blid, $request) -> ?BalanceLimit</code></summary>
 <dl>
 <dd>
 
@@ -10914,7 +11046,7 @@ $client->balance->getBalanceLimit(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;updateBalanceLimit($pid, $bdid, $blid, $request) -> BalanceLimit</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;updateBalanceLimit($pid, $bdid, $blid, $request) -> ?BalanceLimit</code></summary>
 <dl>
 <dd>
 
@@ -11117,7 +11249,7 @@ $client->balance->deleteBalanceLimit(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;getContactBalances($pid) -> GetContactBalancesResponse</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;getContactBalances($pid, $request) -> ?GetContactBalancesResponse</code></summary>
 <dl>
 <dd>
 
@@ -11146,6 +11278,7 @@ Returns balance list
 ```php
 $client->balance->getContactBalances(
     'pid',
+    new GetContactBalancesRequest([]),
 );
 ```
 </dd>
@@ -11165,6 +11298,14 @@ $client->balance->getContactBalances(
     
 </dd>
 </dl>
+
+<dl>
+<dd>
+
+**$includeInternal:** `?bool` — Include balances tied to internal definitions.
+    
+</dd>
+</dl>
 </dd>
 </dl>
 
@@ -11173,7 +11314,7 @@ $client->balance->getContactBalances(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;createBalanceOrder($pid, $request) -> CreateBalanceOrderResponse</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;createBalanceOrder($pid, $request) -> ?CreateBalanceOrderResponse</code></summary>
 <dl>
 <dd>
 
@@ -11292,7 +11433,7 @@ $client->balance->createBalanceOrder(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;getSubscriptionBalances($pid, $cid) -> GetSubscriptionBalancesResponse</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;getSubscriptionBalances($pid, $cid, $request) -> ?GetSubscriptionBalancesResponse</code></summary>
 <dl>
 <dd>
 
@@ -11322,6 +11463,7 @@ Returns subscription balances
 $client->balance->getSubscriptionBalances(
     'pid',
     'cid',
+    new GetSubscriptionBalancesRequest([]),
 );
 ```
 </dd>
@@ -11349,6 +11491,14 @@ $client->balance->getSubscriptionBalances(
     
 </dd>
 </dl>
+
+<dl>
+<dd>
+
+**$includeInternal:** `?bool` — Include balances tied to internal definitions.
+    
+</dd>
+</dl>
 </dd>
 </dl>
 
@@ -11357,7 +11507,7 @@ $client->balance->getSubscriptionBalances(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;createSubscriptionBalances($pid, $cid, $request) -> PostLoyaltyBalanceProgramsPidSubscriptionsCidBalancesResponse</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;createSubscriptionBalances($pid, $cid, $request) -> ?PostLoyaltyBalanceProgramsPidSubscriptionsCidBalancesResponse</code></summary>
 <dl>
 <dd>
 
@@ -11433,7 +11583,7 @@ $client->balance->createSubscriptionBalances(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;getTransactionHistoryApi($pid, $request) -> GetLoyaltyBalanceProgramsPidTransactionHistoryResponse</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;getTransactionHistoryApi($pid, $request) -> ?GetLoyaltyBalanceProgramsPidTransactionHistoryResponse</code></summary>
 <dl>
 <dd>
 
@@ -11497,7 +11647,7 @@ $client->balance->getTransactionHistoryApi(
 <dl>
 <dd>
 
-**$offset:** `?int` — Skip a number of records
+**$offset:** `?int` — Page number to retrieve
     
 </dd>
 </dl>
@@ -11541,6 +11691,22 @@ $client->balance->getTransactionHistoryApi(
     
 </dd>
 </dl>
+
+<dl>
+<dd>
+
+**$status:** `?string` — Transaction status filter. Allowed values: draft, completed, rejected, cancelled, expired
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**$transactionType:** `?string` — Transaction type filter. Allowed values: credit, debit
+    
+</dd>
+</dl>
 </dd>
 </dl>
 
@@ -11549,7 +11715,7 @@ $client->balance->getTransactionHistoryApi(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;beginTransaction($pid, $request) -> Transaction</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;beginTransaction($pid, $request) -> ?Transaction</code></summary>
 <dl>
 <dd>
 
@@ -11681,7 +11847,7 @@ $client->balance->beginTransaction(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;cancelTransaction($pid, $tid) -> Transaction</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;cancelTransaction($pid, $tid) -> ?Transaction</code></summary>
 <dl>
 <dd>
 
@@ -11746,7 +11912,7 @@ $client->balance->cancelTransaction(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;balance-&gt;completeTransaction($pid, $tid) -> Transaction</code></summary>
+<details><summary><code>$client-&gt;balance-&gt;completeTransaction($pid, $tid) -> ?Transaction</code></summary>
 <dl>
 <dd>
 
@@ -11812,7 +11978,7 @@ $client->balance->completeTransaction(
 </details>
 
 ## Program
-<details><summary><code>$client-&gt;program-&gt;getLpList($request) -> GetLpListResponse</code></summary>
+<details><summary><code>$client-&gt;program-&gt;getLpList($request) -> ?GetLpListResponse</code></summary>
 <dl>
 <dd>
 
@@ -11892,7 +12058,7 @@ $client->program->getLpList(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;program-&gt;createNewLp($request) -> LoyaltyProgram</code></summary>
+<details><summary><code>$client-&gt;program-&gt;createNewLp($request) -> ?LoyaltyProgram</code></summary>
 <dl>
 <dd>
 
@@ -11974,7 +12140,7 @@ $client->program->createNewLp(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;program-&gt;getLoyaltyProgramInfo($pid) -> LoyaltyProgram</code></summary>
+<details><summary><code>$client-&gt;program-&gt;getLoyaltyProgramInfo($pid) -> ?LoyaltyProgram</code></summary>
 <dl>
 <dd>
 
@@ -12030,7 +12196,7 @@ $client->program->getLoyaltyProgramInfo(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;program-&gt;updateLoyaltyProgram($pid, $request) -> LoyaltyProgram</code></summary>
+<details><summary><code>$client-&gt;program-&gt;updateLoyaltyProgram($pid, $request) -> ?LoyaltyProgram</code></summary>
 <dl>
 <dd>
 
@@ -12169,7 +12335,7 @@ $client->program->deleteLoyaltyProgram(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;program-&gt;partiallyUpdateLoyaltyProgram($pid, $request) -> LoyaltyProgram</code></summary>
+<details><summary><code>$client-&gt;program-&gt;partiallyUpdateLoyaltyProgram($pid, $request) -> ?LoyaltyProgram</code></summary>
 <dl>
 <dd>
 
@@ -12250,7 +12416,7 @@ $client->program->partiallyUpdateLoyaltyProgram(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;program-&gt;getParameterSubscriptionInfo($pid, $request) -> GetParameterSubscriptionInfoResponse</code></summary>
+<details><summary><code>$client-&gt;program-&gt;getParameterSubscriptionInfo($pid, $request) -> ?GetParameterSubscriptionInfoResponse</code></summary>
 <dl>
 <dd>
 
@@ -12320,6 +12486,14 @@ $client->program->getParameterSubscriptionInfo(
 <dd>
 
 **$loyaltySubscriptionId:** `?string` — The loyalty subscription ID to filter by.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**$includeInternal:** `?bool` — Include balances tied to internal definitions.
     
 </dd>
 </dl>
@@ -12452,7 +12626,7 @@ $client->program->publishLoyaltyProgram(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;program-&gt;subscribeMemberToASubscription($pid, $request) -> SubscribeMemberToASubscriptionResponse</code></summary>
+<details><summary><code>$client-&gt;program-&gt;subscribeMemberToASubscription($pid, $request) -> ?SubscribeMemberToASubscriptionResponse</code></summary>
 <dl>
 <dd>
 
@@ -12604,7 +12778,7 @@ $client->program->deleteContactMembers(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;program-&gt;subscribeToLoyaltyProgram($pid, $request) -> SubscribeToLoyaltyProgramResponse</code></summary>
+<details><summary><code>$client-&gt;program-&gt;subscribeToLoyaltyProgram($pid, $request) -> ?SubscribeToLoyaltyProgramResponse</code></summary>
 <dl>
 <dd>
 
@@ -12688,7 +12862,7 @@ $client->program->subscribeToLoyaltyProgram(
 </details>
 
 ## Reward
-<details><summary><code>$client-&gt;reward-&gt;getCodeCount($pid, $cpid) -> GetCodeCountResponse</code></summary>
+<details><summary><code>$client-&gt;reward-&gt;getCodeCount($pid, $cpid) -> ?GetCodeCountResponse</code></summary>
 <dl>
 <dd>
 
@@ -12753,7 +12927,7 @@ $client->reward->getCodeCount(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;reward-&gt;getRewardPageApi($pid, $request) -> GetLoyaltyOfferProgramsPidOffersResponse</code></summary>
+<details><summary><code>$client-&gt;reward-&gt;getRewardPageApi($pid, $request) -> ?GetLoyaltyOfferProgramsPidOffersResponse</code></summary>
 <dl>
 <dd>
 
@@ -12842,7 +13016,7 @@ $client->reward->getRewardPageApi(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;reward-&gt;createReward($pid, $request) -> CreateRewardResponse</code></summary>
+<details><summary><code>$client-&gt;reward-&gt;createReward($pid, $request) -> ?CreateRewardResponse</code></summary>
 <dl>
 <dd>
 
@@ -12933,7 +13107,7 @@ $client->reward->createReward(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;reward-&gt;createVoucher($pid, $request) -> CreateVoucherResponse</code></summary>
+<details><summary><code>$client-&gt;reward-&gt;createVoucher($pid, $request) -> ?CreateVoucherResponse</code></summary>
 <dl>
 <dd>
 
@@ -13048,7 +13222,7 @@ $client->reward->createVoucher(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;reward-&gt;redeemVoucher($pid, $request) -> Redeem</code></summary>
+<details><summary><code>$client-&gt;reward-&gt;redeemVoucher($pid, $request) -> ?Redeem</code></summary>
 <dl>
 <dd>
 
@@ -13169,7 +13343,7 @@ $client->reward->redeemVoucher(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;reward-&gt;completeRedeemTransaction($pid, $tid) -> Redeem</code></summary>
+<details><summary><code>$client-&gt;reward-&gt;completeRedeemTransaction($pid, $tid) -> ?Redeem</code></summary>
 <dl>
 <dd>
 
@@ -13299,7 +13473,7 @@ $client->reward->revokeVouchers(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;reward-&gt;validateReward($pid, $request) -> ValidateRewardResponse</code></summary>
+<details><summary><code>$client-&gt;reward-&gt;validateReward($pid, $request) -> ?ValidateRewardResponse</code></summary>
 <dl>
 <dd>
 
@@ -13404,7 +13578,7 @@ $client->reward->validateReward(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;reward-&gt;getRewardInformation($pid, $rid, $request) -> GetLoyaltyOfferProgramsPidRewardsRidResponse</code></summary>
+<details><summary><code>$client-&gt;reward-&gt;getRewardInformation($pid, $rid, $request) -> ?GetLoyaltyOfferProgramsPidRewardsRidResponse</code></summary>
 <dl>
 <dd>
 
@@ -13478,7 +13652,7 @@ $client->reward->getRewardInformation(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;reward-&gt;getVoucherForAContact($pid, $request) -> GetLoyaltyOfferProgramsPidVouchersResponse</code></summary>
+<details><summary><code>$client-&gt;reward-&gt;getVoucherForAContact($pid, $request) -> ?GetLoyaltyOfferProgramsPidVouchersResponse</code></summary>
 <dl>
 <dd>
 
@@ -13594,7 +13768,7 @@ $client->reward->getVoucherForAContact(
 </details>
 
 ## Tier
-<details><summary><code>$client-&gt;tier-&gt;addSubscriptionToTier($pid, $cid, $tid) -> AddSubscriptionToTierResponse</code></summary>
+<details><summary><code>$client-&gt;tier-&gt;addSubscriptionToTier($pid, $cid, $tid) -> ?AddSubscriptionToTierResponse</code></summary>
 <dl>
 <dd>
 
@@ -13668,7 +13842,7 @@ $client->tier->addSubscriptionToTier(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;tier-&gt;getListOfTierGroups($pid, $request) -> GetListOfTierGroupsResponse</code></summary>
+<details><summary><code>$client-&gt;tier-&gt;getListOfTierGroups($pid, $request) -> ?GetListOfTierGroupsResponse</code></summary>
 <dl>
 <dd>
 
@@ -13733,7 +13907,7 @@ $client->tier->getListOfTierGroups(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;tier-&gt;createTierGroup($pid, $request) -> TierGroup</code></summary>
+<details><summary><code>$client-&gt;tier-&gt;createTierGroup($pid, $request) -> ?TierGroup</code></summary>
 <dl>
 <dd>
 
@@ -13804,6 +13978,14 @@ $client->tier->createTierGroup(
 <dl>
 <dd>
 
+**$meta:** `?CreateTierGroupRequestMeta` — Additional metadata for the tier group.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
 **$tierOrder:** `?array` — Order of the tiers in the group in ascending order
     
 </dd>
@@ -13824,7 +14006,7 @@ $client->tier->createTierGroup(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;tier-&gt;getTierGroup($pid, $gid, $request) -> TierGroup</code></summary>
+<details><summary><code>$client-&gt;tier-&gt;getTierGroup($pid, $gid, $request) -> ?TierGroup</code></summary>
 <dl>
 <dd>
 
@@ -13898,7 +14080,7 @@ $client->tier->getTierGroup(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;tier-&gt;updateTierGroup($pid, $gid, $request) -> TierGroup</code></summary>
+<details><summary><code>$client-&gt;tier-&gt;updateTierGroup($pid, $gid, $request) -> ?TierGroup</code></summary>
 <dl>
 <dd>
 
@@ -13976,6 +14158,14 @@ $client->tier->updateTierGroup(
 <dd>
 
 **$name:** `string` — Name of the tier group
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**$meta:** `?UpdateTierGroupRequestMeta` — Additional metadata for the tier group.
     
 </dd>
 </dl>
@@ -14068,7 +14258,7 @@ $client->tier->deleteTierGroup(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;tier-&gt;createTierForTierGroup($pid, $gid, $request) -> Tier</code></summary>
+<details><summary><code>$client-&gt;tier-&gt;createTierForTierGroup($pid, $gid, $request) -> ?Tier</code></summary>
 <dl>
 <dd>
 
@@ -14171,7 +14361,7 @@ $client->tier->createTierForTierGroup(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;tier-&gt;getLoyaltyProgramTier($pid, $request) -> GetLoyaltyProgramTierResponse</code></summary>
+<details><summary><code>$client-&gt;tier-&gt;getLoyaltyProgramTier($pid, $request) -> ?GetLoyaltyProgramTierResponse</code></summary>
 <dl>
 <dd>
 
@@ -14236,7 +14426,7 @@ $client->tier->getLoyaltyProgramTier(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;tier-&gt;updateTier($pid, $tid, $request) -> Tier</code></summary>
+<details><summary><code>$client-&gt;tier-&gt;updateTier($pid, $tid, $request) -> ?Tier</code></summary>
 <dl>
 <dd>
 
@@ -14408,7 +14598,7 @@ $client->tier->deleteTier(
 </details>
 
 ## EmailCampaigns
-<details><summary><code>$client-&gt;emailCampaigns-&gt;getEmailCampaigns($request) -> GetEmailCampaignsResponse</code></summary>
+<details><summary><code>$client-&gt;emailCampaigns-&gt;getEmailCampaigns($request) -> ?GetEmailCampaignsResponse</code></summary>
 <dl>
 <dd>
 
@@ -14529,7 +14719,7 @@ $client->emailCampaigns->getEmailCampaigns(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;emailCampaigns-&gt;createEmailCampaign($request) -> CreateEmailCampaignResponse</code></summary>
+<details><summary><code>$client-&gt;emailCampaigns-&gt;createEmailCampaign($request) -> ?CreateEmailCampaignResponse</code></summary>
 <dl>
 <dd>
 
@@ -14822,7 +15012,7 @@ $client->emailCampaigns->createEmailCampaign(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;emailCampaigns-&gt;uploadImageToGallery($request) -> UploadImageToGalleryResponse</code></summary>
+<details><summary><code>$client-&gt;emailCampaigns-&gt;uploadImageToGallery($request) -> ?UploadImageToGalleryResponse</code></summary>
 <dl>
 <dd>
 
@@ -14874,7 +15064,7 @@ $client->emailCampaigns->uploadImageToGallery(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;emailCampaigns-&gt;getEmailCampaign($campaignId, $request) -> GetEmailCampaignResponse</code></summary>
+<details><summary><code>$client-&gt;emailCampaigns-&gt;getEmailCampaign($campaignId, $request) -> ?GetEmailCampaignResponse</code></summary>
 <dl>
 <dd>
 
@@ -15274,7 +15464,7 @@ $client->emailCampaigns->deleteEmailCampaign(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;emailCampaigns-&gt;getAbTestCampaignResult($campaignId) -> GetAbTestCampaignResultResponse</code></summary>
+<details><summary><code>$client-&gt;emailCampaigns-&gt;getAbTestCampaignResult($campaignId) -> ?GetAbTestCampaignResultResponse</code></summary>
 <dl>
 <dd>
 
@@ -15330,7 +15520,7 @@ $client->emailCampaigns->getAbTestCampaignResult(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;emailCampaigns-&gt;emailExportRecipients($campaignId, $request) -> EmailExportRecipientsResponse</code></summary>
+<details><summary><code>$client-&gt;emailCampaigns-&gt;emailExportRecipients($campaignId, $request) -> ?EmailExportRecipientsResponse</code></summary>
 <dl>
 <dd>
 
@@ -15560,7 +15750,7 @@ $client->emailCampaigns->sendTestEmail(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;emailCampaigns-&gt;getSharedTemplateUrl($campaignId) -> GetSharedTemplateUrlResponse</code></summary>
+<details><summary><code>$client-&gt;emailCampaigns-&gt;getSharedTemplateUrl($campaignId) -> ?GetSharedTemplateUrlResponse</code></summary>
 <dl>
 <dd>
 
@@ -15670,7 +15860,7 @@ $client->emailCampaigns->updateCampaignStatus(
 </details>
 
 ## SmsCampaigns
-<details><summary><code>$client-&gt;smsCampaigns-&gt;getSmsCampaigns($request) -> GetSmsCampaignsResponse</code></summary>
+<details><summary><code>$client-&gt;smsCampaigns-&gt;getSmsCampaigns($request) -> ?GetSmsCampaignsResponse</code></summary>
 <dl>
 <dd>
 
@@ -15752,7 +15942,7 @@ $client->smsCampaigns->getSmsCampaigns(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;smsCampaigns-&gt;createSmsCampaign($request) -> CreateSmsCampaignResponse</code></summary>
+<details><summary><code>$client-&gt;smsCampaigns-&gt;createSmsCampaign($request) -> ?CreateSmsCampaignResponse</code></summary>
 <dl>
 <dd>
 
@@ -15854,7 +16044,7 @@ $client->smsCampaigns->createSmsCampaign(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;smsCampaigns-&gt;getSmsCampaign($campaignId) -> GetSmsCampaignResponse</code></summary>
+<details><summary><code>$client-&gt;smsCampaigns-&gt;getSmsCampaign($campaignId) -> ?GetSmsCampaignResponse</code></summary>
 <dl>
 <dd>
 
@@ -16045,7 +16235,7 @@ $client->smsCampaigns->deleteSmsCampaign(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;smsCampaigns-&gt;requestSmsRecipientExport($campaignId, $request) -> RequestSmsRecipientExportResponse</code></summary>
+<details><summary><code>$client-&gt;smsCampaigns-&gt;requestSmsRecipientExport($campaignId, $request) -> ?RequestSmsRecipientExportResponse</code></summary>
 <dl>
 <dd>
 
@@ -16341,7 +16531,7 @@ $client->smsCampaigns->updateSmsCampaignStatus(
 </details>
 
 ## WhatsAppCampaigns
-<details><summary><code>$client-&gt;whatsAppCampaigns-&gt;getWhatsAppCampaigns($request) -> GetWhatsAppCampaignsResponse</code></summary>
+<details><summary><code>$client-&gt;whatsAppCampaigns-&gt;getWhatsAppCampaigns($request) -> ?GetWhatsAppCampaignsResponse</code></summary>
 <dl>
 <dd>
 
@@ -16415,7 +16605,7 @@ $client->whatsAppCampaigns->getWhatsAppCampaigns(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;whatsAppCampaigns-&gt;createWhatsAppCampaign($request) -> CreateWhatsAppCampaignResponse</code></summary>
+<details><summary><code>$client-&gt;whatsAppCampaigns-&gt;createWhatsAppCampaign($request) -> ?CreateWhatsAppCampaignResponse</code></summary>
 <dl>
 <dd>
 
@@ -16504,7 +16694,7 @@ $client->whatsAppCampaigns->createWhatsAppCampaign(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;whatsAppCampaigns-&gt;getWhatsAppConfig() -> GetWhatsAppConfigResponse</code></summary>
+<details><summary><code>$client-&gt;whatsAppCampaigns-&gt;getWhatsAppConfig() -> ?GetWhatsAppConfigResponse</code></summary>
 <dl>
 <dd>
 
@@ -16544,7 +16734,7 @@ $client->whatsAppCampaigns->getWhatsAppConfig();
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;whatsAppCampaigns-&gt;createWhatsAppTemplate($request) -> CreateWhatsAppTemplateResponse</code></summary>
+<details><summary><code>$client-&gt;whatsAppCampaigns-&gt;createWhatsAppTemplate($request) -> ?CreateWhatsAppTemplateResponse</code></summary>
 <dl>
 <dd>
 
@@ -16657,7 +16847,7 @@ Language of the template. For Example :
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;whatsAppCampaigns-&gt;getWhatsAppTemplates($request) -> GetWhatsAppTemplatesResponse</code></summary>
+<details><summary><code>$client-&gt;whatsAppCampaigns-&gt;getWhatsAppTemplates($request) -> ?GetWhatsAppTemplatesResponse</code></summary>
 <dl>
 <dd>
 
@@ -16796,7 +16986,7 @@ $client->whatsAppCampaigns->sendWhatsAppTemplateApproval(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;whatsAppCampaigns-&gt;getWhatsAppCampaign($campaignId) -> GetWhatsAppCampaignResponse</code></summary>
+<details><summary><code>$client-&gt;whatsAppCampaigns-&gt;getWhatsAppCampaign($campaignId) -> ?GetWhatsAppCampaignResponse</code></summary>
 <dl>
 <dd>
 
@@ -16992,7 +17182,7 @@ $client->whatsAppCampaigns->deleteWhatsAppCampaign(
 </details>
 
 ## Companies
-<details><summary><code>$client-&gt;companies-&gt;getAllCompanies($request) -> GetCompaniesResponse</code></summary>
+<details><summary><code>$client-&gt;companies-&gt;getAllCompanies($request) -> ?GetCompaniesResponse</code></summary>
 <dl>
 <dd>
 
@@ -17098,7 +17288,7 @@ $client->companies->getAllCompanies(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;companies-&gt;createACompany($request) -> PostCompaniesResponse</code></summary>
+<details><summary><code>$client-&gt;companies-&gt;createACompany($request) -> ?PostCompaniesResponse</code></summary>
 <dl>
 <dd>
 
@@ -17174,7 +17364,7 @@ $client->companies->createACompany(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;companies-&gt;importCompaniesCreationAndUpdation($request) -> PostCompaniesImportResponse</code></summary>
+<details><summary><code>$client-&gt;companies-&gt;importCompaniesCreationAndUpdation($request) -> ?PostCompaniesImportResponse</code></summary>
 <dl>
 <dd>
 
@@ -17292,7 +17482,7 @@ $client->companies->linkAndUnlinkCompanyWithContactAndDeal(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;companies-&gt;getACompany($id) -> Company</code></summary>
+<details><summary><code>$client-&gt;companies-&gt;getACompany($id) -> ?Company</code></summary>
 <dl>
 <dd>
 
@@ -17376,7 +17566,7 @@ $client->companies->deleteACompany(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;companies-&gt;updateACompany($id, $request) -> Company</code></summary>
+<details><summary><code>$client-&gt;companies-&gt;updateACompany($id, $request) -> ?Company</code></summary>
 <dl>
 <dd>
 
@@ -17459,7 +17649,7 @@ $client->companies->updateACompany(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;companies-&gt;createACompanyDealAttribute($request) -> PostCrmAttributesResponse</code></summary>
+<details><summary><code>$client-&gt;companies-&gt;createACompanyDealAttribute($request) -> ?PostCrmAttributesResponse</code></summary>
 <dl>
 <dd>
 
@@ -17646,7 +17836,7 @@ $client->companies->updateAnAttribute(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;companies-&gt;getCompanyAttributes() -> array</code></summary>
+<details><summary><code>$client-&gt;companies-&gt;getCompanyAttributes() -> ?array</code></summary>
 <dl>
 <dd>
 
@@ -17672,7 +17862,7 @@ $client->companies->getCompanyAttributes();
 </details>
 
 ## Deals
-<details><summary><code>$client-&gt;deals-&gt;getDealAttributes() -> array</code></summary>
+<details><summary><code>$client-&gt;deals-&gt;getDealAttributes() -> ?array</code></summary>
 <dl>
 <dd>
 
@@ -17697,7 +17887,7 @@ $client->deals->getDealAttributes();
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;deals-&gt;getAllDeals($request) -> GetCrmDealsResponse</code></summary>
+<details><summary><code>$client-&gt;deals-&gt;getAllDeals($request) -> ?GetCrmDealsResponse</code></summary>
 <dl>
 <dd>
 
@@ -17795,7 +17985,7 @@ $client->deals->getAllDeals(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;deals-&gt;createADeal($request) -> PostCrmDealsResponse</code></summary>
+<details><summary><code>$client-&gt;deals-&gt;createADeal($request) -> ?PostCrmDealsResponse</code></summary>
 <dl>
 <dd>
 
@@ -17863,7 +18053,7 @@ $client->deals->createADeal(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;deals-&gt;importDealsCreationAndUpdation($request) -> PostCrmDealsImportResponse</code></summary>
+<details><summary><code>$client-&gt;deals-&gt;importDealsCreationAndUpdation($request) -> ?PostCrmDealsImportResponse</code></summary>
 <dl>
 <dd>
 
@@ -17981,7 +18171,7 @@ $client->deals->linkAndUnlinkADealWithContactsAndCompanies(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;deals-&gt;getADeal($id) -> Deal</code></summary>
+<details><summary><code>$client-&gt;deals-&gt;getADeal($id) -> ?Deal</code></summary>
 <dl>
 <dd>
 
@@ -18140,7 +18330,7 @@ $client->deals->updateADeal(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;deals-&gt;getPipelineStages() -> Pipeline</code></summary>
+<details><summary><code>$client-&gt;deals-&gt;getPipelineStages() -> ?Pipeline</code></summary>
 <dl>
 <dd>
 
@@ -18179,7 +18369,7 @@ $client->deals->getPipelineStages();
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;deals-&gt;getAllPipelines() -> array</code></summary>
+<details><summary><code>$client-&gt;deals-&gt;getAllPipelines() -> ?array</code></summary>
 <dl>
 <dd>
 
@@ -18204,7 +18394,7 @@ $client->deals->getAllPipelines();
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;deals-&gt;getAPipeline($pipelineId) -> array</code></summary>
+<details><summary><code>$client-&gt;deals-&gt;getAPipeline($pipelineId) -> ?array</code></summary>
 <dl>
 <dd>
 
@@ -18247,7 +18437,7 @@ $client->deals->getAPipeline(
 </details>
 
 ## Files
-<details><summary><code>$client-&gt;files-&gt;getAllFiles($request) -> array</code></summary>
+<details><summary><code>$client-&gt;files-&gt;getAllFiles($request) -> ?array</code></summary>
 <dl>
 <dd>
 
@@ -18337,7 +18527,7 @@ $client->files->getAllFiles(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;files-&gt;uploadAFile($request) -> FileData</code></summary>
+<details><summary><code>$client-&gt;files-&gt;uploadAFile($request) -> ?FileData</code></summary>
 <dl>
 <dd>
 
@@ -18366,7 +18556,7 @@ $client->files->uploadAFile(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;files-&gt;downloadAFile($id) -> GetCrmFilesIdResponse</code></summary>
+<details><summary><code>$client-&gt;files-&gt;downloadAFile($id) -> ?GetCrmFilesIdResponse</code></summary>
 <dl>
 <dd>
 
@@ -18450,7 +18640,7 @@ $client->files->deleteAFile(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;files-&gt;getFileDetails($id) -> FileData</code></summary>
+<details><summary><code>$client-&gt;files-&gt;getFileDetails($id) -> ?FileData</code></summary>
 <dl>
 <dd>
 
@@ -18493,7 +18683,7 @@ $client->files->getFileDetails(
 </details>
 
 ## Notes
-<details><summary><code>$client-&gt;notes-&gt;getAllNotes($request) -> array</code></summary>
+<details><summary><code>$client-&gt;notes-&gt;getAllNotes($request) -> ?array</code></summary>
 <dl>
 <dd>
 
@@ -18583,7 +18773,7 @@ $client->notes->getAllNotes(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;notes-&gt;createANote($request) -> PostCrmNotesResponse</code></summary>
+<details><summary><code>$client-&gt;notes-&gt;createANote($request) -> ?PostCrmNotesResponse</code></summary>
 <dl>
 <dd>
 
@@ -18627,7 +18817,7 @@ $client->notes->createANote(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;notes-&gt;getANote($id) -> Note</code></summary>
+<details><summary><code>$client-&gt;notes-&gt;getANote($id) -> ?Note</code></summary>
 <dl>
 <dd>
 
@@ -18767,7 +18957,7 @@ $client->notes->updateANote(
 </details>
 
 ## Tasks
-<details><summary><code>$client-&gt;tasks-&gt;getAllTasks($request) -> GetCrmTasksResponse</code></summary>
+<details><summary><code>$client-&gt;tasks-&gt;getAllTasks($request) -> ?GetCrmTasksResponse</code></summary>
 <dl>
 <dd>
 
@@ -18907,7 +19097,7 @@ $client->tasks->getAllTasks(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;tasks-&gt;createATask($request) -> PostCrmTasksResponse</code></summary>
+<details><summary><code>$client-&gt;tasks-&gt;createATask($request) -> ?PostCrmTasksResponse</code></summary>
 <dl>
 <dd>
 
@@ -19033,7 +19223,7 @@ $client->tasks->createATask(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;tasks-&gt;getATask($id) -> Task</code></summary>
+<details><summary><code>$client-&gt;tasks-&gt;getATask($id) -> ?Task</code></summary>
 <dl>
 <dd>
 
@@ -19248,7 +19438,7 @@ $client->tasks->updateATask(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;tasks-&gt;getAllTaskTypes() -> GetCrmTasktypesResponse</code></summary>
+<details><summary><code>$client-&gt;tasks-&gt;getAllTaskTypes() -> ?GetCrmTasktypesResponse</code></summary>
 <dl>
 <dd>
 
@@ -19274,7 +19464,7 @@ $client->tasks->getAllTaskTypes();
 </details>
 
 ## TransactionalWhatsApp
-<details><summary><code>$client-&gt;transactionalWhatsApp-&gt;sendWhatsappMessage($request) -> SendWhatsappMessageResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalWhatsApp-&gt;sendWhatsappMessage($request) -> ?SendWhatsappMessageResponse</code></summary>
 <dl>
 <dd>
 
@@ -19338,7 +19528,7 @@ $client->transactionalWhatsApp->sendWhatsappMessage(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalWhatsApp-&gt;getWhatsappEventReport($request) -> GetWhatsappEventReportResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalWhatsApp-&gt;getWhatsappEventReport($request) -> ?GetWhatsappEventReportResponse</code></summary>
 <dl>
 <dd>
 
@@ -19451,7 +19641,7 @@ $client->transactionalWhatsApp->getWhatsappEventReport(
 </details>
 
 ## TransactionalEmails
-<details><summary><code>$client-&gt;transactionalEmails-&gt;getTransacBlockedContacts($request) -> GetTransacBlockedContactsResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalEmails-&gt;getTransacBlockedContacts($request) -> ?GetTransacBlockedContactsResponse</code></summary>
 <dl>
 <dd>
 
@@ -19575,7 +19765,7 @@ $client->transactionalEmails->unblockOrResubscribeATransactionalContact(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalEmails-&gt;getBlockedDomains() -> GetBlockedDomainsResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalEmails-&gt;getBlockedDomains() -> ?GetBlockedDomainsResponse</code></summary>
 <dl>
 <dd>
 
@@ -19800,7 +19990,7 @@ $client->transactionalEmails->deleteHardbounces(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalEmails-&gt;sendTransacEmail($request) -> SendTransacEmailResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalEmails-&gt;sendTransacEmail($request) -> ?SendTransacEmailResponse</code></summary>
 <dl>
 <dd>
 
@@ -20031,7 +20221,7 @@ $client->transactionalEmails->deleteScheduledEmailById(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalEmails-&gt;getScheduledEmailById($identifier, $request) -> GetScheduledEmailByIdResponseBatches|GetScheduledEmailByIdResponseCreatedAt</code></summary>
+<details><summary><code>$client-&gt;transactionalEmails-&gt;getScheduledEmailById($identifier, $request) -> GetScheduledEmailByIdResponseBatches|GetScheduledEmailByIdResponseCreatedAt|null</code></summary>
 <dl>
 <dd>
 
@@ -20139,7 +20329,7 @@ $client->transactionalEmails->getScheduledEmailById(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalEmails-&gt;getTransacEmailsList($request) -> GetTransacEmailsListResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalEmails-&gt;getTransacEmailsList($request) -> ?GetTransacEmailsListResponse</code></summary>
 <dl>
 <dd>
 
@@ -20251,7 +20441,7 @@ $client->transactionalEmails->getTransacEmailsList(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalEmails-&gt;getTransacEmailContent($uuid) -> GetTransacEmailContentResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalEmails-&gt;getTransacEmailContent($uuid) -> ?GetTransacEmailContentResponse</code></summary>
 <dl>
 <dd>
 
@@ -20351,7 +20541,7 @@ $client->transactionalEmails->deleteAnSmtpTransactionalLog(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalEmails-&gt;getAggregatedSmtpReport($request) -> GetAggregatedSmtpReportResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalEmails-&gt;getAggregatedSmtpReport($request) -> ?GetAggregatedSmtpReportResponse</code></summary>
 <dl>
 <dd>
 
@@ -20431,7 +20621,7 @@ $client->transactionalEmails->getAggregatedSmtpReport(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalEmails-&gt;getEmailEventReport($request) -> GetEmailEventReportResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalEmails-&gt;getEmailEventReport($request) -> ?GetEmailEventReportResponse</code></summary>
 <dl>
 <dd>
 
@@ -20567,7 +20757,7 @@ $client->transactionalEmails->getEmailEventReport(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalEmails-&gt;getSmtpReport($request) -> GetSmtpReportResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalEmails-&gt;getSmtpReport($request) -> ?GetSmtpReportResponse</code></summary>
 <dl>
 <dd>
 
@@ -20657,7 +20847,7 @@ $client->transactionalEmails->getSmtpReport(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalEmails-&gt;postPreviewSmtpEmailTemplates($request) -> PostPreviewSmtpEmailTemplatesResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalEmails-&gt;postPreviewSmtpEmailTemplates($request) -> ?PostPreviewSmtpEmailTemplatesResponse</code></summary>
 <dl>
 <dd>
 
@@ -20701,7 +20891,7 @@ $client->transactionalEmails->postPreviewSmtpEmailTemplates(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalEmails-&gt;getSmtpTemplates($request) -> GetSmtpTemplatesResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalEmails-&gt;getSmtpTemplates($request) -> ?GetSmtpTemplatesResponse</code></summary>
 <dl>
 <dd>
 
@@ -20767,7 +20957,7 @@ $client->transactionalEmails->getSmtpTemplates(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalEmails-&gt;createSmtpTemplate($request) -> CreateSmtpTemplateResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalEmails-&gt;createSmtpTemplate($request) -> ?CreateSmtpTemplateResponse</code></summary>
 <dl>
 <dd>
 
@@ -20885,7 +21075,7 @@ $client->transactionalEmails->createSmtpTemplate(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalEmails-&gt;getSmtpTemplate($templateId) -> GetSmtpTemplateOverview</code></summary>
+<details><summary><code>$client-&gt;transactionalEmails-&gt;getSmtpTemplate($templateId) -> ?GetSmtpTemplateOverview</code></summary>
 <dl>
 <dd>
 
@@ -21146,7 +21336,7 @@ $client->transactionalEmails->sendTestTemplate(
 </details>
 
 ## TransactionalSms
-<details><summary><code>$client-&gt;transactionalSms-&gt;sendAsyncTransactionalSms($request) -> SendAsyncTransactionalSmsResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalSms-&gt;sendAsyncTransactionalSms($request) -> ?SendAsyncTransactionalSmsResponse</code></summary>
 <dl>
 <dd>
 
@@ -21207,7 +21397,7 @@ $client->transactionalSms->sendAsyncTransactionalSms(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalSms-&gt;sendTransacSms($request) -> SendTransacSmsResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalSms-&gt;sendTransacSms($request) -> ?SendTransacSmsResponse</code></summary>
 <dl>
 <dd>
 
@@ -21252,7 +21442,7 @@ $client->transactionalSms->sendTransacSms(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalSms-&gt;getTransacAggregatedSmsReport($request) -> GetTransacAggregatedSmsReportResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalSms-&gt;getTransacAggregatedSmsReport($request) -> ?GetTransacAggregatedSmsReportResponse</code></summary>
 <dl>
 <dd>
 
@@ -21318,7 +21508,7 @@ $client->transactionalSms->getTransacAggregatedSmsReport(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalSms-&gt;getSmsEvents($request) -> GetSmsEventsResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalSms-&gt;getSmsEvents($request) -> ?GetSmsEventsResponse</code></summary>
 <dl>
 <dd>
 
@@ -21424,7 +21614,7 @@ $client->transactionalSms->getSmsEvents(
 </dl>
 </details>
 
-<details><summary><code>$client-&gt;transactionalSms-&gt;getTransacSmsReport($request) -> GetTransacSmsReportResponse</code></summary>
+<details><summary><code>$client-&gt;transactionalSms-&gt;getTransacSmsReport($request) -> ?GetTransacSmsReportResponse</code></summary>
 <dl>
 <dd>
 
@@ -21499,7 +21689,7 @@ $client->transactionalSms->getTransacSmsReport(
 </details>
 
 ## SmsTemplates
-<details><summary><code>$client-&gt;smsTemplates-&gt;getSmsTemplates($request) -> GetSmsTemplatesResponse</code></summary>
+<details><summary><code>$client-&gt;smsTemplates-&gt;getSmsTemplates($request) -> ?GetSmsTemplatesResponse</code></summary>
 <dl>
 <dd>
 

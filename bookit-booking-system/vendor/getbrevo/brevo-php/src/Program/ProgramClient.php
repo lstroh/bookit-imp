@@ -73,11 +73,11 @@ class ProgramClient implements ProgramClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetLpListResponse
+     * @return ?GetLpListResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getLpList(GetLpListRequest $request = new GetLpListRequest(), ?array $options = null): GetLpListResponse
+    public function getLpList(GetLpListRequest $request = new GetLpListRequest(), ?array $options = null): ?GetLpListResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -106,6 +106,9 @@ class ProgramClient implements ProgramClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetLpListResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -132,11 +135,11 @@ class ProgramClient implements ProgramClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return LoyaltyProgram
+     * @return ?LoyaltyProgram
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createNewLp(CreateNewLpRequest $request, ?array $options = null): LoyaltyProgram
+    public function createNewLp(CreateNewLpRequest $request, ?array $options = null): ?LoyaltyProgram
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -152,6 +155,9 @@ class ProgramClient implements ProgramClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return LoyaltyProgram::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -178,11 +184,11 @@ class ProgramClient implements ProgramClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return LoyaltyProgram
+     * @return ?LoyaltyProgram
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getLoyaltyProgramInfo(string $pid, ?array $options = null): LoyaltyProgram
+    public function getLoyaltyProgramInfo(string $pid, ?array $options = null): ?LoyaltyProgram
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -197,6 +203,9 @@ class ProgramClient implements ProgramClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return LoyaltyProgram::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -224,11 +233,11 @@ class ProgramClient implements ProgramClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return LoyaltyProgram
+     * @return ?LoyaltyProgram
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function updateLoyaltyProgram(string $pid, UpdateLoyaltyProgramRequest $request, ?array $options = null): LoyaltyProgram
+    public function updateLoyaltyProgram(string $pid, UpdateLoyaltyProgramRequest $request, ?array $options = null): ?LoyaltyProgram
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -244,6 +253,9 @@ class ProgramClient implements ProgramClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return LoyaltyProgram::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -312,11 +324,11 @@ class ProgramClient implements ProgramClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return LoyaltyProgram
+     * @return ?LoyaltyProgram
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function partiallyUpdateLoyaltyProgram(string $pid, PartiallyUpdateLoyaltyProgramRequest $request = new PartiallyUpdateLoyaltyProgramRequest(), ?array $options = null): LoyaltyProgram
+    public function partiallyUpdateLoyaltyProgram(string $pid, PartiallyUpdateLoyaltyProgramRequest $request = new PartiallyUpdateLoyaltyProgramRequest(), ?array $options = null): ?LoyaltyProgram
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -332,6 +344,9 @@ class ProgramClient implements ProgramClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return LoyaltyProgram::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -359,11 +374,11 @@ class ProgramClient implements ProgramClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetParameterSubscriptionInfoResponse
+     * @return ?GetParameterSubscriptionInfoResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getParameterSubscriptionInfo(string $pid, GetParameterSubscriptionInfoRequest $request = new GetParameterSubscriptionInfoRequest(), ?array $options = null): GetParameterSubscriptionInfoResponse
+    public function getParameterSubscriptionInfo(string $pid, GetParameterSubscriptionInfoRequest $request = new GetParameterSubscriptionInfoRequest(), ?array $options = null): ?GetParameterSubscriptionInfoResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -375,6 +390,9 @@ class ProgramClient implements ProgramClientInterface
         }
         if ($request->loyaltySubscriptionId != null) {
             $query['loyaltySubscriptionId'] = $request->loyaltySubscriptionId;
+        }
+        if ($request->includeInternal != null) {
+            $query['includeInternal'] = $request->includeInternal;
         }
         try {
             $response = $this->client->sendRequest(
@@ -389,6 +407,9 @@ class ProgramClient implements ProgramClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetParameterSubscriptionInfoResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -499,11 +520,11 @@ class ProgramClient implements ProgramClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return SubscribeMemberToASubscriptionResponse
+     * @return ?SubscribeMemberToASubscriptionResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function subscribeMemberToASubscription(string $pid, SubscribeMemberToASubscriptionRequest $request, ?array $options = null): SubscribeMemberToASubscriptionResponse
+    public function subscribeMemberToASubscription(string $pid, SubscribeMemberToASubscriptionRequest $request, ?array $options = null): ?SubscribeMemberToASubscriptionResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -519,6 +540,9 @@ class ProgramClient implements ProgramClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return SubscribeMemberToASubscriptionResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -591,11 +615,11 @@ class ProgramClient implements ProgramClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return SubscribeToLoyaltyProgramResponse
+     * @return ?SubscribeToLoyaltyProgramResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function subscribeToLoyaltyProgram(string $pid, SubscribeToLoyaltyProgramRequest $request, ?array $options = null): SubscribeToLoyaltyProgramResponse
+    public function subscribeToLoyaltyProgram(string $pid, SubscribeToLoyaltyProgramRequest $request, ?array $options = null): ?SubscribeToLoyaltyProgramResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -611,6 +635,9 @@ class ProgramClient implements ProgramClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return SubscribeToLoyaltyProgramResponse::fromJson($json);
             }
         } catch (JsonException $e) {

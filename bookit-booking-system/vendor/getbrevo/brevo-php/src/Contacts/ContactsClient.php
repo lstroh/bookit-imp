@@ -101,11 +101,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetContacts
+     * @return ?GetContacts
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getContacts(GetContactsRequest $request = new GetContactsRequest(), ?array $options = null): GetContacts
+    public function getContacts(GetContactsRequest $request = new GetContactsRequest(), ?array $options = null): ?GetContacts
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -146,6 +146,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetContacts::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -174,11 +177,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateContactResponse
+     * @return ?CreateContactResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createContact(CreateContactRequest $request = new CreateContactRequest(), ?array $options = null): CreateContactResponse
+    public function createContact(CreateContactRequest $request = new CreateContactRequest(), ?array $options = null): ?CreateContactResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -194,6 +197,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateContactResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -217,11 +223,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetAttributesResponse
+     * @return ?GetAttributesResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getAttributes(?array $options = null): GetAttributesResponse
+    public function getAttributes(?array $options = null): ?GetAttributesResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -236,6 +242,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetAttributesResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -509,11 +518,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return RequestContactExportResponse
+     * @return ?RequestContactExportResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function requestContactExport(RequestContactExportRequest $request, ?array $options = null): RequestContactExportResponse
+    public function requestContactExport(RequestContactExportRequest $request, ?array $options = null): ?RequestContactExportResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -529,6 +538,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return RequestContactExportResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -559,11 +571,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetFoldersResponse
+     * @return ?GetFoldersResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getFolders(GetFoldersRequest $request = new GetFoldersRequest(), ?array $options = null): GetFoldersResponse
+    public function getFolders(GetFoldersRequest $request = new GetFoldersRequest(), ?array $options = null): ?GetFoldersResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -589,6 +601,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetFoldersResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -613,11 +628,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateFolderResponse
+     * @return ?CreateFolderResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createFolder(CreateUpdateFolder $request, ?array $options = null): CreateFolderResponse
+    public function createFolder(CreateUpdateFolder $request, ?array $options = null): ?CreateFolderResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -633,6 +648,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateFolderResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -661,11 +679,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetFolder
+     * @return ?GetFolder
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getFolder(int $folderId, ?array $options = null): GetFolder
+    public function getFolder(int $folderId, ?array $options = null): ?GetFolder
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -680,6 +698,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetFolder::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -789,11 +810,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetFolderListsResponse
+     * @return ?GetFolderListsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getFolderLists(int $folderId, GetFolderListsRequest $request = new GetFolderListsRequest(), ?array $options = null): GetFolderListsResponse
+    public function getFolderLists(int $folderId, GetFolderListsRequest $request = new GetFolderListsRequest(), ?array $options = null): ?GetFolderListsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -819,6 +840,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetFolderListsResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -845,11 +869,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return ImportContactsResponse
+     * @return ?ImportContactsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function importContacts(ImportContactsRequest $request = new ImportContactsRequest(), ?array $options = null): ImportContactsResponse
+    public function importContacts(ImportContactsRequest $request = new ImportContactsRequest(), ?array $options = null): ?ImportContactsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -865,6 +889,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return ImportContactsResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -893,11 +920,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetListsResponse
+     * @return ?GetListsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getLists(GetListsRequest $request = new GetListsRequest(), ?array $options = null): GetListsResponse
+    public function getLists(GetListsRequest $request = new GetListsRequest(), ?array $options = null): ?GetListsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -923,6 +950,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetListsResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -947,11 +977,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateListResponse
+     * @return ?CreateListResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createList(CreateListRequest $request, ?array $options = null): CreateListResponse
+    public function createList(CreateListRequest $request, ?array $options = null): ?CreateListResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -967,6 +997,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateListResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -992,11 +1025,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetListResponse
+     * @return ?GetListResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getList(int $listId, GetListRequest $request = new GetListRequest(), ?array $options = null): GetListResponse
+    public function getList(int $listId, GetListRequest $request = new GetListRequest(), ?array $options = null): ?GetListResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -1019,6 +1052,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetListResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -1124,11 +1160,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetContacts
+     * @return ?GetContacts
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getContactsFromList(int $listId, GetContactsFromListRequest $request = new GetContactsFromListRequest(), ?array $options = null): GetContacts
+    public function getContactsFromList(int $listId, GetContactsFromListRequest $request = new GetContactsFromListRequest(), ?array $options = null): ?GetContacts
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -1157,6 +1193,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetContacts::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -1182,11 +1221,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return PostContactInfo
+     * @return ?PostContactInfo
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function addContactToList(int $listId, AddContactToListRequest $request, ?array $options = null): PostContactInfo
+    public function addContactToList(int $listId, AddContactToListRequest $request, ?array $options = null): ?PostContactInfo
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -1202,6 +1241,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return PostContactInfo::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -1227,11 +1269,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return PostContactInfo
+     * @return ?PostContactInfo
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function removeContactFromList(int $listId, RemoveContactFromListRequest $request, ?array $options = null): PostContactInfo
+    public function removeContactFromList(int $listId, RemoveContactFromListRequest $request, ?array $options = null): ?PostContactInfo
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -1247,6 +1289,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return PostContactInfo::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -1271,11 +1316,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetSegmentsResponse
+     * @return ?GetSegmentsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getSegments(GetSegmentsRequest $request = new GetSegmentsRequest(), ?array $options = null): GetSegmentsResponse
+    public function getSegments(GetSegmentsRequest $request = new GetSegmentsRequest(), ?array $options = null): ?GetSegmentsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -1301,6 +1346,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetSegmentsResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -1333,11 +1381,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetContactInfoResponse
+     * @return ?GetContactInfoResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getContactInfo(string|int $identifier, GetContactInfoRequest $request = new GetContactInfoRequest(), ?array $options = null): GetContactInfoResponse
+    public function getContactInfo(string|int $identifier, GetContactInfoRequest $request = new GetContactInfoRequest(), ?array $options = null): ?GetContactInfoResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -1363,6 +1411,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetContactInfoResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -1379,7 +1430,7 @@ class ContactsClient implements ContactsClientInterface
 
     /**
      * <Note>Follow this format when passing a "SMS" phone number as an attribute.
-     * Accepted Number Formats 91xxxxxxxxxx +91xxxxxxxxxx 0091xxxxxxxxxx</Note>
+     * Accepted Number Formats 91xxxxxxxxxx +91xxxxxxxxxx 0091xxxxxxxxxx <br><br> If a blocklisted contact's email address is updated, it is going to remove that blocklisting from the contact and they will be resubscribed.</Note>
      * There are 2 ways to update a contact <br><br> Option 1- https://api.brevo.com/v3/contacts/{identifier} <br><br> Option 2- https://api.brevo.com/v3/contacts/{identifier}?identifierType={} <br> <br> Option 1 only works if identifierType is email_id (for EMAIL) or contact_id (for ID of the contact),where you can directly pass the value of EMAIL and ID of the contact.   <br><br> Option 2 works for all identifierType, use email_id for EMAIL attribute, contact_id for ID of the contact, ext_id for EXT_ID attribute, phone_id for SMS attribute, whatsapp_id for WHATSAPP attribute, landline_number_id for LANDLINE attribute
      *
      * @param (
@@ -1494,11 +1545,11 @@ class ContactsClient implements ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetContactStatsResponse
+     * @return ?GetContactStatsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getContactStats(string|int $identifier, GetContactStatsRequest $request = new GetContactStatsRequest(), ?array $options = null): GetContactStatsResponse
+    public function getContactStats(string|int $identifier, GetContactStatsRequest $request = new GetContactStatsRequest(), ?array $options = null): ?GetContactStatsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -1521,6 +1572,9 @@ class ContactsClient implements ContactsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetContactStatsResponse::fromJson($json);
             }
         } catch (JsonException $e) {

@@ -69,11 +69,11 @@ class SmsCampaignsClient implements SmsCampaignsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetSmsCampaignsResponse
+     * @return ?GetSmsCampaignsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getSmsCampaigns(GetSmsCampaignsRequest $request = new GetSmsCampaignsRequest(), ?array $options = null): GetSmsCampaignsResponse
+    public function getSmsCampaigns(GetSmsCampaignsRequest $request = new GetSmsCampaignsRequest(), ?array $options = null): ?GetSmsCampaignsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -108,6 +108,9 @@ class SmsCampaignsClient implements SmsCampaignsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetSmsCampaignsResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -132,11 +135,11 @@ class SmsCampaignsClient implements SmsCampaignsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateSmsCampaignResponse
+     * @return ?CreateSmsCampaignResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createSmsCampaign(CreateSmsCampaignRequest $request, ?array $options = null): CreateSmsCampaignResponse
+    public function createSmsCampaign(CreateSmsCampaignRequest $request, ?array $options = null): ?CreateSmsCampaignResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -152,6 +155,9 @@ class SmsCampaignsClient implements SmsCampaignsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateSmsCampaignResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -176,11 +182,11 @@ class SmsCampaignsClient implements SmsCampaignsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetSmsCampaignResponse
+     * @return ?GetSmsCampaignResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getSmsCampaign(int $campaignId, ?array $options = null): GetSmsCampaignResponse
+    public function getSmsCampaign(int $campaignId, ?array $options = null): ?GetSmsCampaignResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -195,6 +201,9 @@ class SmsCampaignsClient implements SmsCampaignsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetSmsCampaignResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -302,11 +311,11 @@ class SmsCampaignsClient implements SmsCampaignsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return RequestSmsRecipientExportResponse
+     * @return ?RequestSmsRecipientExportResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function requestSmsRecipientExport(int $campaignId, RequestSmsRecipientExportRequest $request, ?array $options = null): RequestSmsRecipientExportResponse
+    public function requestSmsRecipientExport(int $campaignId, RequestSmsRecipientExportRequest $request, ?array $options = null): ?RequestSmsRecipientExportResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -322,6 +331,9 @@ class SmsCampaignsClient implements SmsCampaignsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return RequestSmsRecipientExportResponse::fromJson($json);
             }
         } catch (JsonException $e) {

@@ -91,11 +91,11 @@ class ExternalFeedsClient implements ExternalFeedsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetAllExternalFeedsResponse
+     * @return ?GetAllExternalFeedsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getAllExternalFeeds(GetAllExternalFeedsRequest $request = new GetAllExternalFeedsRequest(), ?array $options = null): GetAllExternalFeedsResponse
+    public function getAllExternalFeeds(GetAllExternalFeedsRequest $request = new GetAllExternalFeedsRequest(), ?array $options = null): ?GetAllExternalFeedsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -133,6 +133,9 @@ class ExternalFeedsClient implements ExternalFeedsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetAllExternalFeedsResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -179,11 +182,11 @@ class ExternalFeedsClient implements ExternalFeedsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateExternalFeedResponse
+     * @return ?CreateExternalFeedResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createExternalFeed(CreateExternalFeedRequest $request, ?array $options = null): CreateExternalFeedResponse
+    public function createExternalFeed(CreateExternalFeedRequest $request, ?array $options = null): ?CreateExternalFeedResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -199,6 +202,9 @@ class ExternalFeedsClient implements ExternalFeedsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateExternalFeedResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -246,11 +252,11 @@ class ExternalFeedsClient implements ExternalFeedsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetExternalFeedByUuidResponse
+     * @return ?GetExternalFeedByUuidResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getExternalFeedByUuid(string $uuid, ?array $options = null): GetExternalFeedByUuidResponse
+    public function getExternalFeedByUuid(string $uuid, ?array $options = null): ?GetExternalFeedByUuidResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -265,6 +271,9 @@ class ExternalFeedsClient implements ExternalFeedsClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetExternalFeedByUuidResponse::fromJson($json);
             }
         } catch (JsonException $e) {

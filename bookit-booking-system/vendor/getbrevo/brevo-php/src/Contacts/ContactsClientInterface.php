@@ -58,9 +58,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetContacts
+     * @return ?GetContacts
      */
-    public function getContacts(GetContactsRequest $request = new GetContactsRequest(), ?array $options = null): GetContacts;
+    public function getContacts(GetContactsRequest $request = new GetContactsRequest(), ?array $options = null): ?GetContacts;
 
     /**
      * <Note>Follow this format when passing a "SMS" phone number as an attribute.
@@ -76,9 +76,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateContactResponse
+     * @return ?CreateContactResponse
      */
-    public function createContact(CreateContactRequest $request = new CreateContactRequest(), ?array $options = null): CreateContactResponse;
+    public function createContact(CreateContactRequest $request = new CreateContactRequest(), ?array $options = null): ?CreateContactResponse;
 
     /**
      * @param ?array{
@@ -89,9 +89,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetAttributesResponse
+     * @return ?GetAttributesResponse
      */
-    public function getAttributes(?array $options = null): GetAttributesResponse;
+    public function getAttributes(?array $options = null): ?GetAttributesResponse;
 
     /**
      * @param value-of<CreateAttributeRequestAttributeCategory> $attributeCategory Category of the attribute
@@ -192,9 +192,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return RequestContactExportResponse
+     * @return ?RequestContactExportResponse
      */
-    public function requestContactExport(RequestContactExportRequest $request, ?array $options = null): RequestContactExportResponse;
+    public function requestContactExport(RequestContactExportRequest $request, ?array $options = null): ?RequestContactExportResponse;
 
     /**
      * <Note>Ongoing changes for this endpoint
@@ -212,9 +212,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetFoldersResponse
+     * @return ?GetFoldersResponse
      */
-    public function getFolders(GetFoldersRequest $request = new GetFoldersRequest(), ?array $options = null): GetFoldersResponse;
+    public function getFolders(GetFoldersRequest $request = new GetFoldersRequest(), ?array $options = null): ?GetFoldersResponse;
 
     /**
      * @param CreateUpdateFolder $request
@@ -226,9 +226,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateFolderResponse
+     * @return ?CreateFolderResponse
      */
-    public function createFolder(CreateUpdateFolder $request, ?array $options = null): CreateFolderResponse;
+    public function createFolder(CreateUpdateFolder $request, ?array $options = null): ?CreateFolderResponse;
 
     /**
      * <Note>Ongoing changes for this endpoint.
@@ -244,9 +244,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetFolder
+     * @return ?GetFolder
      */
-    public function getFolder(int $folderId, ?array $options = null): GetFolder;
+    public function getFolder(int $folderId, ?array $options = null): ?GetFolder;
 
     /**
      * @param int $folderId Id of the folder
@@ -290,9 +290,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetFolderListsResponse
+     * @return ?GetFolderListsResponse
      */
-    public function getFolderLists(int $folderId, GetFolderListsRequest $request = new GetFolderListsRequest(), ?array $options = null): GetFolderListsResponse;
+    public function getFolderLists(int $folderId, GetFolderListsRequest $request = new GetFolderListsRequest(), ?array $options = null): ?GetFolderListsResponse;
 
     /**
      * It returns the background process ID which on completion calls the notify URL that you have set in the input. **Note**: - Any contact attribute that doesn't exist in your account will be ignored at import end.
@@ -306,9 +306,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return ImportContactsResponse
+     * @return ?ImportContactsResponse
      */
-    public function importContacts(ImportContactsRequest $request = new ImportContactsRequest(), ?array $options = null): ImportContactsResponse;
+    public function importContacts(ImportContactsRequest $request = new ImportContactsRequest(), ?array $options = null): ?ImportContactsResponse;
 
     /**
      * <Note>Ongoing changes for this endpoint.
@@ -324,9 +324,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetListsResponse
+     * @return ?GetListsResponse
      */
-    public function getLists(GetListsRequest $request = new GetListsRequest(), ?array $options = null): GetListsResponse;
+    public function getLists(GetListsRequest $request = new GetListsRequest(), ?array $options = null): ?GetListsResponse;
 
     /**
      * @param CreateListRequest $request
@@ -338,9 +338,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateListResponse
+     * @return ?CreateListResponse
      */
-    public function createList(CreateListRequest $request, ?array $options = null): CreateListResponse;
+    public function createList(CreateListRequest $request, ?array $options = null): ?CreateListResponse;
 
     /**
      * @param int $listId Id of the list
@@ -353,9 +353,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetListResponse
+     * @return ?GetListResponse
      */
-    public function getList(int $listId, GetListRequest $request = new GetListRequest(), ?array $options = null): GetListResponse;
+    public function getList(int $listId, GetListRequest $request = new GetListRequest(), ?array $options = null): ?GetListResponse;
 
     /**
      * @param int $listId Id of the list
@@ -395,9 +395,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetContacts
+     * @return ?GetContacts
      */
-    public function getContactsFromList(int $listId, GetContactsFromListRequest $request = new GetContactsFromListRequest(), ?array $options = null): GetContacts;
+    public function getContactsFromList(int $listId, GetContactsFromListRequest $request = new GetContactsFromListRequest(), ?array $options = null): ?GetContacts;
 
     /**
      * @param int $listId Id of the list
@@ -410,9 +410,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return PostContactInfo
+     * @return ?PostContactInfo
      */
-    public function addContactToList(int $listId, AddContactToListRequest $request, ?array $options = null): PostContactInfo;
+    public function addContactToList(int $listId, AddContactToListRequest $request, ?array $options = null): ?PostContactInfo;
 
     /**
      * @param int $listId Id of the list
@@ -425,9 +425,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return PostContactInfo
+     * @return ?PostContactInfo
      */
-    public function removeContactFromList(int $listId, RemoveContactFromListRequest $request, ?array $options = null): PostContactInfo;
+    public function removeContactFromList(int $listId, RemoveContactFromListRequest $request, ?array $options = null): ?PostContactInfo;
 
     /**
      * @param GetSegmentsRequest $request
@@ -439,9 +439,9 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetSegmentsResponse
+     * @return ?GetSegmentsResponse
      */
-    public function getSegments(GetSegmentsRequest $request = new GetSegmentsRequest(), ?array $options = null): GetSegmentsResponse;
+    public function getSegments(GetSegmentsRequest $request = new GetSegmentsRequest(), ?array $options = null): ?GetSegmentsResponse;
 
     /**
      * <Note>Follow this format when passing a "SMS" phone number as an attribute.
@@ -461,13 +461,13 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetContactInfoResponse
+     * @return ?GetContactInfoResponse
      */
-    public function getContactInfo(string|int $identifier, GetContactInfoRequest $request = new GetContactInfoRequest(), ?array $options = null): GetContactInfoResponse;
+    public function getContactInfo(string|int $identifier, GetContactInfoRequest $request = new GetContactInfoRequest(), ?array $options = null): ?GetContactInfoResponse;
 
     /**
      * <Note>Follow this format when passing a "SMS" phone number as an attribute.
-     * Accepted Number Formats 91xxxxxxxxxx +91xxxxxxxxxx 0091xxxxxxxxxx</Note>
+     * Accepted Number Formats 91xxxxxxxxxx +91xxxxxxxxxx 0091xxxxxxxxxx <br><br> If a blocklisted contact's email address is updated, it is going to remove that blocklisting from the contact and they will be resubscribed.</Note>
      * There are 2 ways to update a contact <br><br> Option 1- https://api.brevo.com/v3/contacts/{identifier} <br><br> Option 2- https://api.brevo.com/v3/contacts/{identifier}?identifierType={} <br> <br> Option 1 only works if identifierType is email_id (for EMAIL) or contact_id (for ID of the contact),where you can directly pass the value of EMAIL and ID of the contact.   <br><br> Option 2 works for all identifierType, use email_id for EMAIL attribute, contact_id for ID of the contact, ext_id for EXT_ID attribute, phone_id for SMS attribute, whatsapp_id for WHATSAPP attribute, landline_number_id for LANDLINE attribute
      *
      * @param (
@@ -519,7 +519,7 @@ interface ContactsClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetContactStatsResponse
+     * @return ?GetContactStatsResponse
      */
-    public function getContactStats(string|int $identifier, GetContactStatsRequest $request = new GetContactStatsRequest(), ?array $options = null): GetContactStatsResponse;
+    public function getContactStats(string|int $identifier, GetContactStatsRequest $request = new GetContactStatsRequest(), ?array $options = null): ?GetContactStatsResponse;
 }

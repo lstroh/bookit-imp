@@ -60,11 +60,11 @@ class SmsTemplatesClient implements SmsTemplatesClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetSmsTemplatesResponse
+     * @return ?GetSmsTemplatesResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getSmsTemplates(GetSmsTemplatesRequest $request = new GetSmsTemplatesRequest(), ?array $options = null): GetSmsTemplatesResponse
+    public function getSmsTemplates(GetSmsTemplatesRequest $request = new GetSmsTemplatesRequest(), ?array $options = null): ?GetSmsTemplatesResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -90,6 +90,9 @@ class SmsTemplatesClient implements SmsTemplatesClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetSmsTemplatesResponse::fromJson($json);
             }
         } catch (JsonException $e) {

@@ -77,11 +77,11 @@ class RewardClient implements RewardClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetCodeCountResponse
+     * @return ?GetCodeCountResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getCodeCount(string $pid, string $cpid, ?array $options = null): GetCodeCountResponse
+    public function getCodeCount(string $pid, string $cpid, ?array $options = null): ?GetCodeCountResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -96,6 +96,9 @@ class RewardClient implements RewardClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetCodeCountResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -123,11 +126,11 @@ class RewardClient implements RewardClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetLoyaltyOfferProgramsPidOffersResponse
+     * @return ?GetLoyaltyOfferProgramsPidOffersResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getRewardPageApi(string $pid, GetLoyaltyOfferProgramsPidOffersRequest $request = new GetLoyaltyOfferProgramsPidOffersRequest(), ?array $options = null): GetLoyaltyOfferProgramsPidOffersResponse
+    public function getRewardPageApi(string $pid, GetLoyaltyOfferProgramsPidOffersRequest $request = new GetLoyaltyOfferProgramsPidOffersRequest(), ?array $options = null): ?GetLoyaltyOfferProgramsPidOffersResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -156,6 +159,9 @@ class RewardClient implements RewardClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetLoyaltyOfferProgramsPidOffersResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -183,11 +189,11 @@ class RewardClient implements RewardClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateRewardResponse
+     * @return ?CreateRewardResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createReward(string $pid, CreateRewardRequest $request, ?array $options = null): CreateRewardResponse
+    public function createReward(string $pid, CreateRewardRequest $request, ?array $options = null): ?CreateRewardResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -203,6 +209,9 @@ class RewardClient implements RewardClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateRewardResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -230,11 +239,11 @@ class RewardClient implements RewardClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateVoucherResponse
+     * @return ?CreateVoucherResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createVoucher(string $pid, CreateVoucherRequest $request, ?array $options = null): CreateVoucherResponse
+    public function createVoucher(string $pid, CreateVoucherRequest $request, ?array $options = null): ?CreateVoucherResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -250,6 +259,9 @@ class RewardClient implements RewardClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateVoucherResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -277,11 +289,11 @@ class RewardClient implements RewardClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return Redeem
+     * @return ?Redeem
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function redeemVoucher(string $pid, RedeemVoucherRequest $request = new RedeemVoucherRequest(), ?array $options = null): Redeem
+    public function redeemVoucher(string $pid, RedeemVoucherRequest $request = new RedeemVoucherRequest(), ?array $options = null): ?Redeem
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -297,6 +309,9 @@ class RewardClient implements RewardClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return Redeem::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -324,11 +339,11 @@ class RewardClient implements RewardClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return Redeem
+     * @return ?Redeem
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function completeRedeemTransaction(string $pid, string $tid, ?array $options = null): Redeem
+    public function completeRedeemTransaction(string $pid, string $tid, ?array $options = null): ?Redeem
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -343,6 +358,9 @@ class RewardClient implements RewardClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return Redeem::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -417,11 +435,11 @@ class RewardClient implements RewardClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return ValidateRewardResponse
+     * @return ?ValidateRewardResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function validateReward(string $pid, ValidateRewardRequest $request = new ValidateRewardRequest(), ?array $options = null): ValidateRewardResponse
+    public function validateReward(string $pid, ValidateRewardRequest $request = new ValidateRewardRequest(), ?array $options = null): ?ValidateRewardResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -437,6 +455,9 @@ class RewardClient implements RewardClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return ValidateRewardResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -465,11 +486,11 @@ class RewardClient implements RewardClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetLoyaltyOfferProgramsPidRewardsRidResponse
+     * @return ?GetLoyaltyOfferProgramsPidRewardsRidResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getRewardInformation(string $pid, string $rid, GetLoyaltyOfferProgramsPidRewardsRidRequest $request = new GetLoyaltyOfferProgramsPidRewardsRidRequest(), ?array $options = null): GetLoyaltyOfferProgramsPidRewardsRidResponse
+    public function getRewardInformation(string $pid, string $rid, GetLoyaltyOfferProgramsPidRewardsRidRequest $request = new GetLoyaltyOfferProgramsPidRewardsRidRequest(), ?array $options = null): ?GetLoyaltyOfferProgramsPidRewardsRidResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -489,6 +510,9 @@ class RewardClient implements RewardClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetLoyaltyOfferProgramsPidRewardsRidResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -516,11 +540,11 @@ class RewardClient implements RewardClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetLoyaltyOfferProgramsPidVouchersResponse
+     * @return ?GetLoyaltyOfferProgramsPidVouchersResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getVoucherForAContact(string $pid, GetLoyaltyOfferProgramsPidVouchersRequest $request, ?array $options = null): GetLoyaltyOfferProgramsPidVouchersResponse
+    public function getVoucherForAContact(string $pid, GetLoyaltyOfferProgramsPidVouchersRequest $request, ?array $options = null): ?GetLoyaltyOfferProgramsPidVouchersResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -556,6 +580,9 @@ class RewardClient implements RewardClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetLoyaltyOfferProgramsPidVouchersResponse::fromJson($json);
             }
         } catch (JsonException $e) {

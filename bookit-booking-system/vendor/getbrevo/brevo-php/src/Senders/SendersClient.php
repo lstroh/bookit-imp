@@ -88,11 +88,11 @@ class SendersClient implements SendersClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetSendersResponse
+     * @return ?GetSendersResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getSenders(GetSendersRequest $request = new GetSendersRequest(), ?array $options = null): GetSendersResponse
+    public function getSenders(GetSendersRequest $request = new GetSendersRequest(), ?array $options = null): ?GetSendersResponse
     {
         $options = array_merge($this->options, $options ?? []);
         $query = [];
@@ -115,6 +115,9 @@ class SendersClient implements SendersClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetSendersResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -159,11 +162,11 @@ class SendersClient implements SendersClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return CreateSenderResponse
+     * @return ?CreateSenderResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function createSender(CreateSenderRequest $request, ?array $options = null): CreateSenderResponse
+    public function createSender(CreateSenderRequest $request, ?array $options = null): ?CreateSenderResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -179,6 +182,9 @@ class SendersClient implements SendersClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return CreateSenderResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -217,11 +223,11 @@ class SendersClient implements SendersClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetIpsResponse
+     * @return ?GetIpsResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getIps(?array $options = null): GetIpsResponse
+    public function getIps(?array $options = null): ?GetIpsResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -236,6 +242,9 @@ class SendersClient implements SendersClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetIpsResponse::fromJson($json);
             }
         } catch (JsonException $e) {
@@ -375,11 +384,11 @@ class SendersClient implements SendersClientInterface
      *   queryParameters?: array<string, mixed>,
      *   bodyProperties?: array<string, mixed>,
      * } $options
-     * @return GetIpsFromSenderResponse
+     * @return ?GetIpsFromSenderResponse
      * @throws BrevoException
      * @throws BrevoApiException
      */
-    public function getIpsFromSender(int $senderId, ?array $options = null): GetIpsFromSenderResponse
+    public function getIpsFromSender(int $senderId, ?array $options = null): ?GetIpsFromSenderResponse
     {
         $options = array_merge($this->options, $options ?? []);
         try {
@@ -394,6 +403,9 @@ class SendersClient implements SendersClientInterface
             $statusCode = $response->getStatusCode();
             if ($statusCode >= 200 && $statusCode < 400) {
                 $json = $response->getBody()->getContents();
+                if (empty($json)) {
+                    return null;
+                }
                 return GetIpsFromSenderResponse::fromJson($json);
             }
         } catch (JsonException $e) {
