@@ -7077,6 +7077,22 @@ class Bookit_Dashboard_Bookings_API {
 			}
 		}
 
+		// Options stored in wp_options (not wp_bookings_settings).
+		$wp_option_settings = array(
+			'bookit_confirmed_v2_url' => function () {
+				return get_option( 'bookit_confirmed_v2_url', home_url( '/booking-confirmed-v2/' ) );
+			},
+		);
+		foreach ( $wp_option_settings as $opt_key => $getter ) {
+			if ( ! in_array( $opt_key, $allowed_keys, true ) ) {
+				continue;
+			}
+			$include = empty( $requested_keys ) || in_array( $opt_key, $requested_keys, true );
+			if ( $include ) {
+				$formatted[ $opt_key ] = $getter();
+			}
+		}
+
 		return rest_ensure_response(
 			array(
 				'success'  => true,
@@ -7138,6 +7154,24 @@ class Bookit_Dashboard_Bookings_API {
 			}
 
 			if ( ! in_array( $key, $allowed_keys, true ) ) {
+				continue;
+			}
+
+			if ( 'bookit_confirmed_v2_url' === $key ) {
+				$url = is_string( $value ) ? trim( $value ) : '';
+				if ( '' === $url ) {
+					delete_option( 'bookit_confirmed_v2_url' );
+					continue;
+				}
+				$url = esc_url_raw( $url );
+				if ( '' === $url || false === filter_var( $url, FILTER_VALIDATE_URL ) ) {
+					return new WP_Error(
+						'invalid_bookit_confirmed_v2_url',
+						__( 'V2 booking confirmed URL must be a valid absolute URL.', 'bookit-booking-system' ),
+						array( 'status' => 400 )
+					);
+				}
+				update_option( 'bookit_confirmed_v2_url', $url );
 				continue;
 			}
 
@@ -7510,6 +7544,7 @@ class Bookit_Dashboard_Bookings_API {
 			'reschedule_fee_amount',
 			'cancellation_policy_text',
 			'auto_refund_enabled',
+			'bookit_confirmed_v2_url',
 		);
 	}
 

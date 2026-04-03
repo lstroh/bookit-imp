@@ -45,6 +45,8 @@ class Test_Settings_Email_API extends WP_UnitTestCase {
 		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_staff" );
 		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_settings" );
 
+		delete_option( 'bookit_confirmed_v2_url' );
+
 		$_SESSION = array();
 
 		parent::tearDown();
@@ -85,11 +87,13 @@ class Test_Settings_Email_API extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test get settings returns empty when no settings exist.
+	 * When no bookings_settings rows exist, GET still returns wp_option-backed defaults (e.g. V2 confirmed URL).
 	 *
 	 * @covers Bookit_Dashboard_Bookings_API::get_settings
 	 */
 	public function test_get_settings_returns_empty_when_none_exist() {
+		delete_option( 'bookit_confirmed_v2_url' );
+
 		$admin = $this->create_test_staff( array( 'role' => 'admin' ) );
 		$this->login_as( $admin, 'admin' );
 
@@ -98,7 +102,11 @@ class Test_Settings_Email_API extends WP_UnitTestCase {
 
 		$data = $response->get_data();
 		$this->assertTrue( $data['success'] );
-		$this->assertEmpty( $data['settings'] );
+		$this->assertSame(
+			home_url( '/booking-confirmed-v2/' ),
+			$data['settings']['bookit_confirmed_v2_url']
+		);
+		$this->assertCount( 1, $data['settings'] );
 	}
 
 	/**

@@ -31,6 +31,46 @@
       </div>
     </div>
 
+    <!-- Booking: V2 confirmed redirect URL (wp_option bookit_confirmed_v2_url) -->
+    <div v-if="isAdmin" class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">Booking</h2>
+        <p class="text-sm text-gray-500 mt-1">
+          Customer booking flow URLs
+        </p>
+      </div>
+
+      <div class="px-4 sm:px-6 py-6 space-y-4">
+        <div>
+          <label for="bookit-confirmed-v2-url" class="block text-sm font-medium text-gray-700 mb-1">
+            V2 Booking Confirmed Page URL
+          </label>
+          <input
+            id="bookit-confirmed-v2-url"
+            v-model="settings.bookit_confirmed_v2_url"
+            type="url"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            placeholder="https://yoursite.com/booking-confirmed-v2/"
+            :disabled="savingBookingConfirmedUrl"
+          />
+          <p class="text-xs text-gray-500 mt-1">
+            The page customers are redirected to after completing a V2 wizard booking. Must be a full URL.
+          </p>
+        </div>
+
+        <div class="flex justify-end pt-2">
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+            :disabled="savingBookingConfirmedUrl"
+            @click="saveBookingConfirmedUrl"
+          >
+            {{ savingBookingConfirmedUrl ? 'Saving...' : 'Save Booking URL' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Packages Settings -->
     <div v-if="isAdmin" class="bg-white rounded-xl border border-gray-200 p-6">
       <h2 class="text-base font-semibold text-gray-900 mb-1">Session Packages</h2>
@@ -200,6 +240,11 @@ const HEX_PATTERN = /^#[0-9A-Fa-f]{6}$/
 const currentUserRole = window.BOOKIT_DASHBOARD?.staff?.role || ''
 const isAdmin = computed(() => currentUserRole === 'admin' || currentUserRole === 'bookit_admin')
 
+const settings = ref({
+  bookit_confirmed_v2_url: ''
+})
+const savingBookingConfirmedUrl = ref(false)
+
 const showStaffEarnings = ref(false)
 const packagesEnabled = ref(false)
 const savingGeneral = ref(false)
@@ -214,6 +259,49 @@ const branding = ref({
   businessName: '',
   poweredByVisible: true
 })
+
+const loadBookingConfirmedUrl = async () => {
+  if (!isAdmin.value) {
+    return
+  }
+
+  try {
+    const response = await api.get('settings?keys=bookit_confirmed_v2_url')
+
+    if (response.data.success && response.data.settings) {
+      settings.value.bookit_confirmed_v2_url =
+        String(response.data.settings.bookit_confirmed_v2_url ?? '')
+      return
+    }
+  } catch {
+    // Fall back to empty; server default applies on save/read.
+  }
+
+  settings.value.bookit_confirmed_v2_url = ''
+}
+
+const saveBookingConfirmedUrl = async () => {
+  savingBookingConfirmedUrl.value = true
+
+  try {
+    const response = await api.post('settings', {
+      settings: {
+        bookit_confirmed_v2_url: settings.value.bookit_confirmed_v2_url || ''
+      }
+    })
+
+    if (response.data.success) {
+      toastSuccess('Settings saved successfully.')
+      await loadBookingConfirmedUrl()
+    } else {
+      toastError(response.data.message || 'Failed to save settings.')
+    }
+  } catch (err) {
+    toastError(err.message || 'Failed to save settings.')
+  } finally {
+    savingBookingConfirmedUrl.value = false
+  }
+}
 
 const loadShowStaffEarnings = async () => {
   try {
@@ -383,6 +471,7 @@ const saveBranding = async () => {
 
 onMounted(async () => {
   await loadShowStaffEarnings()
+  await loadBookingConfirmedUrl()
   await loadPackagesEnabled()
   await loadBranding()
 })
