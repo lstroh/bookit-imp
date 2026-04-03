@@ -28,6 +28,10 @@ if ( ! defined( 'BOOKIT_E5005' ) ) {
 	define( 'BOOKIT_E5005', 'E5005' ); // PACKAGE_INSUFFICIENT_SESSIONS
 }
 
+if ( ! defined( 'BOOKIT_E2005' ) ) {
+	define( 'BOOKIT_E2005', 'E2005' ); // INVALID_STATUS_TRANSITION
+}
+
 Bookit_Error_Registry::register(
 	'E1001',
 	array(
@@ -94,6 +98,16 @@ Bookit_Error_Registry::register(
 		'user_message' => __( 'This booking was just updated by someone else. The latest version has been loaded — please review and save again.', 'bookit-booking-system' ),
 		'log_message'  => 'Optimistic lock conflict on booking ID {booking_id}',
 		'http_status'  => 409,
+		'category'     => 'booking',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'E2005',
+	array(
+		'user_message' => __( 'This status change is not allowed. Please refresh and try again.', 'bookit-booking-system' ),
+		'log_message'  => 'Invalid status transition on booking ID {booking_id}: {old_status} → {new_status}',
+		'http_status'  => 422,
 		'category'     => 'booking',
 	)
 );

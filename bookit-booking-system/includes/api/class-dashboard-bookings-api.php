@@ -4048,6 +4048,22 @@ class Bookit_Dashboard_Bookings_API {
 	}
 
 	/**
+	 * Allowed booking status transitions (from current status → targets).
+	 *
+	 * @return array<string, string[]>
+	 */
+	private static function get_allowed_transitions(): array {
+		return array(
+			'pending'         => array( 'pending_payment', 'confirmed', 'cancelled' ),
+			'pending_payment' => array( 'confirmed', 'cancelled' ),
+			'confirmed'       => array( 'completed', 'cancelled', 'no_show' ),
+			'completed'       => array(),
+			'cancelled'       => array(),
+			'no_show'         => array(),
+		);
+	}
+
+	/**
 	 * Update existing booking.
 	 *
 	 * @param WP_REST_Request $request Request object.
@@ -4126,6 +4142,30 @@ class Bookit_Dashboard_Bookings_API {
 		$new_date       = $request->get_param( 'booking_date' );
 		$new_time       = $request->get_param( 'booking_time' );
 		$new_status     = $request->get_param( 'status' );
+
+		// State transition enforcement (Issue 7).
+		if ( null !== $new_status && '' !== $new_status && $new_status !== $old_status ) {
+			$allowed = self::get_allowed_transitions()[ $old_status ] ?? array();
+			if ( ! in_array( $new_status, $allowed, true ) ) {
+				Bookit_Audit_Logger::log(
+					'booking.invalid_transition',
+					'booking',
+					$booking_id,
+					array(
+						'old_status' => $old_status,
+						'new_status' => $new_status,
+					)
+				);
+				return Bookit_Error_Registry::to_wp_error(
+					'E2005',
+					array(
+						'booking_id' => $booking_id,
+						'old_status' => $old_status,
+						'new_status' => $new_status,
+					)
+				);
+			}
+		}
 
 		// Check if date/time/staff/service changed - need to verify availability.
 		$datetime_changed =

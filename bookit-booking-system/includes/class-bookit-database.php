@@ -337,7 +337,7 @@ class Bookit_Database {
 			booking_id BIGINT UNSIGNED NOT NULL,
 			customer_id BIGINT UNSIGNED NOT NULL,
 			amount DECIMAL(10,2) NOT NULL,
-			payment_type ENUM('deposit','full_payment','refund') DEFAULT 'full_payment',
+			payment_type ENUM('deposit','full_payment','balance_payment','refund') DEFAULT 'full_payment',
 			payment_method VARCHAR(50) NOT NULL COMMENT 'stripe, paypal, cash, card',
 			payment_status ENUM('pending','completed','failed','refunded','partially_refunded') DEFAULT 'pending',
 			stripe_payment_intent_id VARCHAR(255) NULL COMMENT 'Stripe PaymentIntent ID',

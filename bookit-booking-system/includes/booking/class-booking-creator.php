@@ -201,6 +201,16 @@ class Booking_System_Booking_Creator {
 			array( '%d' )
 		);
 
+		// Generate and store a magic link token for customer self-service links.
+		$magic_link_token = wp_generate_password( 32, false, false );
+		$wpdb->update(
+			$wpdb->prefix . 'bookings',
+			array( 'magic_link_token' => $magic_link_token ),
+			array( 'id' => $booking_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+
 		// Also create a payment record for tracking purposes.
 		$payment_intent_id = isset( $data['payment_intent_id'] ) ? $data['payment_intent_id'] : '';
 		if ( $amount_paid > 0 ) {

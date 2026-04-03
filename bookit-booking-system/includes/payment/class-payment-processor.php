@@ -209,6 +209,37 @@ class Booking_System_Payment_Processor {
 			return $booking_id;
 		}
 
+		// Issue 13: Insert payment record for pay-on-arrival bookings.
+		// status = 'pending' because cash has not yet been collected by staff.
+		global $wpdb;
+		$customer_id = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT customer_id FROM {$wpdb->prefix}bookings WHERE id = %d",
+				$booking_id
+			)
+		);
+		$total_price = (float) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT total_price FROM {$wpdb->prefix}bookings WHERE id = %d",
+				$booking_id
+			)
+		);
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_payments',
+			array(
+				'booking_id'       => $booking_id,
+				'customer_id'      => $customer_id,
+				'amount'           => isset( $session_data['total_price'] ) ? (float) $session_data['total_price'] : $total_price,
+				'payment_type'     => 'full_payment',
+				'payment_method'   => 'pay_on_arrival',
+				'payment_status'   => 'pending',
+				'transaction_date' => current_time( 'mysql' ),
+				'created_at'       => current_time( 'mysql' ),
+				'updated_at'       => current_time( 'mysql' ),
+			),
+			array( '%d', '%d', '%f', '%s', '%s', '%s', '%s', '%s', '%s' )
+		);
+
 		// Notify extensions after a public wizard booking is created.
 		do_action( 'bookit_after_booking_created', (int) $booking_id, $booking_data );
 
