@@ -121,15 +121,19 @@ class Booking_System_Payment_Processor {
 	 */
 	private function process_stripe_payment( $session_data ) {
 		$stripe_checkout = new Booking_System_Stripe_Checkout();
-		$session_id      = $stripe_checkout->create_checkout_session( $session_data );
+		$session_result  = $stripe_checkout->create_checkout_session( $session_data );
 
-		if ( is_wp_error( $session_id ) ) {
+		if ( is_wp_error( $session_result ) ) {
 			if ( self::should_log() ) {
-				error_log( 'Stripe Checkout Error: ' . $session_id->get_error_message() );
+				error_log( 'Stripe Checkout Error: ' . $session_result->get_error_message() );
 			}
-			wp_safe_redirect( home_url( '/book?step=5&error=' . $session_id->get_error_code() ) );
+			wp_safe_redirect( home_url( '/book?step=5&error=' . $session_result->get_error_code() ) );
 			exit;
 		}
+
+		$session_id = is_array( $session_result ) && isset( $session_result['session_id'] )
+			? $session_result['session_id']
+			: $session_result;
 
 		$stripe_config   = new Bookit_Stripe_Config();
 		$publishable_key = $stripe_config->get_publishable_key();

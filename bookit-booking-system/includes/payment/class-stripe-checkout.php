@@ -38,7 +38,7 @@ class Booking_System_Stripe_Checkout {
 	 * If the same session data is submitted twice, returns the cached session ID.
 	 *
 	 * @param array<string, mixed> $session_data Booking wizard session data.
-	 * @return string|\WP_Error Stripe session ID or error.
+	 * @return string|array{session_id: string, redirect_url: string}|\WP_Error Session ID, or V2 array with redirect_url, or error.
 	 */
 	public function create_checkout_session( $session_data ) {
 		// Initialize idempotency handler.
@@ -47,8 +47,11 @@ class Booking_System_Stripe_Checkout {
 			return $idempotency_result;
 		}
 
-		// If we got a cached session ID, return it immediately.
+		// If we got a cached session ID (or V2 session + URL), return it immediately.
 		if ( is_string( $idempotency_result ) && ! empty( $idempotency_result ) ) {
+			return $idempotency_result;
+		}
+		if ( is_array( $idempotency_result ) && ! empty( $idempotency_result['session_id'] ) && ! empty( $idempotency_result['redirect_url'] ) ) {
 			return $idempotency_result;
 		}
 
@@ -93,17 +96,27 @@ class Booking_System_Stripe_Checkout {
 
 		if ( apply_filters( 'bookit_stripe_api_mode', 'live' ) === 'mock' ) {
 			$mock_result = apply_filters( 'bookit_mock_stripe_session', $session_data );
+			$is_v2       = isset( $session_data['wizard_version'] ) && 'v2' === $session_data['wizard_version'];
 			if ( is_object( $mock_result ) && isset( $mock_result->id ) ) {
+				$redirect_for_cache = isset( $mock_result->url ) ? (string) $mock_result->url : '';
 				// Complete idempotency for successful mock.
-				$this->complete_idempotency_operation(
-					array(
-						'session_id'   => $mock_result->id,
-						'amount_total' => $mock_result->amount_total ?? 0,
-						'currency'     => $mock_result->currency ?? 'gbp',
-						'created_at'   => gmdate( 'Y-m-d H:i:s' ),
-						'mock'         => true,
-					)
+				$idempotency_payload = array(
+					'session_id'   => $mock_result->id,
+					'amount_total' => $mock_result->amount_total ?? 0,
+					'currency'     => $mock_result->currency ?? 'gbp',
+					'created_at'   => gmdate( 'Y-m-d H:i:s' ),
+					'mock'         => true,
 				);
+				if ( '' !== $redirect_for_cache ) {
+					$idempotency_payload['redirect_url'] = $redirect_for_cache;
+				}
+				$this->complete_idempotency_operation( $idempotency_payload );
+				if ( $is_v2 && '' !== $redirect_for_cache ) {
+					return array(
+						'session_id'   => $mock_result->id,
+						'redirect_url' => $redirect_for_cache,
+					);
+				}
 				return $mock_result->id;
 			}
 			if ( is_string( $mock_result ) && ! empty( $mock_result ) ) {
@@ -133,19 +146,33 @@ class Booking_System_Stripe_Checkout {
 
 		$params = $this->build_session_params( $session_data, $service, $staff, $deposit_amount );
 
+		$is_v2 = isset( $session_data['wizard_version'] ) && 'v2' === $session_data['wizard_version'];
+
 		try {
 			$checkout_session = \Stripe\Checkout\Session::create( $params );
 			$session_id       = $checkout_session->id;
 
 			// Mark idempotency operation as completed with session details.
-			$this->complete_idempotency_operation(
-				array(
-					'session_id'   => $session_id,
-					'amount_total' => $checkout_session->amount_total,
-					'currency'     => $checkout_session->currency,
-					'created_at'   => gmdate( 'Y-m-d H:i:s' ),
-				)
+			$response_payload = array(
+				'session_id'   => $session_id,
+				'amount_total' => $checkout_session->amount_total,
+				'currency'     => $checkout_session->currency,
+				'created_at'   => gmdate( 'Y-m-d H:i:s' ),
 			);
+			if ( $is_v2 && ! empty( $checkout_session->url ) ) {
+				$response_payload['redirect_url'] = $checkout_session->url;
+			}
+			$this->complete_idempotency_operation( $response_payload );
+
+			if ( $is_v2 ) {
+				$url = isset( $checkout_session->url ) ? (string) $checkout_session->url : '';
+				if ( '' !== $url ) {
+					return array(
+						'session_id'   => $session_id,
+						'redirect_url' => $url,
+					);
+				}
+			}
 
 			return $session_id;
 		} catch ( \Exception $e ) {
@@ -220,12 +247,19 @@ class Booking_System_Stripe_Checkout {
 			return true;
 		}
 
-		// If operation already completed, return cached session ID.
+		// If operation already completed, return cached session ID (or V2 session + redirect URL).
 		if ( 'completed' === $operation['status'] && ! empty( $operation['response_data'] ) ) {
 			$cached_data = json_decode( $operation['response_data'], true );
 			if ( ! empty( $cached_data['session_id'] ) ) {
 				if ( function_exists( 'error_log' ) ) {
 					error_log( 'Stripe Checkout: Returning cached session ID ' . $cached_data['session_id'] );
+				}
+				$is_v2 = isset( $session_data['wizard_version'] ) && 'v2' === $session_data['wizard_version'];
+				if ( $is_v2 && ! empty( $cached_data['redirect_url'] ) ) {
+					return array(
+						'session_id'   => $cached_data['session_id'],
+						'redirect_url' => $cached_data['redirect_url'],
+					);
 				}
 				return $cached_data['session_id'];
 			}
@@ -481,9 +515,13 @@ class Booking_System_Stripe_Checkout {
 		);
 
 		$success_url = home_url( '/booking-confirmed?session_id={CHECKOUT_SESSION_ID}' );
+		$cancel_url  = home_url( '/book?step=5&cancelled=1' );
 		if ( isset( $session_data['wizard_version'] ) && 'v2' === $session_data['wizard_version'] ) {
 			$v2_base = rtrim( get_option( 'bookit_confirmed_v2_url', home_url( '/booking-confirmed-v2/' ) ), '/' );
 			$success_url = $v2_base . '?session_id={CHECKOUT_SESSION_ID}';
+			$cancel_url  = home_url( '/book-v2/' );
+			$metadata['flow_type']       = 'booking';
+			$metadata['wizard_version'] = 'v2';
 		}
 
 		return array(
@@ -491,7 +529,7 @@ class Booking_System_Stripe_Checkout {
 			'line_items'          => $line_items,
 			'mode'                => 'payment',
 			'success_url'         => $success_url,
-			'cancel_url'          => home_url( '/book?step=5&cancelled=1' ),
+			'cancel_url'          => $cancel_url,
 			'customer_email'     => $session_data['customer_email'],
 			'metadata'            => $metadata,
 		);

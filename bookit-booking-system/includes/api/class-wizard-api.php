@@ -441,6 +441,11 @@ class Bookit_Wizard_API {
 			$payment_method                      = 'use_package';
 		}
 
+		// V2 wizard posts payment_method "card" for Stripe Checkout (V1 uses admin_post + session_id string).
+		if ( 'card' === $payment_method && isset( $session_data['wizard_version'] ) && 'v2' === $session_data['wizard_version'] ) {
+			$payment_method = 'stripe';
+		}
+
 		require_once BOOKIT_PLUGIN_DIR . 'includes/payment/class-payment-processor.php';
 		$processor = new Booking_System_Payment_Processor();
 
@@ -454,9 +459,60 @@ class Bookit_Wizard_API {
 				$result = $processor->process_use_package( $session_data );
 				break;
 
-			case 'card':
 			case 'stripe':
+				$stripe_session = $session_data;
+				$stripe_session['wizard_version'] = 'v2';
+				require_once BOOKIT_PLUGIN_DIR . 'includes/payment/class-stripe-checkout.php';
+				$stripe_checkout = new Booking_System_Stripe_Checkout();
+				try {
+					$stripe_result = $stripe_checkout->create_checkout_session( $stripe_session );
+				} catch ( \Stripe\Exception\ApiErrorException $e ) {
+					if ( function_exists( 'error_log' ) ) {
+						error_log( 'Stripe Checkout ApiErrorException: ' . $e->getMessage() );
+					}
+					return Bookit_Error_Registry::to_wp_error(
+						'E3010',
+						array( 'gateway_message' => $e->getMessage() )
+					);
+				}
+
+				if ( is_wp_error( $stripe_result ) ) {
+					if ( 'stripe_error' === $stripe_result->get_error_code() ) {
+						if ( function_exists( 'error_log' ) ) {
+							error_log( 'Stripe Checkout: ' . $stripe_result->get_error_message() );
+						}
+						return Bookit_Error_Registry::to_wp_error(
+							'E3010',
+							array( 'gateway_message' => $stripe_result->get_error_message() )
+						);
+					}
+					$err_data = $stripe_result->get_error_data();
+					$status   = is_array( $err_data ) && isset( $err_data['status'] ) ? (int) $err_data['status'] : 400;
+					return new WP_Error(
+						$stripe_result->get_error_code(),
+						$stripe_result->get_error_message(),
+						array( 'status' => $status )
+					);
+				}
+
+				if ( ! is_array( $stripe_result ) || empty( $stripe_result['redirect_url'] ) ) {
+					return Bookit_Error_Registry::to_wp_error(
+						'E3010',
+						array( 'gateway_message' => 'Missing checkout URL' )
+					);
+				}
+
+				return rest_ensure_response(
+					array(
+						'success'      => true,
+						'redirect_url' => $stripe_result['redirect_url'],
+					)
+				);
+
 			case 'paypal':
+				return Bookit_Error_Registry::to_wp_error( 'PAYMENT_METHOD_NOT_SUPPORTED' );
+
+			case 'card':
 				return new WP_Error(
 					'payment_method_not_available',
 					__( 'Online payment is not yet available. Please select Pay in Person or use a package.', 'bookit-booking-system' ),

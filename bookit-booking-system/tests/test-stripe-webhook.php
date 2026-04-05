@@ -50,6 +50,49 @@ class Test_Stripe_Webhook extends WP_UnitTestCase {
 	private int $test_staff_id = 0;
 
 	/**
+	 * Upsert a row in wp_bookings_settings.
+	 *
+	 * @param string $key   Setting key.
+	 * @param mixed  $value String or bool.
+	 */
+	private function upsert_booking_setting( string $key, $value ): void {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'bookings_settings';
+		$type  = 'string';
+		if ( is_bool( $value ) ) {
+			$type  = 'boolean';
+			$value = $value ? '1' : '0';
+		} else {
+			$value = (string) $value;
+		}
+
+		$existing = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE setting_key = %s", $key ) );
+		if ( $existing ) {
+			$wpdb->update(
+				$table,
+				array(
+					'setting_value' => $value,
+					'setting_type'  => $type,
+				),
+				array( 'setting_key' => $key ),
+				array( '%s', '%s' ),
+				array( '%s' )
+			);
+		} else {
+			$wpdb->insert(
+				$table,
+				array(
+					'setting_key'   => $key,
+					'setting_value' => $value,
+					'setting_type'  => $type,
+				),
+				array( '%s', '%s', '%s' )
+			);
+		}
+	}
+
+	/**
 	 * Set up each test.
 	 */
 	public function setUp(): void {
@@ -86,9 +129,10 @@ class Test_Stripe_Webhook extends WP_UnitTestCase {
 		$this->webhook_handler = new Booking_System_Stripe_Webhook();
 		do_action( 'rest_api_init' );
 
-		// Set up test webhook secret (plugin uses test_webhook_secret option).
-		update_option( 'bookit_stripe_test_mode', 1 );
-		update_option( 'bookit_stripe_test_webhook_secret', 'whsec_test123456789' );
+		// Set up test Stripe settings in wp_bookings_settings (same as dashboard).
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_webhook_secret', 'whsec_test123456789' );
+		$this->upsert_booking_setting( 'stripe_secret_key', 'sk_test_51234567890abcdef' );
 
 		// Mock Stripe signature verification: in tests, accept any non-empty signature;
 		// use signature 'invalid' to simulate invalid_signature.
@@ -173,8 +217,9 @@ class Test_Stripe_Webhook extends WP_UnitTestCase {
 		$wpdb->delete( $prefix . 'bookings_staff', array( 'id' => $this->test_staff_id ), array( '%d' ) );
 		$wpdb->delete( $prefix . 'bookings_services', array( 'id' => $this->test_service_id ), array( '%d' ) );
 
-		delete_option( 'bookit_stripe_test_mode' );
-		delete_option( 'bookit_stripe_test_webhook_secret' );
+		foreach ( array( 'stripe_test_mode', 'stripe_webhook_secret', 'stripe_secret_key' ) as $sk ) {
+			$wpdb->delete( $prefix . 'bookings_settings', array( 'setting_key' => $sk ), array( '%s' ) );
+		}
 
 		// Clear idempotency transient if set.
 		delete_transient( 'stripe_webhook_cs_test_session123' );

@@ -192,12 +192,55 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Set Stripe test options.
+	 * Set Stripe test keys in wp_bookings_settings (same storage as dashboard).
 	 */
 	private function set_stripe_test_options(): void {
-		update_option( 'bookit_stripe_test_mode', 1 );
-		update_option( 'bookit_stripe_test_secret_key', 'sk_test_51234567890abcdef' );
-		update_option( 'bookit_stripe_test_publishable_key', 'pk_test_51234567890abcdef' );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_secret_key', 'sk_test_51234567890abcdef' );
+		$this->upsert_booking_setting( 'stripe_publishable_key', 'pk_test_51234567890abcdef' );
+	}
+
+	/**
+	 * Upsert a row in wp_bookings_settings.
+	 *
+	 * @param string $key   Setting key.
+	 * @param mixed  $value String or bool.
+	 */
+	private function upsert_booking_setting( string $key, $value ): void {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'bookings_settings';
+		$type  = 'string';
+		if ( is_bool( $value ) ) {
+			$type  = 'boolean';
+			$value = $value ? '1' : '0';
+		} else {
+			$value = (string) $value;
+		}
+
+		$existing = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE setting_key = %s", $key ) );
+		if ( $existing ) {
+			$wpdb->update(
+				$table,
+				array(
+					'setting_value' => $value,
+					'setting_type'  => $type,
+				),
+				array( 'setting_key' => $key ),
+				array( '%s', '%s' ),
+				array( '%s' )
+			);
+		} else {
+			$wpdb->insert(
+				$table,
+				array(
+					'setting_key'   => $key,
+					'setting_value' => $value,
+					'setting_type'  => $type,
+				),
+				array( '%s', '%s', '%s' )
+			);
+		}
 	}
 
 	/**
@@ -294,9 +337,9 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 
 		remove_filter( 'bookit_log_deposit_edge_cases', '__return_false' );
 
-		delete_option( 'bookit_stripe_test_mode' );
-		delete_option( 'bookit_stripe_test_secret_key' );
-		delete_option( 'bookit_stripe_test_publishable_key' );
+		foreach ( array( 'stripe_test_mode', 'stripe_secret_key', 'stripe_publishable_key' ) as $stripe_key ) {
+			$wpdb->delete( $p . 'bookings_settings', array( 'setting_key' => $stripe_key ), array( '%s' ) );
+		}
 
 		$this->last_mock_session = null;
 		parent::tearDown();
@@ -567,8 +610,7 @@ class Test_Stripe_Checkout extends WP_UnitTestCase {
 	 * Assert: Returns WP_Error with 'missing_api_key' code.
 	 */
 	public function test_handles_missing_stripe_keys(): void {
-		delete_option( 'bookit_stripe_test_secret_key' );
-		update_option( 'bookit_stripe_test_secret_key', '' );
+		$this->upsert_booking_setting( 'stripe_secret_key', '' );
 
 		$result = $this->stripe_checkout->create_checkout_session( $this->test_session_data );
 

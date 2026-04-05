@@ -35,26 +35,23 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	const TEST_WEBHOOK_SECRET = 'whsec_1234567890abcdefghijklmnopqrstuvwxyz';
 
 	/**
-	 * Stripe option names used by the plugin.
+	 * Stripe keys stored in wp_bookings_settings (same as dashboard).
 	 *
 	 * @var array<string>
 	 */
-	private static $stripe_options = array(
-		'bookit_stripe_test_mode',
-		'bookit_stripe_test_publishable_key',
-		'bookit_stripe_test_secret_key',
-		'bookit_stripe_test_webhook_secret',
-		'bookit_stripe_live_publishable_key',
-		'bookit_stripe_live_secret_key',
-		'bookit_stripe_live_webhook_secret',
+	private static $stripe_booking_setting_keys = array(
+		'stripe_test_mode',
+		'stripe_publishable_key',
+		'stripe_secret_key',
+		'stripe_webhook_secret',
 	);
 
 	/**
-	 * Saved option values before tests (for restore in tearDown).
+	 * Snapshot of booking settings rows before each test (restored in tearDown).
 	 *
-	 * @var array<string, mixed>
+	 * @var array<string, array<string, string>|null>
 	 */
-	private $saved_options = array();
+	private $bookings_settings_snapshot = array();
 
 	/**
 	 * Set up each test.
@@ -62,11 +59,7 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	public function setUp(): void {
 		parent::setUp();
 
-		// Save current Stripe options so we can restore in tearDown.
-		foreach ( self::$stripe_options as $option ) {
-			$value = get_option( $option, '__not_set__' );
-			$this->saved_options[ $option ] = $value;
-		}
+		$this->bookings_settings_snapshot = $this->snapshot_stripe_booking_settings();
 
 		$this->reset_stripe_client_static();
 	}
@@ -75,17 +68,112 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * Tear down each test.
 	 */
 	public function tearDown(): void {
-		// Restore original options.
-		foreach ( $this->saved_options as $option => $value ) {
-			if ( $value === '__not_set__' ) {
-				delete_option( $option );
-			} else {
-				update_option( $option, $value );
-			}
-		}
+		$this->restore_stripe_booking_settings( $this->bookings_settings_snapshot );
 
 		$this->reset_stripe_client_static();
 		parent::tearDown();
+	}
+
+	/**
+	 * Snapshot current rows for Stripe keys in wp_bookings_settings.
+	 *
+	 * @return array<string, array<string, string>|null>
+	 */
+	private function snapshot_stripe_booking_settings(): array {
+		global $wpdb;
+
+		$snapshot = array();
+		foreach ( self::$stripe_booking_setting_keys as $key ) {
+			$row = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT setting_key, setting_value, setting_type FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s",
+					$key
+				),
+				ARRAY_A
+			);
+			$snapshot[ $key ] = $row ? $row : null;
+		}
+		return $snapshot;
+	}
+
+	/**
+	 * Restore snapshot: delete current Stripe keys and re-insert saved rows.
+	 *
+	 * @param array<string, array<string, string>|null> $snapshot Snapshot from snapshot_stripe_booking_settings().
+	 */
+	private function restore_stripe_booking_settings( array $snapshot ): void {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'bookings_settings';
+		foreach ( self::$stripe_booking_setting_keys as $key ) {
+			$wpdb->delete( $table, array( 'setting_key' => $key ), array( '%s' ) );
+			if ( ! empty( $snapshot[ $key ] ) && is_array( $snapshot[ $key ] ) ) {
+				$wpdb->insert(
+					$table,
+					array(
+						'setting_key'   => $snapshot[ $key ]['setting_key'],
+						'setting_value' => $snapshot[ $key ]['setting_value'],
+						'setting_type'  => $snapshot[ $key ]['setting_type'],
+					),
+					array( '%s', '%s', '%s' )
+				);
+			}
+		}
+	}
+
+	/**
+	 * Upsert a value in wp_bookings_settings (matches dashboard storage).
+	 *
+	 * @param string $key   Setting key.
+	 * @param mixed  $value String/bool value.
+	 */
+	private function upsert_booking_setting( string $key, $value ): void {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'bookings_settings';
+		$type  = 'string';
+		if ( is_bool( $value ) ) {
+			$type  = 'boolean';
+			$value = $value ? '1' : '0';
+		} else {
+			$value = (string) $value;
+		}
+
+		$existing = $wpdb->get_var(
+			$wpdb->prepare( "SELECT id FROM {$table} WHERE setting_key = %s", $key )
+		);
+		if ( $existing ) {
+			$wpdb->update(
+				$table,
+				array(
+					'setting_value' => $value,
+					'setting_type'  => $type,
+				),
+				array( 'setting_key' => $key ),
+				array( '%s', '%s' ),
+				array( '%s' )
+			);
+		} else {
+			$wpdb->insert(
+				$table,
+				array(
+					'setting_key'   => $key,
+					'setting_value' => $value,
+					'setting_type'  => $type,
+				),
+				array( '%s', '%s', '%s' )
+			);
+		}
+	}
+
+	/**
+	 * Delete a setting row if present.
+	 *
+	 * @param string $key Setting key.
+	 */
+	private function delete_booking_setting( string $key ): void {
+		global $wpdb;
+		$wpdb->delete( $wpdb->prefix . 'bookings_settings', array( 'setting_key' => $key ), array( '%s' ) );
 	}
 
 	/**
@@ -100,41 +188,10 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Force live mode by directly setting the option to '0' in the database,
-	 * bypassing all WordPress filters. Clears caches so get_option reads fresh.
+	 * Force live mode (stripe_test_mode = false in wp_bookings_settings).
 	 */
 	private function force_live_mode(): void {
-		global $wpdb;
-
-		// Check if option exists.
-		$exists = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name = %s",
-				'bookit_stripe_test_mode'
-			)
-		);
-
-		if ( $exists ) {
-			$wpdb->update(
-				$wpdb->options,
-				array( 'option_value' => '0' ),
-				array( 'option_name' => 'bookit_stripe_test_mode' )
-			);
-		} else {
-			$wpdb->insert(
-				$wpdb->options,
-				array(
-					'option_name'  => 'bookit_stripe_test_mode',
-					'option_value' => '0',
-					'autoload'     => 'yes',
-				)
-			);
-		}
-
-		// Clear all option caches so get_option reads from DB.
-		wp_cache_delete( 'bookit_stripe_test_mode', 'options' );
-		wp_cache_delete( 'alloptions', 'options' );
-		wp_cache_flush();
+		$this->upsert_booking_setting( 'stripe_test_mode', false );
 	}
 
 	// -------------------------------------------------------------------------
@@ -147,7 +204,7 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_mode
 	 */
 	public function test_get_mode_returns_test_when_test_mode_enabled(): void {
-		update_option( 'bookit_stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
 		$this->assertSame( 'test', Bookit_Stripe_Config::get_mode() );
 	}
 
@@ -167,7 +224,7 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_mode
 	 */
 	public function test_get_mode_defaults_to_test_when_no_setting_exists(): void {
-		delete_option( 'bookit_stripe_test_mode' );
+		$this->delete_booking_setting( 'stripe_test_mode' );
 		$this->assertSame( 'test', Bookit_Stripe_Config::get_mode() );
 	}
 
@@ -181,8 +238,8 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_publishable_key
 	 */
 	public function test_get_publishable_key_returns_test_key_when_in_test_mode(): void {
-		update_option( 'bookit_stripe_test_mode', true );
-		update_option( 'bookit_stripe_test_publishable_key', self::TEST_PUBLISHABLE_KEY );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_publishable_key', self::TEST_PUBLISHABLE_KEY );
 		$this->assertSame( self::TEST_PUBLISHABLE_KEY, Bookit_Stripe_Config::get_publishable_key() );
 	}
 
@@ -192,8 +249,8 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_publishable_key
 	 */
 	public function test_get_publishable_key_returns_empty_string_when_no_key_set(): void {
-		update_option( 'bookit_stripe_test_mode', true );
-		update_option( 'bookit_stripe_test_publishable_key', '' );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_publishable_key', '' );
 		$this->assertSame( '', Bookit_Stripe_Config::get_publishable_key() );
 	}
 
@@ -203,10 +260,17 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_publishable_key
 	 */
 	public function test_get_publishable_key_returns_correct_key_after_saving(): void {
-		update_option( 'bookit_stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
 		$key = self::TEST_PUBLISHABLE_KEY;
-		update_option( 'bookit_stripe_test_publishable_key', $key );
-		$this->assertSame( $key, get_option( 'bookit_stripe_test_publishable_key' ) );
+		$this->upsert_booking_setting( 'stripe_publishable_key', $key );
+		global $wpdb;
+		$stored = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s",
+				'stripe_publishable_key'
+			)
+		);
+		$this->assertSame( $key, $stored );
 		$this->assertSame( $key, Bookit_Stripe_Config::get_publishable_key() );
 	}
 
@@ -217,7 +281,7 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 */
 	public function test_get_publishable_key_returns_live_key_when_in_live_mode(): void {
 		$live_key = 'pk_live_51234567890abcdefghijklmnopqrstuvwxyz';
-		update_option( 'bookit_stripe_live_publishable_key', $live_key );
+		$this->upsert_booking_setting( 'stripe_publishable_key', $live_key );
 		$this->force_live_mode();
 		$this->assertSame( $live_key, Bookit_Stripe_Config::get_publishable_key() );
 	}
@@ -232,8 +296,8 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_secret_key
 	 */
 	public function test_get_secret_key_returns_test_key_when_in_test_mode(): void {
-		update_option( 'bookit_stripe_test_mode', true );
-		update_option( 'bookit_stripe_test_secret_key', self::TEST_SECRET_KEY );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_secret_key', self::TEST_SECRET_KEY );
 		$this->assertSame( self::TEST_SECRET_KEY, Bookit_Stripe_Config::get_secret_key() );
 	}
 
@@ -243,8 +307,8 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_secret_key
 	 */
 	public function test_get_secret_key_returns_empty_string_when_no_key_set(): void {
-		update_option( 'bookit_stripe_test_mode', true );
-		update_option( 'bookit_stripe_test_secret_key', '' );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_secret_key', '' );
 		$this->assertSame( '', Bookit_Stripe_Config::get_secret_key() );
 	}
 
@@ -254,8 +318,8 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_secret_key
 	 */
 	public function test_get_secret_key_handles_missing_option_gracefully(): void {
-		update_option( 'bookit_stripe_test_mode', true );
-		delete_option( 'bookit_stripe_test_secret_key' );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->delete_booking_setting( 'stripe_secret_key' );
 		$this->assertSame( '', Bookit_Stripe_Config::get_secret_key() );
 	}
 
@@ -269,8 +333,8 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_webhook_secret
 	 */
 	public function test_get_webhook_secret_returns_secret_when_set(): void {
-		update_option( 'bookit_stripe_test_mode', true );
-		update_option( 'bookit_stripe_test_webhook_secret', self::TEST_WEBHOOK_SECRET );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_webhook_secret', self::TEST_WEBHOOK_SECRET );
 		$this->assertSame( self::TEST_WEBHOOK_SECRET, Bookit_Stripe_Config::get_webhook_secret() );
 	}
 
@@ -280,8 +344,8 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_webhook_secret
 	 */
 	public function test_get_webhook_secret_returns_empty_string_when_not_set(): void {
-		update_option( 'bookit_stripe_test_mode', true );
-		update_option( 'bookit_stripe_test_webhook_secret', '' );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_webhook_secret', '' );
 		$this->assertSame( '', Bookit_Stripe_Config::get_webhook_secret() );
 	}
 
@@ -295,8 +359,8 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_stripe_client
 	 */
 	public function test_get_stripe_client_initializes_with_correct_api_key_when_sdk_loaded(): void {
-		update_option( 'bookit_stripe_test_mode', true );
-		update_option( 'bookit_stripe_test_secret_key', self::TEST_SECRET_KEY );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_secret_key', self::TEST_SECRET_KEY );
 
 		if ( ! class_exists( '\Stripe\StripeClient' ) ) {
 			$this->markTestSkipped( 'Stripe SDK not loaded (run composer install).' );
@@ -312,8 +376,8 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_stripe_client
 	 */
 	public function test_get_stripe_client_returns_null_when_api_key_missing(): void {
-		update_option( 'bookit_stripe_test_mode', true );
-		update_option( 'bookit_stripe_test_secret_key', '' );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_secret_key', '' );
 
 		$client = Bookit_Stripe_Config::get_stripe_client();
 		$this->assertNull( $client );
@@ -325,8 +389,8 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_stripe_client
 	 */
 	public function test_get_stripe_client_returns_same_instance_on_subsequent_calls(): void {
-		update_option( 'bookit_stripe_test_mode', true );
-		update_option( 'bookit_stripe_test_secret_key', self::TEST_SECRET_KEY );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_secret_key', self::TEST_SECRET_KEY );
 
 		if ( ! class_exists( '\Stripe\StripeClient' ) ) {
 			$this->markTestSkipped( 'Stripe SDK not loaded.' );
@@ -343,8 +407,8 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_stripe_client
 	 */
 	public function test_get_stripe_client_handles_missing_option_gracefully(): void {
-		update_option( 'bookit_stripe_test_mode', true );
-		delete_option( 'bookit_stripe_test_secret_key' );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->delete_booking_setting( 'stripe_secret_key' );
 
 		$client = Bookit_Stripe_Config::get_stripe_client();
 		$this->assertNull( $client );
@@ -457,10 +521,10 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_webhook_secret
 	 */
 	public function test_test_mode_returns_all_three_key_types_when_set(): void {
-		update_option( 'bookit_stripe_test_mode', true );
-		update_option( 'bookit_stripe_test_publishable_key', self::TEST_PUBLISHABLE_KEY );
-		update_option( 'bookit_stripe_test_secret_key', self::TEST_SECRET_KEY );
-		update_option( 'bookit_stripe_test_webhook_secret', self::TEST_WEBHOOK_SECRET );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_publishable_key', self::TEST_PUBLISHABLE_KEY );
+		$this->upsert_booking_setting( 'stripe_secret_key', self::TEST_SECRET_KEY );
+		$this->upsert_booking_setting( 'stripe_webhook_secret', self::TEST_WEBHOOK_SECRET );
 
 		$this->assertSame( self::TEST_PUBLISHABLE_KEY, Bookit_Stripe_Config::get_publishable_key() );
 		$this->assertSame( self::TEST_SECRET_KEY, Bookit_Stripe_Config::get_secret_key() );
@@ -475,9 +539,9 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_webhook_secret
 	 */
 	public function test_live_mode_allows_empty_keys(): void {
-		update_option( 'bookit_stripe_live_publishable_key', '' );
-		update_option( 'bookit_stripe_live_secret_key', '' );
-		update_option( 'bookit_stripe_live_webhook_secret', '' );
+		$this->upsert_booking_setting( 'stripe_publishable_key', '' );
+		$this->upsert_booking_setting( 'stripe_secret_key', '' );
+		$this->upsert_booking_setting( 'stripe_webhook_secret', '' );
 		$this->force_live_mode();
 
 		$this->assertSame( '', Bookit_Stripe_Config::get_publishable_key() );
@@ -490,50 +554,41 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Test settings are saved to wp_options.
+	 * Test settings are stored in wp_bookings_settings and read by Bookit_Stripe_Config.
 	 */
-	public function test_settings_saved_to_wp_options(): void {
-		update_option( 'bookit_stripe_test_mode', true );
-		update_option( 'bookit_stripe_test_publishable_key', self::TEST_PUBLISHABLE_KEY );
-		update_option( 'bookit_stripe_test_secret_key', self::TEST_SECRET_KEY );
-		update_option( 'bookit_stripe_test_webhook_secret', self::TEST_WEBHOOK_SECRET );
+	public function test_settings_saved_to_bookings_settings(): void {
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_publishable_key', self::TEST_PUBLISHABLE_KEY );
+		$this->upsert_booking_setting( 'stripe_secret_key', self::TEST_SECRET_KEY );
+		$this->upsert_booking_setting( 'stripe_webhook_secret', self::TEST_WEBHOOK_SECRET );
 
-		$this->assertTrue( get_option( 'bookit_stripe_test_mode' ) );
-		$this->assertSame( self::TEST_PUBLISHABLE_KEY, get_option( 'bookit_stripe_test_publishable_key' ) );
-		$this->assertSame( self::TEST_SECRET_KEY, get_option( 'bookit_stripe_test_secret_key' ) );
-		$this->assertSame( self::TEST_WEBHOOK_SECRET, get_option( 'bookit_stripe_test_webhook_secret' ) );
+		global $wpdb;
+		$this->assertSame( '1', $wpdb->get_var( $wpdb->prepare( "SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s", 'stripe_test_mode' ) ) );
+		$this->assertSame( self::TEST_PUBLISHABLE_KEY, $wpdb->get_var( $wpdb->prepare( "SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s", 'stripe_publishable_key' ) ) );
+		$this->assertSame( self::TEST_SECRET_KEY, $wpdb->get_var( $wpdb->prepare( "SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s", 'stripe_secret_key' ) ) );
+		$this->assertSame( self::TEST_WEBHOOK_SECRET, $wpdb->get_var( $wpdb->prepare( "SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s", 'stripe_webhook_secret' ) ) );
 	}
 
 	/**
-	 * Test settings persist after retrieval.
+	 * Test clearing publishable key in wp_bookings_settings is reflected by config.
 	 */
 	public function test_settings_persist_after_retrieval(): void {
-		// Save test keys.
-		update_option( 'bookit_stripe_test_mode', true );
-		update_option( 'bookit_stripe_test_publishable_key', self::TEST_PUBLISHABLE_KEY );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_publishable_key', self::TEST_PUBLISHABLE_KEY );
 
-		// Verify test key persists and is returned in test mode.
-		$key = get_option( 'bookit_stripe_test_publishable_key' );
-		$this->assertSame( self::TEST_PUBLISHABLE_KEY, $key );
 		$this->assertSame( self::TEST_PUBLISHABLE_KEY, Bookit_Stripe_Config::get_publishable_key() );
 
-		// Force live mode - config should return live key (empty).
-		$this->force_live_mode();
+		$this->upsert_booking_setting( 'stripe_publishable_key', '' );
 		$this->assertSame( '', Bookit_Stripe_Config::get_publishable_key() );
-
-		// Test key still exists in DB.
-		$key_after = get_option( 'bookit_stripe_test_publishable_key' );
-		$this->assertSame( self::TEST_PUBLISHABLE_KEY, $key_after );
 	}
 
 	/**
-	 * Test retrieve settings returns defaults when options are missing.
+	 * Test retrieve settings returns defaults when booking settings rows are missing.
 	 */
 	public function test_retrieve_handles_missing_options_returns_defaults(): void {
-		delete_option( 'bookit_stripe_test_mode' );
-		delete_option( 'bookit_stripe_test_publishable_key' );
-		delete_option( 'bookit_stripe_test_secret_key' );
-		delete_option( 'bookit_stripe_test_webhook_secret' );
+		foreach ( self::$stripe_booking_setting_keys as $key ) {
+			$this->delete_booking_setting( $key );
+		}
 
 		$this->assertSame( 'test', Bookit_Stripe_Config::get_mode() );
 		$this->assertSame( '', Bookit_Stripe_Config::get_publishable_key() );
@@ -630,7 +685,7 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::is_test_mode
 	 */
 	public function test_is_test_mode_returns_true_when_mode_is_test(): void {
-		update_option( 'bookit_stripe_test_mode', true );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
 		$this->assertTrue( Bookit_Stripe_Config::is_test_mode() );
 	}
 
@@ -650,8 +705,8 @@ class Test_Stripe_Config extends WP_UnitTestCase {
 	 * @covers Bookit_Stripe_Config::get_publishable_key
 	 */
 	public function test_get_publishable_key_returns_string_when_option_missing(): void {
-		update_option( 'bookit_stripe_test_mode', true );
-		delete_option( 'bookit_stripe_test_publishable_key' );
+		$this->upsert_booking_setting( 'stripe_test_mode', true );
+		$this->delete_booking_setting( 'stripe_publishable_key' );
 		$key = Bookit_Stripe_Config::get_publishable_key();
 		$this->assertIsString( $key );
 		$this->assertSame( '', $key );

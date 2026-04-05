@@ -2,6 +2,8 @@
 /**
  * Stripe configuration and SDK initialization.
  *
+ * Reads Stripe keys from wp_bookings_settings (same storage as the Bookit Dashboard SPA).
+ *
  * @package    Bookit_Booking_System
  * @subpackage Bookit_Booking_System/includes/payment
  */
@@ -21,7 +23,7 @@ if ( ! defined( 'WPINC' ) ) {
 class Bookit_Stripe_Config {
 
 	/**
-	 * Option name for settings group.
+	 * Legacy option group name (WordPress Settings API for admin/settings/stripe-settings.php).
 	 *
 	 * @var string
 	 */
@@ -35,62 +37,98 @@ class Bookit_Stripe_Config {
 	private static $stripe_client = null;
 
 	/**
+	 * Read a setting value from wp_bookings_settings.
+	 *
+	 * @param string $setting_key Key in bookings_settings.setting_key.
+	 * @return string|null Raw setting_value, or null if no row.
+	 */
+	private static function get_bookings_setting_value( string $setting_key ): ?string {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'bookings_settings';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$value = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT setting_value FROM {$table} WHERE setting_key = %s LIMIT 1",
+				$setting_key
+			)
+		);
+
+		if ( null === $value ) {
+			return null;
+		}
+
+		return (string) $value;
+	}
+
+	/**
+	 * Whether Stripe test mode is enabled (dashboard: stripe_test_mode).
+	 * Defaults to true when unset (safer for avoiding accidental live charges).
+	 *
+	 * @return bool
+	 */
+	public static function is_test_mode(): bool {
+		$raw = self::get_bookings_setting_value( 'stripe_test_mode' );
+
+		if ( null === $raw || '' === trim( $raw ) ) {
+			return true;
+		}
+
+		$normalized = strtolower( trim( $raw ) );
+
+		if ( in_array( $normalized, array( '0', 'false', 'no', 'off', '' ), true ) ) {
+			return false;
+		}
+
+		if ( in_array( $normalized, array( '1', 'true', 'yes', 'on' ), true ) ) {
+			return true;
+		}
+
+		// Numeric or other truthy strings.
+		if ( is_numeric( $raw ) ) {
+			return (float) $raw !== 0.0;
+		}
+
+		return true;
+	}
+
+	/**
 	 * Get current mode: 'test' or 'live'.
 	 *
 	 * @return string 'test' or 'live'
 	 */
 	public static function get_mode(): string {
-		$test_mode = get_option( 'bookit_stripe_test_mode', true );
-		// WordPress may store false as '0', 0, or ''; treat as live.
-		if ( $test_mode === false || $test_mode === 0 || $test_mode === '0' || $test_mode === '' ) {
-			return 'live';
-		}
-		return 'test';
+		return self::is_test_mode() ? 'test' : 'live';
 	}
 
 	/**
-	 * Check if test mode is enabled.
-	 *
-	 * @return bool
-	 */
-	public static function is_test_mode(): bool {
-		return self::get_mode() === 'test';
-	}
-
-	/**
-	 * Get publishable key for current mode.
+	 * Get publishable key (dashboard: stripe_publishable_key).
 	 *
 	 * @return string
 	 */
 	public static function get_publishable_key(): string {
-		if ( self::is_test_mode() ) {
-			return (string) get_option( 'bookit_stripe_test_publishable_key', '' );
-		}
-		return (string) get_option( 'bookit_stripe_live_publishable_key', '' );
+		$v = self::get_bookings_setting_value( 'stripe_publishable_key' );
+		return null === $v ? '' : $v;
 	}
 
 	/**
-	 * Get secret key for current mode.
+	 * Get secret key (dashboard: stripe_secret_key).
 	 *
 	 * @return string
 	 */
 	public static function get_secret_key(): string {
-		if ( self::is_test_mode() ) {
-			return (string) get_option( 'bookit_stripe_test_secret_key', '' );
-		}
-		return (string) get_option( 'bookit_stripe_live_secret_key', '' );
+		$v = self::get_bookings_setting_value( 'stripe_secret_key' );
+		return null === $v ? '' : $v;
 	}
 
 	/**
-	 * Get webhook secret for current mode.
+	 * Get webhook secret (dashboard: stripe_webhook_secret).
 	 *
 	 * @return string
 	 */
 	public static function get_webhook_secret(): string {
-		if ( self::is_test_mode() ) {
-			return (string) get_option( 'bookit_stripe_test_webhook_secret', '' );
-		}
-		return (string) get_option( 'bookit_stripe_live_webhook_secret', '' );
+		$v = self::get_bookings_setting_value( 'stripe_webhook_secret' );
+		return null === $v ? '' : $v;
 	}
 
 	/**

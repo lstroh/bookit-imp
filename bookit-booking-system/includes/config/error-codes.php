@@ -143,6 +143,26 @@ Bookit_Error_Registry::register(
 );
 
 Bookit_Error_Registry::register(
+	'E3010',
+	array(
+		'user_message' => __( 'Could not start the payment session. Please try again.', 'bookit-booking-system' ),
+		'log_message'  => 'Stripe checkout session failed: {gateway_message}',
+		'http_status'  => 500,
+		'category'     => 'payment',
+	)
+);
+
+Bookit_Error_Registry::register(
+	'PAYMENT_METHOD_NOT_SUPPORTED',
+	array(
+		'user_message' => __( 'Payment method not supported', 'bookit-booking-system' ),
+		'log_message'  => 'Requested payment method is not supported',
+		'http_status'  => 501,
+		'category'     => 'payment',
+	)
+);
+
+Bookit_Error_Registry::register(
 	'E4001',
 	array(
 		'user_message' => __( 'Please fill in all required fields.', 'bookit-booking-system' ),
