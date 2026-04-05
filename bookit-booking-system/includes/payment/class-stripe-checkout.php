@@ -190,6 +190,107 @@ class Booking_System_Stripe_Checkout {
 	}
 
 	/**
+	 * Create Stripe Checkout Session for purchasing a package (V2 wizard buy_{package_type_id}).
+	 *
+	 * @param array<string, mixed> $package_type Row from wp_bookings_package_types.
+	 * @param float                $charge_amount Amount to charge in pounds (GBP).
+	 * @param array<string, mixed> $session_data Wizard session (booking + customer fields for metadata).
+	 * @return \Stripe\Checkout\Session|\WP_Error
+	 */
+	public function create_package_checkout_session( array $package_type, float $charge_amount, array $session_data ) {
+		$validation = $this->validate_session_data( $session_data );
+		if ( is_wp_error( $validation ) ) {
+			return $validation;
+		}
+
+		$stripe_config = new Bookit_Stripe_Config();
+		$secret_key    = $stripe_config->get_secret_key();
+		if ( empty( $secret_key ) ) {
+			return new WP_Error( 'missing_api_key', __( 'Stripe API key not configured', 'bookit-booking-system' ) );
+		}
+
+		if ( apply_filters( 'bookit_stripe_api_mode', 'live' ) === 'mock' ) {
+			$mock_result = apply_filters( 'bookit_mock_stripe_package_session', null, $package_type, $charge_amount, $session_data );
+			if ( null === $mock_result ) {
+				$mock_result = apply_filters( 'bookit_mock_stripe_session', $session_data );
+			}
+			if ( is_object( $mock_result ) && isset( $mock_result->id ) ) {
+				return $mock_result;
+			}
+			if ( is_string( $mock_result ) && ! empty( $mock_result ) ) {
+				return (object) array(
+					'id'  => $mock_result,
+					'url' => 'https://checkout.stripe.com/c/pay/' . $mock_result,
+				);
+			}
+			return new WP_Error( 'mock_error', __( 'Mock package session failed', 'bookit-booking-system' ) );
+		}
+
+		if ( ! class_exists( '\Stripe\Stripe' ) ) {
+			$autoload = dirname( dirname( __DIR__ ) ) . '/vendor/autoload.php';
+			if ( file_exists( $autoload ) ) {
+				require_once $autoload;
+			}
+		}
+		\Stripe\Stripe::setApiKey( $secret_key );
+
+		$metadata = array(
+			'flow_type'           => 'package',
+			'package_type_id'     => (string) $package_type['id'],
+			'package_name'        => isset( $package_type['name'] ) ? (string) $package_type['name'] : '',
+			'sessions_total'      => (string) (int) ( $package_type['sessions_count'] ?? 0 ),
+			'expiry_enabled'      => isset( $package_type['expiry_enabled'] ) ? (string) (int) $package_type['expiry_enabled'] : '0',
+			'expiry_days'         => isset( $package_type['expiry_days'] ) && null !== $package_type['expiry_days'] ? (string) (int) $package_type['expiry_days'] : '',
+			'service_id'          => (string) $session_data['service_id'],
+			'staff_id'            => (string) $session_data['staff_id'],
+			'booking_date'        => (string) $session_data['date'],
+			'booking_time'        => (string) $session_data['time'],
+			'customer_email'      => (string) $session_data['customer_email'],
+			'customer_first_name' => (string) $session_data['customer_first_name'],
+			'customer_last_name'  => (string) $session_data['customer_last_name'],
+			'customer_phone'      => isset( $session_data['customer_phone'] ) ? (string) $session_data['customer_phone'] : '',
+			'cooling_off_waiver'  => isset( $session_data['cooling_off_waiver'] ) ? (string) absint( $session_data['cooling_off_waiver'] ) : '0',
+			'wizard_version'      => 'v2',
+		);
+		if ( ! empty( $session_data['customer_special_requests'] ) ) {
+			$metadata['special_requests'] = substr( (string) $session_data['customer_special_requests'], 0, 500 );
+		}
+
+		$unit_amount_pence = (int) round( $charge_amount * 100 );
+
+		$line_items = array(
+			array(
+				'price_data' => array(
+					'currency'     => 'gbp',
+					'product_data' => array(
+						'name' => isset( $package_type['name'] ) ? (string) $package_type['name'] : __( 'Package', 'bookit-booking-system' ),
+					),
+					'unit_amount'  => $unit_amount_pence,
+				),
+				'quantity'   => 1,
+			),
+		);
+
+		$v2_base     = trailingslashit(
+			get_option( 'bookit_confirmed_v2_url', home_url( '/booking-confirmed-v2/' ) )
+		);
+		$success_url = $v2_base . '?session_id={CHECKOUT_SESSION_ID}';
+		$cancel_url  = home_url( '/book-v2/' );
+
+		$params = array(
+			'payment_method_types' => array( 'card' ),
+			'line_items'           => $line_items,
+			'mode'                 => 'payment',
+			'success_url'          => $success_url,
+			'cancel_url'           => $cancel_url,
+			'customer_email'       => $session_data['customer_email'],
+			'metadata'             => $metadata,
+		);
+
+		return \Stripe\Checkout\Session::create( $params );
+	}
+
+	/**
 	 * Initialize idempotency tracking for checkout session creation.
 	 *
 	 * @param array<string, mixed> $session_data Session data.

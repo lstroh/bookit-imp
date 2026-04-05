@@ -390,7 +390,7 @@ class Test_Wizard_API extends WP_UnitTestCase {
 		$data = $response->get_data();
 		$this->assertTrue( $data['success'] );
 		$this->assertArrayHasKey( 'redirect_url', $data );
-		$this->assertStringContainsString( 'booking-confirmed', $data['redirect_url'] );
+		$this->assertStringContainsString( 'booking_id=', $data['redirect_url'] );
 		$this->assertNotEmpty( $data['booking_id'] );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery

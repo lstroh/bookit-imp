@@ -446,6 +446,103 @@ class Bookit_Wizard_API {
 			$payment_method = 'stripe';
 		}
 
+		// V2 "Buy a package" stores payment_method as buy_{package_type_id}; route to Stripe package checkout.
+		if ( isset( $session_data['wizard_version'] ) && 'v2' === $session_data['wizard_version'] && preg_match( '/^buy_(\d+)$/', $payment_method, $buy_match ) ) {
+			global $wpdb;
+			$package_type_id = (int) $buy_match[1];
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$package_type = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT id, name, sessions_count, price_mode, fixed_price, discount_percentage,
+						expiry_enabled, expiry_days, is_active
+					FROM {$wpdb->prefix}bookings_package_types
+					WHERE id = %d AND is_active = 1",
+					$package_type_id
+				),
+				ARRAY_A
+			);
+
+			if ( ! $package_type ) {
+				return Bookit_Error_Registry::to_wp_error( 'E5001' );
+			}
+
+			$charge = 0.0;
+			if ( 'fixed' === ( $package_type['price_mode'] ?? '' ) ) {
+				$charge = (float) $package_type['fixed_price'];
+			} elseif ( 'discount' === ( $package_type['price_mode'] ?? '' ) ) {
+				$service_price = null;
+				if ( isset( $session_data['service_price'] ) && '' !== (string) $session_data['service_price'] ) {
+					$service_price = (float) $session_data['service_price'];
+				} elseif ( ! empty( $session_data['service_id'] ) ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+					$db_price = $wpdb->get_var(
+						$wpdb->prepare(
+							"SELECT price FROM {$wpdb->prefix}bookings_services WHERE id = %d",
+							(int) $session_data['service_id']
+						)
+					);
+					$service_price = null !== $db_price ? (float) $db_price : null;
+				}
+				$disc_pct = isset( $package_type['discount_percentage'] ) ? (float) $package_type['discount_percentage'] : 0.0;
+				if ( null !== $service_price && $service_price > 0 ) {
+					$charge = round( $service_price * ( 1 - $disc_pct / 100 ), 2 );
+				}
+			}
+
+			if ( $charge <= 0 ) {
+				return Bookit_Error_Registry::to_wp_error(
+					'PACKAGE_PRICE_INVALID',
+					array( 'package_type_id' => $package_type_id )
+				);
+			}
+
+			$session_data['wizard_version'] = 'v2';
+			require_once BOOKIT_PLUGIN_DIR . 'includes/payment/class-stripe-checkout.php';
+			$stripe_checkout = new Booking_System_Stripe_Checkout();
+			try {
+				$session = $stripe_checkout->create_package_checkout_session( $package_type, $charge, $session_data );
+			} catch ( \Stripe\Exception\ApiErrorException $e ) {
+				if ( function_exists( 'error_log' ) ) {
+					error_log( 'Stripe package checkout ApiErrorException: ' . $e->getMessage() );
+				}
+				return Bookit_Error_Registry::to_wp_error(
+					'E3010',
+					array( 'gateway_message' => $e->getMessage() )
+				);
+			}
+
+			if ( is_wp_error( $session ) ) {
+				if ( 'stripe_error' === $session->get_error_code() || 'mock_error' === $session->get_error_code() ) {
+					return Bookit_Error_Registry::to_wp_error(
+						'E3010',
+						array( 'gateway_message' => $session->get_error_message() )
+					);
+				}
+				$err_data = $session->get_error_data();
+				$status   = is_array( $err_data ) && isset( $err_data['status'] ) ? (int) $err_data['status'] : 400;
+				return new WP_Error(
+					$session->get_error_code(),
+					$session->get_error_message(),
+					array( 'status' => $status )
+				);
+			}
+
+			$url = is_object( $session ) && isset( $session->url ) ? (string) $session->url : '';
+			if ( '' === $url ) {
+				return Bookit_Error_Registry::to_wp_error(
+					'E3010',
+					array( 'gateway_message' => 'Missing checkout URL' )
+				);
+			}
+
+			return rest_ensure_response(
+				array(
+					'success'      => true,
+					'redirect_url' => $url,
+				)
+			);
+		}
+
 		require_once BOOKIT_PLUGIN_DIR . 'includes/payment/class-payment-processor.php';
 		$processor = new Booking_System_Payment_Processor();
 

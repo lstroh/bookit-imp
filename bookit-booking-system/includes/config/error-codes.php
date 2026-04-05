@@ -163,6 +163,16 @@ Bookit_Error_Registry::register(
 );
 
 Bookit_Error_Registry::register(
+	'PACKAGE_PRICE_INVALID',
+	array(
+		'user_message' => __( 'Package price could not be calculated', 'bookit-booking-system' ),
+		'log_message'  => 'Package price invalid for package_type_id {package_type_id}',
+		'http_status'  => 422,
+		'category'     => 'packages',
+	)
+);
+
+Bookit_Error_Registry::register(
 	'E4001',
 	array(
 		'user_message' => __( 'Please fill in all required fields.', 'bookit-booking-system' ),
