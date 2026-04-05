@@ -305,4 +305,68 @@ class Test_Stripe_V2_Wiring extends WP_UnitTestCase {
 		$wpdb->delete( $wpdb->prefix . 'bookings_services', array( 'id' => $ids['service_id'] ), array( '%d' ) );
 		$wpdb->delete( $wpdb->prefix . 'bookings_staff', array( 'id' => $ids['staff_id'] ), array( '%d' ) );
 	}
+
+	/**
+	 * StripeObject metadata must use toArray() in the webhook; (array) cast does not expose keys like service_id.
+	 *
+	 * @covers Booking_System_Stripe_Webhook::handle_checkout_completed
+	 */
+	public function test_webhook_metadata_toArray_finds_service_id(): void {
+		$plugin_dir = dirname( dirname( __DIR__ ) );
+		$webhook_file = $plugin_dir . '/includes/api/class-stripe-webhook.php';
+		$creator_file = $plugin_dir . '/includes/booking/class-booking-creator.php';
+		if ( ! file_exists( $webhook_file ) || ! file_exists( $creator_file ) ) {
+			$this->markTestSkipped( 'Stripe webhook or booking creator not available.' );
+			return;
+		}
+		require_once $plugin_dir . '/includes/payment/class-stripe-config.php';
+		require_once $webhook_file;
+		require_once $creator_file;
+
+		$ids = $this->insert_service_and_staff();
+		$booking_date = wp_date( 'Y-m-d', strtotime( '+30 days' ), wp_timezone() );
+
+		$session_id = 'cs_test_metadata_toArray_' . wp_generate_password( 12, false );
+		delete_transient( 'stripe_webhook_' . $session_id );
+
+		$session = \Stripe\Checkout\Session::constructFrom(
+			array(
+				'id'             => $session_id,
+				'payment_status' => 'paid',
+				'payment_intent' => 'pi_test_metadata_toArray',
+				'amount_total'   => 5000,
+				'currency'       => 'gbp',
+				'metadata'       => array(
+					'service_id'           => (string) $ids['service_id'],
+					'staff_id'             => (string) $ids['staff_id'],
+					'booking_date'         => $booking_date,
+					'booking_time'         => '10:00:00',
+					'customer_email'       => 'metadata-toarray@example.com',
+					'customer_first_name'  => 'Meta',
+					'customer_last_name'   => 'Data',
+					'customer_phone'       => '07700900999',
+				),
+			)
+		);
+
+		$event  = (object) array(
+			'data' => (object) array(
+				'object' => $session,
+			),
+		);
+		$handler = new Booking_System_Stripe_Webhook();
+		$method  = new ReflectionMethod( Booking_System_Stripe_Webhook::class, 'handle_checkout_completed' );
+		$method->setAccessible( true );
+		$result = $method->invoke( $handler, $event );
+
+		$this->assertTrue(
+			! ( is_wp_error( $result ) && 'missing_metadata' === $result->get_error_code() && false !== strpos( $result->get_error_message(), 'service_id' ) ),
+			'StripeObject metadata must resolve service_id (use metadata->toArray(), not (array) cast).'
+		);
+
+		global $wpdb;
+		$wpdb->delete( $wpdb->prefix . 'bookings', array( 'stripe_session_id' => $session_id ), array( '%s' ) );
+		$wpdb->delete( $wpdb->prefix . 'bookings_services', array( 'id' => $ids['service_id'] ), array( '%d' ) );
+		$wpdb->delete( $wpdb->prefix . 'bookings_staff', array( 'id' => $ids['staff_id'] ), array( '%d' ) );
+	}
 }

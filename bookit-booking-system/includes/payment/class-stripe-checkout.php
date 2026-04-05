@@ -517,7 +517,9 @@ class Booking_System_Stripe_Checkout {
 		$success_url = home_url( '/booking-confirmed?session_id={CHECKOUT_SESSION_ID}' );
 		$cancel_url  = home_url( '/book?step=5&cancelled=1' );
 		if ( isset( $session_data['wizard_version'] ) && 'v2' === $session_data['wizard_version'] ) {
-			$v2_base = rtrim( get_option( 'bookit_confirmed_v2_url', home_url( '/booking-confirmed-v2/' ) ), '/' );
+			$v2_base = trailingslashit(
+				get_option( 'bookit_confirmed_v2_url', home_url( '/booking-confirmed-v2/' ) )
+			);
 			$success_url = $v2_base . '?session_id={CHECKOUT_SESSION_ID}';
 			$cancel_url  = home_url( '/book-v2/' );
 			$metadata['flow_type']       = 'booking';

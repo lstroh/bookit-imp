@@ -247,7 +247,9 @@ class Booking_System_Stripe_Webhook {
 			return true;
 		}
 
-		$metadata = (array) $session->metadata;
+		$metadata = ( isset( $session->metadata ) && $session->metadata instanceof \Stripe\StripeObject )
+			? $session->metadata->toArray()
+			: (array) $session->metadata;
 
 		$required_fields = array(
 			'service_id',
