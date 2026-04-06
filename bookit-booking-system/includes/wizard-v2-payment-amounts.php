@@ -40,3 +40,16 @@ function bookit_v2_compute_payment_amounts_from_service( $service ) {
 		'total_price' => $total_price,
 	);
 }
+
+/**
+ * Amount that would be charged online right now (deposit if configured, else full total).
+ *
+ * @param array $amounts Result of bookit_v2_compute_payment_amounts_from_service().
+ * @return float
+ */
+function bookit_v2_stripe_charge_amount( array $amounts ) {
+	if ( ! empty( $amounts['has_deposit'] ) ) {
+		return (float) ( $amounts['deposit_due'] ?? 0 );
+	}
+	return (float) ( $amounts['total_price'] ?? 0 );
+}

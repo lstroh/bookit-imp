@@ -696,6 +696,71 @@ class Test_Booking_Wizard_V2 extends WP_UnitTestCase {
 	/**
 	 * @coversNothing
 	 */
+	public function test_v2_step5_hides_online_payment_rows_when_deposit_is_zero() {
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service(
+			array(
+				'deposit_type'   => 'none',
+				'deposit_amount' => 0,
+				'price'          => 0.00,
+			)
+		);
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 5 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Freebie' );
+		Bookit_Session_Manager::set( 'service_duration', 30 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Staff' );
+		Bookit_Session_Manager::set( 'date', '2026-06-15' );
+		Bookit_Session_Manager::set( 'time', '11:00' );
+		Bookit_Session_Manager::set( 'customer_email', 'guest@example.com' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringNotContainsString( 'bookit-v2-pay-card', $output );
+		$this->assertStringNotContainsString( 'bookit-v2-pay-paypal', $output );
+		$this->assertStringContainsString( 'bookit-v2-pay-person', $output );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function test_v2_step5_shows_online_payment_rows_when_deposit_is_set() {
+		$category_id = $this->create_test_category();
+		$service_id  = $this->create_test_service(
+			array(
+				'deposit_type'   => 'percentage',
+				'deposit_amount' => 50,
+				'price'          => 100.00,
+			)
+		);
+		$this->link_service_to_category( $service_id, $category_id );
+		$staff_id = $this->create_test_staff();
+		$this->link_staff_to_service( $staff_id, $service_id );
+
+		Bookit_Session_Manager::init();
+		Bookit_Session_Manager::set( 'current_step', 5 );
+		Bookit_Session_Manager::set( 'service_id', $service_id );
+		Bookit_Session_Manager::set( 'service_name', 'Paid deposit' );
+		Bookit_Session_Manager::set( 'service_duration', 60 );
+		Bookit_Session_Manager::set( 'staff_id', $staff_id );
+		Bookit_Session_Manager::set( 'staff_name', 'Anyone' );
+		Bookit_Session_Manager::set( 'date', '2026-08-01' );
+		Bookit_Session_Manager::set( 'time', '14:00' );
+		Bookit_Session_Manager::set( 'customer_email', 'guest@example.com' );
+
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( 'bookit-v2-pay-card', $output );
+		$this->assertStringContainsString( 'bookit-v2-pay-paypal', $output );
+	}
+
+	/**
+	 * @coversNothing
+	 */
 	public function test_v2_step5_renders_no_zone_b_when_packages_disabled() {
 		global $wpdb;
 

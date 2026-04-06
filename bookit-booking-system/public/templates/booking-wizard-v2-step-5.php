@@ -95,6 +95,8 @@ $has_deposit        = $amounts['has_deposit'];
 $deposit_due        = $amounts['deposit_due'];
 $balance_due        = $amounts['balance_due'];
 $total_price        = $amounts['total_price'];
+$stripe_charge_amount = bookit_v2_stripe_charge_amount( $amounts );
+$show_online_payment  = $stripe_charge_amount > 0;
 
 $cancellation_policy_text = $wpdb->get_var(
 	$wpdb->prepare(
@@ -418,6 +420,7 @@ if ( 'buy_package' === $zone_b_variant ) {
 			<p class="bookit-v2-zone-label"><?php echo esc_html( $zone_c_label ); ?></p>
 			<div class="bookit-v2-payment-rows">
 
+				<?php if ( $show_online_payment ) : ?>
 				<div class="bookit-v2-payment-row bookit-v2-payment-row--selected" id="bookit-v2-pay-card"
 					data-value="card">
 					<input type="radio" name="bookit_v2_payment_choice"
@@ -430,7 +433,9 @@ if ( 'buy_package' === $zone_b_variant ) {
 						<span class="bookit-v2-logo-pill bookit-v2-logo-pill--mc">MC</span>
 					</div>
 				</div>
+				<?php endif; ?>
 
+				<?php if ( $show_online_payment ) : ?>
 				<div class="bookit-v2-payment-row" id="bookit-v2-pay-paypal" data-value="paypal">
 					<input type="radio" name="bookit_v2_payment_choice"
 						id="bookit-v2-radio-paypal" value="paypal" />
@@ -441,10 +446,11 @@ if ( 'buy_package' === $zone_b_variant ) {
 						<span class="bookit-v2-logo-pill bookit-v2-logo-pill--paypal">PayPal</span>
 					</div>
 				</div>
+				<?php endif; ?>
 
-				<div class="bookit-v2-payment-row" id="bookit-v2-pay-person" data-value="person">
+				<div class="bookit-v2-payment-row<?php echo $show_online_payment ? '' : ' bookit-v2-payment-row--selected'; ?>" id="bookit-v2-pay-person" data-value="person">
 					<input type="radio" name="bookit_v2_payment_choice"
-						id="bookit-v2-radio-person" value="person" />
+						id="bookit-v2-radio-person" value="person"<?php echo $show_online_payment ? '' : ' checked'; ?> />
 					<div class="bookit-v2-payment-label-group">
 						<p class="bookit-v2-payment-label"><?php esc_html_e( 'Pay in person', 'bookit-booking-system' ); ?></p>
 						<p class="bookit-v2-payment-sub"><?php esc_html_e( 'No payment needed now', 'bookit-booking-system' ); ?></p>
@@ -453,6 +459,16 @@ if ( 'buy_package' === $zone_b_variant ) {
 
 			</div>
 		</div>
+
+		<script>
+		( function() {
+			document.addEventListener( 'DOMContentLoaded', function() {
+				if ( typeof bookitWizardV2 !== 'undefined' ) {
+					bookitWizardV2.showOnlinePayment = <?php echo wp_json_encode( (bool) $show_online_payment ); ?>;
+				}
+			} );
+		} )();
+		</script>
 
 		<div class="bookit-v2-sticky-footer">
 			<div class="bookit-v2-footer-inner">

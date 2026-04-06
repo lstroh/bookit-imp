@@ -328,7 +328,9 @@
 	}
 
 	function initStep5() {
-		updateCtaLabel( 'card' );
+		var w0 = typeof bookitWizardV2 !== 'undefined' ? bookitWizardV2 : {};
+		var showOnlinePayment = w0.showOnlinePayment !== false;
+		updateCtaLabel( showOnlinePayment ? 'card' : 'person' );
 
 		document.querySelectorAll( '#bookit-v2-zone-c .bookit-v2-payment-row' ).forEach( function( row ) {
 			row.addEventListener( 'click', function() {
@@ -356,7 +358,7 @@
 				var isAlreadySelected = row.classList.contains( 'bookit-v2-package-row--selected' );
 
 				if ( isAlreadySelected ) {
-					// Deselect — re-enable Zone C and reset to card
+					// Deselect — re-enable Zone C and reset to card (or pay in person if online options hidden)
 					row.classList.remove( 'bookit-v2-package-row--selected' );
 					var radio = row.querySelector( 'input[type="radio"]' );
 					if ( radio ) {
@@ -366,16 +368,30 @@
 					document.querySelectorAll( '#bookit-v2-zone-c .bookit-v2-payment-row' ).forEach( function( pr ) {
 						pr.classList.remove( 'bookit-v2-payment-row--disabled' );
 					} );
-					// Re-select card as default
+					var wPkg = typeof bookitWizardV2 !== 'undefined' ? bookitWizardV2 : {};
+					var showOnline = wPkg.showOnlinePayment !== false;
+					document.querySelectorAll( '#bookit-v2-zone-c .bookit-v2-payment-row' ).forEach( function( pr ) {
+						pr.classList.remove( 'bookit-v2-payment-row--selected' );
+					} );
 					var cardRow = document.querySelector( '#bookit-v2-pay-card' );
 					var cardRadio = document.querySelector( '#bookit-v2-radio-card' );
-					if ( cardRow ) {
+					if ( showOnline && cardRow ) {
 						cardRow.classList.add( 'bookit-v2-payment-row--selected' );
 					}
-					if ( cardRadio ) {
+					if ( showOnline && cardRadio ) {
 						cardRadio.checked = true;
 					}
-					updateCtaLabel( 'card' );
+					if ( ! showOnline ) {
+						var personRow = document.querySelector( '#bookit-v2-pay-person' );
+						var personRadio = document.querySelector( '#bookit-v2-radio-person' );
+						if ( personRow ) {
+							personRow.classList.add( 'bookit-v2-payment-row--selected' );
+						}
+						if ( personRadio ) {
+							personRadio.checked = true;
+						}
+					}
+					updateCtaLabel( showOnline ? 'card' : 'person' );
 				} else {
 					// Select this package row
 					document.querySelectorAll( '.bookit-v2-package-row' ).forEach( function( r ) {

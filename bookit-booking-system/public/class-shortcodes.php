@@ -413,8 +413,9 @@ class Bookit_Shortcodes {
 
 		if ( $has_wizard_v2 ) {
 			require_once BOOKIT_PLUGIN_DIR . 'includes/wizard-v2-payment-amounts.php';
-			$v2_deposit_amount = (float) Bookit_Session_Manager::get( 'deposit_due', 0.00 );
-			$v2_total_amount   = (float) Bookit_Session_Manager::get( 'total_price', 0.00 );
+			$v2_deposit_amount      = (float) Bookit_Session_Manager::get( 'deposit_due', 0.00 );
+			$v2_total_amount        = (float) Bookit_Session_Manager::get( 'total_price', 0.00 );
+			$v2_show_online_payment = true;
 			if ( 5 === (int) $current_step ) {
 				$v2_service_id = (int) Bookit_Session_Manager::get( 'service_id', 0 );
 				if ( $v2_service_id > 0 ) {
@@ -428,9 +429,10 @@ class Bookit_Shortcodes {
 						ARRAY_A
 					);
 					if ( $v2_service_row ) {
-						$v2_amounts      = bookit_v2_compute_payment_amounts_from_service( $v2_service_row );
-						$v2_deposit_amount = $v2_amounts['has_deposit'] ? (float) $v2_amounts['deposit_due'] : 0.0;
-						$v2_total_amount   = (float) $v2_amounts['total_price'];
+						$v2_amounts          = bookit_v2_compute_payment_amounts_from_service( $v2_service_row );
+						$v2_deposit_amount   = $v2_amounts['has_deposit'] ? (float) $v2_amounts['deposit_due'] : 0.0;
+						$v2_total_amount     = (float) $v2_amounts['total_price'];
+						$v2_show_online_payment = bookit_v2_stripe_charge_amount( $v2_amounts ) > 0;
 					}
 				}
 			}
@@ -458,8 +460,9 @@ class Bookit_Shortcodes {
 					'nonce'         => wp_create_nonce( 'wp_rest' ),
 					'bookingNonce'  => Bookit_CSRF_Protection::get_nonce(),
 					'currentStep'   => $current_step,
-					'depositAmount' => $v2_deposit_amount,
-					'totalAmount'   => $v2_total_amount,
+					'depositAmount'       => $v2_deposit_amount,
+					'totalAmount'         => $v2_total_amount,
+					'showOnlinePayment'   => $v2_show_online_payment,
 					// Default success redirect target; the WordPress page slug must match this path (or override via bookit_confirmed_v2_url).
 					'confirmed_v2_url' => home_url( '/booking-confirmed-v2/' ),
 				)
