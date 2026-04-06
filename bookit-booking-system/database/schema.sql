@@ -156,6 +156,7 @@ CREATE TABLE wp_bookings (
 	full_amount_paid TINYINT(1) DEFAULT 0,
 	payment_method VARCHAR(50) NULL COMMENT 'stripe, paypal, cash, card',
 	payment_intent_id VARCHAR(255) NULL COMMENT 'Stripe PaymentIntent ID',
+	refunded_amount DECIMAL(10,2) NULL DEFAULT NULL COMMENT 'Cumulative Stripe refund (charge.amount_refunded / 100). Added by migration 0015.',
 	customer_package_id BIGINT UNSIGNED NULL COMMENT 'Optional link to redeemed customer package',
 	stripe_session_id VARCHAR(255) NULL DEFAULT NULL COMMENT 'Stripe Checkout session ID for lookup after payment',
 	special_requests TEXT NULL COMMENT 'Special requests from customer during booking',

@@ -194,6 +194,9 @@ class Booking_System_Stripe_Webhook {
 			case 'checkout.session.completed':
 				return $this->handle_checkout_session_completed( $event );
 
+			case 'charge.refunded':
+				return $this->handle_charge_refunded( $event );
+
 			case 'payment_intent.succeeded':
 				if ( self::should_log() ) {
 					error_log( 'Stripe Webhook: payment_intent.succeeded received (no action needed)' );
@@ -615,6 +618,161 @@ class Booking_System_Stripe_Webhook {
 					'Stripe Webhook: Package + booking #%d from session %s',
 					$booking_id,
 					$session->id
+				)
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Handle charge.refunded: persist cumulative refund on booking, optional cancellation, payment row, audit.
+	 *
+	 * @param object $event Stripe event.
+	 * @return bool|WP_Error
+	 */
+	private function handle_charge_refunded( $event ) {
+		global $wpdb;
+
+		$charge = $event->data->object;
+
+		$pi_raw = $charge->payment_intent ?? null;
+		if ( is_object( $pi_raw ) && isset( $pi_raw->id ) ) {
+			$payment_intent_id = (string) $pi_raw->id;
+		} else {
+			$payment_intent_id = is_string( $pi_raw ) ? $pi_raw : (string) $pi_raw;
+		}
+
+		if ( '' === $payment_intent_id ) {
+			if ( self::should_log() ) {
+				error_log( 'Stripe Webhook: charge.refunded missing payment_intent; cannot match booking' );
+			}
+			return true;
+		}
+
+		$bookings_table = $wpdb->prefix . 'bookings';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$booking = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, customer_id, total_price, refunded_amount, status
+				FROM {$bookings_table}
+				WHERE payment_intent_id = %s
+				AND deleted_at IS NULL
+				LIMIT 1",
+				$payment_intent_id
+			)
+		);
+
+		if ( ! $booking ) {
+			if ( self::should_log() ) {
+				error_log(
+					sprintf(
+						'Stripe Webhook: charge.refunded: no booking for PI %s',
+						$payment_intent_id
+					)
+				);
+			}
+			return true;
+		}
+
+		$refund_amount_pence = isset( $charge->amount_refunded ) ? (int) $charge->amount_refunded : 0;
+		$refund_amount_gbp     = $refund_amount_pence / 100;
+
+		if ( $refund_amount_gbp <= 0 ) {
+			return true;
+		}
+
+		$booking_id = (int) $booking->id;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$updated = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$bookings_table} SET refunded_amount = %f WHERE id = %d",
+				$refund_amount_gbp,
+				$booking_id
+			)
+		);
+
+		if ( false === $updated ) {
+			if ( self::should_log() ) {
+				error_log(
+					sprintf(
+						'Stripe Webhook: charge.refunded failed to update booking #%d: %s',
+						$booking_id,
+						$wpdb->last_error
+					)
+				);
+			}
+			return true;
+		}
+
+		$total_price = (float) $booking->total_price;
+		$is_full_refund = round( $refund_amount_gbp, 2 ) >= round( $total_price, 2 );
+
+		if ( $is_full_refund && 'cancelled' !== $booking->status ) {
+			// System cancellation from Stripe; bypasses admin status-transition guard.
+			$wpdb->update(
+				$bookings_table,
+				array(
+					'status'       => 'cancelled',
+					'cancelled_at' => current_time( 'mysql' ),
+					'cancelled_by' => '0',
+				),
+				array( 'id' => $booking_id ),
+				array( '%s', '%s', '%s' ),
+				array( '%d' )
+			);
+		}
+
+		$pay_status = $is_full_refund ? 'refunded' : 'partially_refunded';
+
+		$inserted = $wpdb->insert(
+			$wpdb->prefix . 'bookings_payments',
+			array(
+				'booking_id'               => $booking_id,
+				'customer_id'              => (int) $booking->customer_id,
+				'amount'                   => -$refund_amount_gbp,
+				'payment_type'             => 'refund',
+				'payment_method'           => 'stripe',
+				'payment_status'           => $pay_status,
+				'stripe_payment_intent_id' => $payment_intent_id,
+				'transaction_date'         => current_time( 'mysql' ),
+				'created_at'               => current_time( 'mysql' ),
+				'updated_at'               => current_time( 'mysql' ),
+			),
+			array( '%d', '%d', '%f', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+		);
+
+		if ( false === $inserted && self::should_log() ) {
+			error_log(
+				sprintf(
+					'Stripe Webhook: charge.refunded failed to insert payment row for booking #%d: %s',
+					$booking_id,
+					$wpdb->last_error
+				)
+			);
+		}
+
+		Bookit_Audit_Logger::log(
+			'booking.refunded',
+			'booking',
+			$booking_id,
+			array(
+				'new_value' => array(
+					'refunded_amount' => $refund_amount_gbp,
+				),
+				'notes'     => 'Refund processed via Stripe charge.refunded webhook',
+			)
+		);
+
+		if ( self::should_log() ) {
+			error_log(
+				sprintf(
+					'Stripe Webhook: charge.refunded booking #%d PI %s amount_refunded=%s (%.2f)',
+					$booking_id,
+					$payment_intent_id,
+					(string) $refund_amount_pence,
+					$refund_amount_gbp
 				)
 			);
 		}
