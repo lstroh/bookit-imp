@@ -124,6 +124,22 @@ class Test_Notification_Dispatcher extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @covers Booking_System_Email_Sender::generate_customer_email
+	 */
+	public function test_customer_email_includes_add_to_calendar_link() {
+		$email_sender = new Booking_System_Email_Sender();
+		$booking      = $this->build_minimal_booking();
+		$booking['magic_link_token'] = 'ical-email-test-token';
+
+		$html = $email_sender->generate_customer_email( $booking );
+
+		$has_ical_path = ( str_contains( $html, 'wizard/ical' ) || str_contains( $html, 'wizard%2Fical' ) );
+		$this->assertTrue( $has_ical_path, 'Expected bookit/v1/wizard/ical in customer email (pretty or rest_route form).' );
+		$this->assertStringContainsString( 'booking_id=123', $html );
+		$this->assertStringContainsString( 'ical-email-test-token', $html );
+	}
+
+	/**
 	 * @covers Bookit_Notification_Dispatcher::process_email_queue_item
 	 * @covers Bookit_WP_Mail_Fallback_Provider::send
 	 */

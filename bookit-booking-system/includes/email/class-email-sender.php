@@ -319,6 +319,13 @@ class Booking_System_Email_Sender {
 							)
 						);
 					if ( ! empty( $magic_link_token ) ) {
+						$ical_url       = add_query_arg(
+							array(
+								'booking_id' => $booking_id,
+								'token'      => $magic_link_token,
+							),
+							rest_url( 'bookit/v1/wizard/ical' )
+						);
 						$cancel_url     = add_query_arg(
 							array(
 								'booking_id' => $booking_id,
@@ -342,6 +349,14 @@ class Booking_System_Email_Sender {
 								</p>
 								<table cellpadding="0" cellspacing="0" border="0">
 									<tr>
+										<td style="padding-right: 12px;">
+											<a href="<?php echo esc_url( $ical_url ); ?>"
+												style="display:inline-block; padding: 10px 20px; background-color: #005FB8;
+													color: #ffffff; text-decoration: none; border-radius: 4px;
+													font-size: 14px; font-family: Arial, sans-serif; font-weight: 600;">
+												<?php esc_html_e( '📅 Add to Calendar', 'bookit-booking-system' ); ?>
+											</a>
+										</td>
 										<td style="padding-right: 12px;">
 											<a href="<?php echo esc_url( $reschedule_url ); ?>"
 												style="display:inline-block; padding: 10px 20px; background-color: #005FB8;
