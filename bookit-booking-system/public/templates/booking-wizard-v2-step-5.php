@@ -10,6 +10,37 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+/**
+ * Whether a package type applies to the booking service (PHP filter; mirrors Bookit_Available_Packages_API::get_available_packages()).
+ *
+ * @param string|null $applicable_service_ids Raw package_types.applicable_service_ids value.
+ * @param int         $service_id             Current booking service ID.
+ * @return bool
+ */
+if ( ! function_exists( 'bookit_v2_step5_package_matches_service' ) ) {
+	function bookit_v2_step5_package_matches_service( $applicable_service_ids, $service_id ) {
+		$service_id = absint( $service_id );
+
+		if ( null === $applicable_service_ids || '' === (string) $applicable_service_ids || '[]' === (string) $applicable_service_ids ) {
+			return true;
+		}
+
+		$service_ids = null;
+		if ( isset( $applicable_service_ids ) && null !== $applicable_service_ids && '' !== (string) $applicable_service_ids ) {
+			$decoded = json_decode( (string) $applicable_service_ids, true );
+			if ( is_array( $decoded ) ) {
+				$service_ids = array_values( array_map( 'absint', $decoded ) );
+			}
+		}
+
+		if ( null !== $service_ids && ! in_array( $service_id, $service_ids, true ) ) {
+			return false;
+		}
+
+		return true;
+	}
+}
+
 require_once BOOKIT_PLUGIN_DIR . 'includes/core/class-session-manager.php';
 Bookit_Session_Manager::init();
 $session_data = Bookit_Session_Manager::get_data();
@@ -108,10 +139,9 @@ $packages_enabled = $wpdb->get_var(
 $customer_packages = array();
 $customer_email    = isset( $session_data['customer_email'] ) ? $session_data['customer_email'] : '';
 if ( '1' === $packages_enabled && ! empty( $customer_email ) ) {
-	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- JSON_CONTAINS requires CAST; placeholders used for email and service id.
 	$customer_packages = $wpdb->get_results(
 		$wpdb->prepare(
-			"SELECT cp.*, pt.name as package_name
+			"SELECT cp.*, pt.name as package_name, pt.applicable_service_ids AS pt_applicable_service_ids
 			 FROM {$wpdb->prefix}bookings_customer_packages cp
 			 INNER JOIN {$wpdb->prefix}bookings_package_types pt ON cp.package_type_id = pt.id
 			 WHERE cp.customer_id = (
@@ -119,30 +149,46 @@ if ( '1' === $packages_enabled && ! empty( $customer_email ) ) {
 			 )
 			 AND cp.status = 'active'
 			 AND cp.sessions_remaining > 0
-			 AND (cp.expires_at IS NULL OR cp.expires_at > NOW())
-			 AND (pt.applicable_service_ids IS NULL
-				  OR pt.applicable_service_ids = '[]'
-				  OR JSON_CONTAINS(pt.applicable_service_ids, CAST(%d AS JSON)))",
-			$customer_email,
-			(int) $session_data['service_id']
+			 AND (cp.expires_at IS NULL OR cp.expires_at > NOW())",
+			$customer_email
 		),
 		ARRAY_A
 	);
+	if ( ! is_array( $customer_packages ) ) {
+		$customer_packages = array();
+	}
+
+	$service_id_for_packages = (int) $session_data['service_id'];
+	$filtered_customer_pkgs  = array();
+	foreach ( $customer_packages as $cp_row ) {
+		$applicable = isset( $cp_row['pt_applicable_service_ids'] ) ? $cp_row['pt_applicable_service_ids'] : null;
+		if ( bookit_v2_step5_package_matches_service( $applicable, $service_id_for_packages ) ) {
+			unset( $cp_row['pt_applicable_service_ids'] );
+			$filtered_customer_pkgs[] = $cp_row;
+		}
+	}
+	$customer_packages = $filtered_customer_pkgs;
 }
 
 $available_packages = array();
 if ( '1' === $packages_enabled && empty( $customer_packages ) ) {
 	$available_packages = $wpdb->get_results(
-		$wpdb->prepare(
-			"SELECT * FROM {$wpdb->prefix}bookings_package_types
-			 WHERE is_active = 1
-			 AND (applicable_service_ids IS NULL
-				  OR applicable_service_ids = '[]'
-				  OR JSON_CONTAINS(applicable_service_ids, CAST(%d AS JSON)))",
-			(int) $session_data['service_id']
-		),
+		"SELECT * FROM {$wpdb->prefix}bookings_package_types WHERE is_active = 1",
 		ARRAY_A
 	);
+	if ( ! is_array( $available_packages ) ) {
+		$available_packages = array();
+	} else {
+		$service_id_for_packages = (int) $session_data['service_id'];
+		$filtered_available_pkgs = array();
+		foreach ( $available_packages as $pkg_row ) {
+			$applicable = isset( $pkg_row['applicable_service_ids'] ) ? $pkg_row['applicable_service_ids'] : null;
+			if ( bookit_v2_step5_package_matches_service( $applicable, $service_id_for_packages ) ) {
+				$filtered_available_pkgs[] = $pkg_row;
+			}
+		}
+		$available_packages = $filtered_available_pkgs;
+	}
 }
 
 $zone_b_variant = 'none';
