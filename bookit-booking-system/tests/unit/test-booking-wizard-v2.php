@@ -702,7 +702,7 @@ class Test_Booking_Wizard_V2 extends WP_UnitTestCase {
 			array(
 				'deposit_type'   => 'none',
 				'deposit_amount' => 0,
-				'price'          => 0.00,
+				'price'          => 25.00,
 			)
 		);
 		$this->link_service_to_category( $service_id, $category_id );
@@ -712,7 +712,7 @@ class Test_Booking_Wizard_V2 extends WP_UnitTestCase {
 		Bookit_Session_Manager::init();
 		Bookit_Session_Manager::set( 'current_step', 5 );
 		Bookit_Session_Manager::set( 'service_id', $service_id );
-		Bookit_Session_Manager::set( 'service_name', 'Freebie' );
+		Bookit_Session_Manager::set( 'service_name', 'No deposit service' );
 		Bookit_Session_Manager::set( 'service_duration', 30 );
 		Bookit_Session_Manager::set( 'staff_id', $staff_id );
 		Bookit_Session_Manager::set( 'staff_name', 'Staff' );
