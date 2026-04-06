@@ -834,4 +834,274 @@ class Test_Stripe_V2_Wiring extends WP_UnitTestCase {
 		$wpdb->delete( $wpdb->prefix . 'bookings_staff', array( 'id' => $ids['staff_id'] ), array( '%d' ) );
 		delete_transient( 'stripe_pkg_' . $session_id );
 	}
+
+	/**
+	 * Ensure email queue table exists (same shape as test-notification-dispatcher).
+	 *
+	 * @return void
+	 */
+	private function ensure_email_queue_table_exists(): void {
+		global $wpdb;
+
+		$table_name = $wpdb->prefix . 'bookit_email_queue';
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$wpdb->query(
+			"CREATE TABLE IF NOT EXISTS {$table_name} (
+				id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				booking_id      BIGINT UNSIGNED NULL,
+				email_type      VARCHAR(50) NOT NULL,
+				recipient_email VARCHAR(255) NOT NULL,
+				recipient_name  VARCHAR(255) NOT NULL DEFAULT '',
+				subject         VARCHAR(500) NOT NULL DEFAULT '',
+				html_body       LONGTEXT NOT NULL,
+				params          LONGTEXT NULL,
+				status          ENUM('pending','processing','sent','failed','cancelled') NOT NULL DEFAULT 'pending',
+				attempts        TINYINT UNSIGNED NOT NULL DEFAULT 0,
+				max_attempts    TINYINT UNSIGNED NOT NULL DEFAULT 3,
+				scheduled_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				sent_at         DATETIME NULL,
+				last_error      TEXT NULL,
+				created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+				PRIMARY KEY (id),
+				KEY idx_status_scheduled (status, scheduled_at),
+				KEY idx_booking_id (booking_id)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+		);
+	}
+
+	/**
+	 * @param int $booking_id Booking ID.
+	 * @return void
+	 */
+	private function clear_email_queue_for_booking( int $booking_id ): void {
+		global $wpdb;
+		$wpdb->delete(
+			$wpdb->prefix . 'bookit_email_queue',
+			array( 'booking_id' => $booking_id ),
+			array( '%d' )
+		);
+	}
+
+	/**
+	 * @covers Booking_System_Stripe_Webhook::handle_checkout_session_completed
+	 */
+	public function test_stripe_webhook_booking_flow_enqueues_customer_email(): void {
+		$plugin_dir   = dirname( dirname( __DIR__ ) );
+		$webhook_file = $plugin_dir . '/includes/api/class-stripe-webhook.php';
+		$creator_file = $plugin_dir . '/includes/booking/class-booking-creator.php';
+		if ( ! file_exists( $webhook_file ) || ! file_exists( $creator_file ) ) {
+			$this->markTestSkipped( 'Stripe webhook or booking creator not available.' );
+			return;
+		}
+
+		$this->ensure_email_queue_table_exists();
+
+		require_once $plugin_dir . '/includes/payment/class-stripe-config.php';
+		require_once $webhook_file;
+		require_once $creator_file;
+
+		$ids          = $this->insert_service_and_staff();
+		$booking_date = wp_date( 'Y-m-d', strtotime( '+30 days' ), wp_timezone() );
+
+		$session_id = 'cs_test_webhook_email_booking_' . wp_generate_password( 10, false );
+		delete_transient( 'stripe_webhook_' . $session_id );
+
+		$session = \Stripe\Checkout\Session::constructFrom(
+			array(
+				'id'             => $session_id,
+				'payment_status' => 'paid',
+				'payment_intent' => 'pi_test_webhook_email_booking',
+				'amount_total'   => 5000,
+				'currency'       => 'gbp',
+				'metadata'       => array(
+					'service_id'          => (string) $ids['service_id'],
+					'staff_id'            => (string) $ids['staff_id'],
+					'booking_date'        => $booking_date,
+					'booking_time'        => '10:00:00',
+					'customer_email'      => 'webhook-email-booking@example.com',
+					'customer_first_name' => 'Mail',
+					'customer_last_name'  => 'Booking',
+					'customer_phone'      => '07700900111',
+				),
+			)
+		);
+
+		$event   = (object) array(
+			'data' => (object) array(
+				'object' => $session,
+			),
+		);
+		$handler = new Booking_System_Stripe_Webhook();
+		$method  = new ReflectionMethod( Booking_System_Stripe_Webhook::class, 'handle_checkout_session_completed' );
+		$method->setAccessible( true );
+		$result = $method->invoke( $handler, $event );
+
+		$this->assertTrue( true === $result );
+
+		global $wpdb;
+		$booking_id = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings WHERE stripe_session_id = %s LIMIT 1",
+				$session_id
+			)
+		);
+		$this->assertGreaterThan( 0, $booking_id );
+
+		$cust = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookit_email_queue WHERE booking_id = %d AND email_type = %s ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'customer_confirmation'
+			),
+			ARRAY_A
+		);
+		$this->assertIsArray( $cust );
+		$this->assertSame( 'customer_confirmation', $cust['email_type'] );
+		$this->assertSame( 'pending', $cust['status'] );
+
+		$biz = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookit_email_queue WHERE booking_id = %d AND email_type = %s ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'business_notification'
+			),
+			ARRAY_A
+		);
+		$this->assertIsArray( $biz );
+		$this->assertSame( 'business_notification', $biz['email_type'] );
+
+		$this->clear_email_queue_for_booking( $booking_id );
+		$wpdb->delete( $wpdb->prefix . 'bookings', array( 'id' => $booking_id ), array( '%d' ) );
+		$wpdb->delete( $wpdb->prefix . 'bookings_customers', array( 'email' => 'webhook-email-booking@example.com' ), array( '%s' ) );
+		$wpdb->delete( $wpdb->prefix . 'bookings_services', array( 'id' => $ids['service_id'] ), array( '%d' ) );
+		$wpdb->delete( $wpdb->prefix . 'bookings_staff', array( 'id' => $ids['staff_id'] ), array( '%d' ) );
+		delete_transient( 'stripe_webhook_' . $session_id );
+	}
+
+	/**
+	 * @covers Booking_System_Stripe_Webhook::handle_checkout_session_completed
+	 */
+	public function test_stripe_webhook_package_flow_enqueues_customer_email(): void {
+		$plugin_dir   = dirname( dirname( __DIR__ ) );
+		$webhook_file = $plugin_dir . '/includes/api/class-stripe-webhook.php';
+		$creator_file = $plugin_dir . '/includes/booking/class-booking-creator.php';
+		if ( ! file_exists( $webhook_file ) || ! file_exists( $creator_file ) ) {
+			$this->markTestSkipped( 'Stripe webhook or booking creator not available.' );
+			return;
+		}
+
+		$this->ensure_email_queue_table_exists();
+
+		require_once $plugin_dir . '/includes/payment/class-stripe-config.php';
+		require_once $webhook_file;
+		require_once $creator_file;
+
+		global $wpdb;
+
+		$ids         = $this->insert_service_and_staff();
+		$package_tid = $this->insert_package_type(
+			array(
+				'sessions_count' => 5,
+				'name'           => 'Webhook Email Package',
+			)
+		);
+
+		$booking_date = wp_date( 'Y-m-d', strtotime( '+30 days' ), wp_timezone() );
+		$session_id   = 'cs_test_webhook_email_pkg_' . wp_generate_password( 8, false );
+
+		delete_transient( 'stripe_pkg_' . $session_id );
+
+		$session = \Stripe\Checkout\Session::constructFrom(
+			array(
+				'id'             => $session_id,
+				'payment_status' => 'paid',
+				'payment_intent' => 'pi_test_webhook_email_pkg',
+				'amount_total'   => 12000,
+				'currency'       => 'gbp',
+				'metadata'       => array(
+					'flow_type'           => 'package',
+					'package_type_id'     => (string) $package_tid,
+					'package_name'        => 'Webhook Email Package',
+					'sessions_total'      => '5',
+					'expiry_enabled'      => '0',
+					'expiry_days'         => '',
+					'service_id'          => (string) $ids['service_id'],
+					'staff_id'            => (string) $ids['staff_id'],
+					'booking_date'        => $booking_date,
+					'booking_time'        => '10:00:00',
+					'customer_email'      => 'webhook-email-pkg@example.com',
+					'customer_first_name' => 'Mail',
+					'customer_last_name'  => 'Package',
+					'customer_phone'      => '07700900888',
+					'cooling_off_waiver'  => '1',
+				),
+			)
+		);
+
+		$event   = (object) array(
+			'data' => (object) array(
+				'object' => $session,
+			),
+		);
+		$handler = new Booking_System_Stripe_Webhook();
+		$method  = new ReflectionMethod( Booking_System_Stripe_Webhook::class, 'handle_checkout_session_completed' );
+		$method->setAccessible( true );
+		$result = $method->invoke( $handler, $event );
+
+		$this->assertTrue( true === $result );
+
+		$b = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings WHERE stripe_session_id = %s LIMIT 1",
+				$session_id
+			),
+			ARRAY_A
+		);
+		$this->assertIsArray( $b );
+		$booking_id = (int) $b['id'];
+		$this->assertGreaterThan( 0, $booking_id );
+
+		$cust = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookit_email_queue WHERE booking_id = %d AND email_type = %s ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'customer_confirmation'
+			),
+			ARRAY_A
+		);
+		$this->assertIsArray( $cust );
+		$this->assertSame( 'customer_confirmation', $cust['email_type'] );
+
+		$biz = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookit_email_queue WHERE booking_id = %d AND email_type = %s ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'business_notification'
+			),
+			ARRAY_A
+		);
+		$this->assertIsArray( $biz );
+		$this->assertSame( 'business_notification', $biz['email_type'] );
+
+		$this->clear_email_queue_for_booking( $booking_id );
+		$wpdb->delete( $wpdb->prefix . 'bookings_package_redemptions', array( 'booking_id' => $booking_id ), array( '%d' ) );
+		$wpdb->delete( $wpdb->prefix . 'bookings_payments', array( 'booking_id' => $booking_id ), array( '%d' ) );
+		$wpdb->delete( $wpdb->prefix . 'bookings', array( 'id' => $booking_id ), array( '%d' ) );
+		$cp_id = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_customer_packages WHERE payment_reference = %s LIMIT 1",
+				$session_id
+			)
+		);
+		if ( $cp_id > 0 ) {
+			$wpdb->delete( $wpdb->prefix . 'bookings_customer_packages', array( 'id' => $cp_id ), array( '%d' ) );
+		}
+		$wpdb->delete( $wpdb->prefix . 'bookings_customers', array( 'email' => 'webhook-email-pkg@example.com' ), array( '%s' ) );
+		$wpdb->delete( $wpdb->prefix . 'bookings_package_types', array( 'id' => $package_tid ), array( '%d' ) );
+		$wpdb->delete( $wpdb->prefix . 'bookings_services', array( 'id' => $ids['service_id'] ), array( '%d' ) );
+		$wpdb->delete( $wpdb->prefix . 'bookings_staff', array( 'id' => $ids['staff_id'] ), array( '%d' ) );
+		delete_transient( 'stripe_pkg_' . $session_id );
+	}
 }

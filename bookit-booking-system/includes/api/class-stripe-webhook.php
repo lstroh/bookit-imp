@@ -347,6 +347,8 @@ class Booking_System_Stripe_Webhook {
 
 		set_transient( $idempotency_key, $booking_id, 24 * HOUR_IN_SECONDS );
 
+		$this->send_booking_confirmation_emails_after_webhook( (int) $booking_id );
+
 		if ( self::should_log() ) {
 			error_log(
 				sprintf(
@@ -612,6 +614,8 @@ class Booking_System_Stripe_Webhook {
 
 		set_transient( $idempotency_key, $customer_package_id, 24 * HOUR_IN_SECONDS );
 
+		$this->send_booking_confirmation_emails_after_webhook( $booking_id );
+
 		if ( self::should_log() ) {
 			error_log(
 				sprintf(
@@ -623,6 +627,40 @@ class Booking_System_Stripe_Webhook {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Send customer and business emails after Stripe webhook creates a booking (best-effort; does not block success).
+	 *
+	 * @param int $booking_id Booking ID.
+	 * @return void
+	 */
+	private function send_booking_confirmation_emails_after_webhook( $booking_id ) {
+		$booking_id = (int) $booking_id;
+
+		require_once BOOKIT_PLUGIN_DIR . 'includes/booking/class-booking-retriever.php';
+		$booking_retriever = new Booking_System_Booking_Retriever();
+		$booking           = $booking_retriever->get_booking_by_id( $booking_id );
+
+		if ( $booking ) {
+			$email_sender_file = BOOKIT_PLUGIN_DIR . 'includes/email/class-email-sender.php';
+			if ( file_exists( $email_sender_file ) ) {
+				require_once $email_sender_file;
+				$email_sender = new Booking_System_Email_Sender();
+
+				$customer_result = $email_sender->send_customer_confirmation( $booking );
+				if ( is_wp_error( $customer_result ) && self::should_log() ) {
+					error_log( 'Stripe Webhook: Failed to send customer email - ' . $customer_result->get_error_message() );
+				}
+
+				$business_result = $email_sender->send_business_notification( $booking );
+				if ( is_wp_error( $business_result ) && self::should_log() ) {
+					error_log( 'Stripe Webhook: Failed to send business email - ' . $business_result->get_error_message() );
+				}
+			}
+		} elseif ( self::should_log() ) {
+			error_log( 'Stripe Webhook: Could not retrieve booking #' . $booking_id . ' for emails' );
+		}
 	}
 
 	/**
