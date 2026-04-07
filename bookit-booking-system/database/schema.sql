@@ -4,8 +4,8 @@
  * This file documents the complete database schema for reference.
  * DO NOT run this file directly - tables are created via Bookit_Database class.
  * 
- * Total Tables: 16
- * Last Updated: 2026-03-30
+ * Total Tables: 17
+ * Last Updated: 2026-04-07
  *
  * Migration 11: Drop legacy working hours table
  * Sprint: DB-Audit-Fixes-2
@@ -90,6 +90,7 @@ CREATE TABLE wp_bookings_staff (
 	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	deleted_at DATETIME NULL DEFAULT NULL,
+	notification_preferences LONGTEXT NULL DEFAULT NULL COMMENT 'JSON: {"new_booking":"immediate","reschedule":"immediate","cancellation":"immediate","daily_schedule":false}',
 	PRIMARY KEY (id),
 	UNIQUE KEY unique_email (email),
 	KEY idx_role (role),
@@ -392,6 +393,22 @@ CREATE TABLE wp_bookings_package_redemptions (
 		FOREIGN KEY (customer_package_id) REFERENCES wp_bookings_customer_packages(id),
 	CONSTRAINT fk_pr_booking
 		FOREIGN KEY (booking_id) REFERENCES wp_bookings(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- TABLE 17: wp_bookit_notification_digest_queue
+-- ============================================
+-- Created via migration: database/migrations/0017-create-notification-digest-queue.php
+CREATE TABLE wp_bookit_notification_digest_queue (
+	id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	staff_id   BIGINT UNSIGNED NOT NULL,
+	event_type ENUM('new_booking','reschedule','cancellation') NOT NULL,
+	booking_id BIGINT UNSIGNED NOT NULL,
+	processed  TINYINT(1) NOT NULL DEFAULT 0,
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (id),
+	KEY idx_staff_event_processed (staff_id, event_type, processed),
+	KEY idx_booking_id (booking_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
