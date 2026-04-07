@@ -42,6 +42,7 @@
             <file>./tests/unit/test-datetime-model.php</file>
             <file>./tests/unit/test-availability-algorithm.php</file>
             <file>./tests/unit/test-dashboard-bookings-api.php</file>
+            <file>./tests/unit/test-sprint6a-hooks.php</file>
             <file>./tests/unit/test-sprint5a-schema-fixes.php</file>
             <file>./tests/unit/test-bulk-working-hours-api.php</file>
             <file>./tests/unit/test-profile-api.php</file>

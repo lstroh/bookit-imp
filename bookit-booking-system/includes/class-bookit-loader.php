@@ -375,7 +375,7 @@ class Bookit_Loader {
 			10,
 			1
 		);
-		// TODO: bookit_booking_rescheduled not yet fired in core -- hook registered for future use.
+		// bookit_booking_rescheduled -- fired from update_booking() (dashboard) and reschedule_booking_magic_link() (magic link).
 		add_action(
 			'bookit_booking_rescheduled',
 			function( int $booking_id ) {

@@ -4291,6 +4291,35 @@ class Bookit_Dashboard_Bookings_API {
 		// Notify extensions after booking update has been persisted.
 		do_action( 'bookit_after_booking_updated', $booking_id, $new_data );
 
+		// Fire reassigned / rescheduled lifecycle hooks (Sprint 6A-1).
+		$old_staff_id = (int) $existing['staff_id'];
+
+		$new_time_for_compare = $new_time;
+		if ( is_string( $new_time_for_compare ) && strlen( $new_time_for_compare ) === 5 ) {
+			$new_time_for_compare .= ':00';
+		}
+
+		$date_changed = (string) $existing['booking_date'] !== (string) $new_date;
+		$time_changed = (string) $existing['start_time'] !== (string) $new_time_for_compare;
+
+		if ( $date_changed || $time_changed ) {
+			do_action(
+				'bookit_booking_rescheduled',
+				$booking_id,
+				$update_data
+			);
+		}
+
+		if ( $old_staff_id !== $new_staff_id ) {
+			do_action(
+				'bookit_booking_reassigned',
+				$booking_id,
+				$old_staff_id,
+				$new_staff_id,
+				$update_data
+			);
+		}
+
 		// Send notification email if requested.
 		$send_notification = filter_var( $request->get_param( 'send_notification' ), FILTER_VALIDATE_BOOLEAN );
 
