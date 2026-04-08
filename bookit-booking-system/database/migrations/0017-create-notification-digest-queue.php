@@ -36,13 +36,9 @@ class Bookit_Migration_0017_Create_Notification_Digest_Queue extends Bookit_Migr
 
 		$table_name = $wpdb->prefix . 'bookit_notification_digest_queue';
 
-		if ( $this->table_exists( $table_name ) ) {
-			return;
-		}
-
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$wpdb->query(
-			"CREATE TABLE {$table_name} (
+			"CREATE TABLE IF NOT EXISTS {$table_name} (
 				id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 				staff_id   BIGINT UNSIGNED NOT NULL,
 				event_type ENUM('new_booking','reschedule','cancellation') NOT NULL,
@@ -52,7 +48,7 @@ class Bookit_Migration_0017_Create_Notification_Digest_Queue extends Bookit_Migr
 				PRIMARY KEY (id),
 				KEY idx_staff_event_processed (staff_id, event_type, processed),
 				KEY idx_booking_id (booking_id)
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
 		);
 	}
 
@@ -67,26 +63,6 @@ class Bookit_Migration_0017_Create_Notification_Digest_Queue extends Bookit_Migr
 		$table_name = $wpdb->prefix . 'bookit_notification_digest_queue';
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->query( "DROP TABLE {$table_name}" );
-	}
-
-	/**
-	 * Check whether a table exists.
-	 *
-	 * @param string $table_name Full table name.
-	 * @return bool
-	 */
-	private function table_exists( string $table_name ): bool {
-		global $wpdb;
-
-		// Avoid SHOW TABLES LIKE: '_' is a wildcard in SQL LIKE patterns.
-		// Also avoid information_schema in case the connection DB differs from DB_NAME in wp-env.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.NotPrepared
-		$tables = $wpdb->get_col( 'SHOW TABLES' );
-		if ( ! is_array( $tables ) ) {
-			return false;
-		}
-
-		return in_array( $table_name, $tables, true );
+		$wpdb->query( "DROP TABLE IF EXISTS {$table_name}" );
 	}
 }
