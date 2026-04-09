@@ -43,6 +43,15 @@ class Bookit_Deactivator {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-package-expiry.php';
 		Bookit_Package_Expiry::unregister_cron();
 
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-staff-digest-daily.php';
+		Bookit_Staff_Digest_Daily::unregister_cron();
+
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-staff-digest-weekly.php';
+		Bookit_Staff_Digest_Weekly::unregister_cron();
+
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-staff-schedule-daily.php';
+		Bookit_Staff_Schedule_Daily::unregister_cron();
+
 		// Flush rewrite rules.
 		flush_rewrite_rules();
 

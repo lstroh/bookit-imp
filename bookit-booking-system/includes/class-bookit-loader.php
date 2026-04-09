@@ -183,6 +183,9 @@ class Bookit_Loader {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/functions-notifications.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-notification-dispatcher.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-staff-notifier.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-staff-digest-daily.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-staff-digest-weekly.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-staff-schedule-daily.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-notification-exception.php';
 
 		// Booking retrieval and email (confirmation page).
@@ -389,6 +392,9 @@ class Bookit_Loader {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-package-expiry.php';
 		Bookit_Package_Expiry::init();
 		Bookit_Staff_Notifier::init();
+		Bookit_Staff_Digest_Daily::init();
+		Bookit_Staff_Digest_Weekly::init();
+		Bookit_Staff_Schedule_Daily::init();
 	}
 
 	/**

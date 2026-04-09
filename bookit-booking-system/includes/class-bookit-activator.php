@@ -113,6 +113,15 @@ class Bookit_Activator {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-package-expiry.php';
 		Bookit_Package_Expiry::register_cron();
 
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-staff-digest-daily.php';
+		Bookit_Staff_Digest_Daily::register_cron();
+
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-staff-digest-weekly.php';
+		Bookit_Staff_Digest_Weekly::register_cron();
+
+		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-staff-schedule-daily.php';
+		Bookit_Staff_Schedule_Daily::register_cron();
+
 		// Initialize logger (creates log directory in best location)
 		require_once BOOKIT_PLUGIN_DIR . 'includes/class-bookit-logger.php';
 		Bookit_Logger::init();
