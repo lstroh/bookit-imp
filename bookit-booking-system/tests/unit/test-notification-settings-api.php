@@ -257,6 +257,90 @@ class Test_Notification_Settings_API extends WP_UnitTestCase {
 
 	/**
 	 * @covers Bookit_Dashboard_Bookings_API::update_settings
+	 * @covers Bookit_Dashboard_Bookings_API::get_settings
+	 */
+	public function test_digest_send_time_setting_saved_and_retrieved() {
+		$admin = $this->create_test_staff( array( 'role' => 'admin' ) );
+		$this->login_as( $admin, 'admin' );
+
+		$update_request = new WP_REST_Request( 'POST', '/' . $this->namespace . '/dashboard/settings' );
+		$update_request->set_body_params(
+			array(
+				'settings' => array(
+					'staff_digest_send_time' => '17:30',
+				),
+			)
+		);
+		$update_response = rest_get_server()->dispatch( $update_request );
+		$this->assertEquals( 200, $update_response->get_status() );
+
+		$get_request = new WP_REST_Request( 'GET', '/' . $this->namespace . '/dashboard/settings' );
+		$get_request->set_param( 'keys', 'staff_digest_send_time' );
+		$get_response = rest_get_server()->dispatch( $get_request );
+		$get_data     = $get_response->get_data();
+
+		$this->assertEquals( 200, $get_response->get_status() );
+		$this->assertSame( '17:30', $get_data['settings']['staff_digest_send_time'] );
+	}
+
+	/**
+	 * @covers Bookit_Dashboard_Bookings_API::update_settings
+	 * @covers Bookit_Dashboard_Bookings_API::get_settings
+	 */
+	public function test_schedule_send_time_setting_saved_and_retrieved() {
+		$admin = $this->create_test_staff( array( 'role' => 'admin' ) );
+		$this->login_as( $admin, 'admin' );
+
+		$update_request = new WP_REST_Request( 'POST', '/' . $this->namespace . '/dashboard/settings' );
+		$update_request->set_body_params(
+			array(
+				'settings' => array(
+					'staff_schedule_send_time' => '07:00',
+				),
+			)
+		);
+		$update_response = rest_get_server()->dispatch( $update_request );
+		$this->assertEquals( 200, $update_response->get_status() );
+
+		$get_request = new WP_REST_Request( 'GET', '/' . $this->namespace . '/dashboard/settings' );
+		$get_request->set_param( 'keys', 'staff_schedule_send_time' );
+		$get_response = rest_get_server()->dispatch( $get_request );
+		$get_data     = $get_response->get_data();
+
+		$this->assertEquals( 200, $get_response->get_status() );
+		$this->assertSame( '07:00', $get_data['settings']['staff_schedule_send_time'] );
+	}
+
+	/**
+	 * @covers Bookit_Dashboard_Bookings_API::update_settings
+	 * @covers Bookit_Dashboard_Bookings_API::get_settings
+	 */
+	public function test_weekly_day_setting_saved_and_retrieved() {
+		$admin = $this->create_test_staff( array( 'role' => 'admin' ) );
+		$this->login_as( $admin, 'admin' );
+
+		$update_request = new WP_REST_Request( 'POST', '/' . $this->namespace . '/dashboard/settings' );
+		$update_request->set_body_params(
+			array(
+				'settings' => array(
+					'staff_digest_weekly_day' => 5,
+				),
+			)
+		);
+		$update_response = rest_get_server()->dispatch( $update_request );
+		$this->assertEquals( 200, $update_response->get_status() );
+
+		$get_request = new WP_REST_Request( 'GET', '/' . $this->namespace . '/dashboard/settings' );
+		$get_request->set_param( 'keys', 'staff_digest_weekly_day' );
+		$get_response = rest_get_server()->dispatch( $get_request );
+		$get_data     = $get_response->get_data();
+
+		$this->assertEquals( 200, $get_response->get_status() );
+		$this->assertSame( 5, (int) $get_data['settings']['staff_digest_weekly_day'] );
+	}
+
+	/**
+	 * @covers Bookit_Dashboard_Bookings_API::update_settings
 	 */
 	public function test_unknown_setting_key_is_rejected() {
 		global $wpdb;

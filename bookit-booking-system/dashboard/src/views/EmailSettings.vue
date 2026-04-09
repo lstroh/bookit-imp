@@ -182,6 +182,82 @@
         </form>
       </div>
 
+      <!-- Staff Notification Timing -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">Staff Notification Timing</h2>
+          <p class="text-sm text-gray-500 mt-1">
+            Configure when digest and schedule emails are sent to staff members
+          </p>
+        </div>
+
+        <div class="px-4 sm:px-6 py-6 space-y-5">
+          <!-- Digest Email Send Time -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Digest Email Send Time
+            </label>
+            <input
+              v-model="settings.staff_digest_send_time"
+              type="time"
+              class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+            <p class="text-xs text-gray-500 mt-1">
+              Time of day for daily and weekly digest emails (business timezone)
+            </p>
+          </div>
+
+          <!-- Daily Schedule Email Send Time -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Daily Schedule Email Send Time
+            </label>
+            <input
+              v-model="settings.staff_schedule_send_time"
+              type="time"
+              class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+            <p class="text-xs text-gray-500 mt-1">
+              Time of day for the daily schedule summary email (business timezone)
+            </p>
+          </div>
+
+          <!-- Weekly Digest Day -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Weekly Digest Day
+            </label>
+            <select
+              v-model.number="settings.staff_digest_weekly_day"
+              class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option :value="1">Monday</option>
+              <option :value="2">Tuesday</option>
+              <option :value="3">Wednesday</option>
+              <option :value="4">Thursday</option>
+              <option :value="5">Friday</option>
+              <option :value="6">Saturday</option>
+              <option :value="7">Sunday</option>
+            </select>
+            <p class="text-xs text-gray-500 mt-1">
+              Day of the week when weekly digest emails are sent
+            </p>
+          </div>
+
+          <!-- Save Button -->
+          <div class="flex justify-end pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              :disabled="saving"
+              @click="saveSettings"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+            >
+              {{ saving ? 'Saving...' : 'Save Notification Timing' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Section 2: SMTP Configuration (Advanced) -->
       <div class="bg-white rounded-lg shadow-sm border border-gray-200">
         <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
@@ -522,6 +598,9 @@ const settings = ref({
   smtp_password: '',
   smtp_from_name: '',
   smtp_from_email: '',
+  staff_digest_send_time: '18:00',
+  staff_schedule_send_time: '08:00',
+  staff_digest_weekly_day: 1,
   brevo_template_booking_confirmed: '',
   brevo_template_booking_cancelled: '',
   brevo_template_booking_rescheduled: '',
@@ -530,7 +609,7 @@ const settings = ref({
   brevo_template_business_notification: ''
 })
 
-const SETTING_KEYS = 'smtp_enabled,smtp_host,smtp_port,smtp_encryption,smtp_username,smtp_password,smtp_from_name,smtp_from_email,email_provider,brevo_api_key,brevo_from_name,brevo_from_email,brevo_template_booking_confirmed,brevo_template_booking_cancelled,brevo_template_booking_rescheduled,brevo_template_magic_link_cancel,brevo_template_magic_link_reschedule,brevo_template_business_notification,sms_provider,brevo_sms_api_key'
+const SETTING_KEYS = 'smtp_enabled,smtp_host,smtp_port,smtp_encryption,smtp_username,smtp_password,smtp_from_name,smtp_from_email,email_provider,brevo_api_key,brevo_from_name,brevo_from_email,brevo_template_booking_confirmed,brevo_template_booking_cancelled,brevo_template_booking_rescheduled,brevo_template_magic_link_cancel,brevo_template_magic_link_reschedule,brevo_template_business_notification,sms_provider,brevo_sms_api_key,staff_digest_send_time,staff_schedule_send_time,staff_digest_weekly_day'
 
 const loadSettings = async () => {
   loading.value = true
