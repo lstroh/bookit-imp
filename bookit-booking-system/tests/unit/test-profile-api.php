@@ -338,8 +338,139 @@ class Test_Profile_API extends WP_UnitTestCase {
 		$routes = rest_get_server()->get_routes();
 
 		$this->assertArrayHasKey( '/' . $this->namespace . '/dashboard/profile', $routes );
+		$this->assertArrayHasKey( '/' . $this->namespace . '/dashboard/profile/notification-preferences', $routes );
 		$this->assertArrayHasKey( '/' . $this->namespace . '/dashboard/profile/change-password', $routes );
 		$this->assertArrayHasKey( '/' . $this->namespace . '/dashboard/profile/verify-password', $routes );
+	}
+
+	// ========== TESTS FOR: PUT /dashboard/profile/notification-preferences ==========
+
+	/**
+	 * Test notification preferences can be saved and retrieved via profile.
+	 *
+	 * @covers Bookit_Dashboard_Bookings_API::update_notification_preferences
+	 * @covers Bookit_Dashboard_Bookings_API::get_my_profile
+	 */
+	public function test_preferences_endpoint_saves_and_retrieves_preferences() {
+		$staff_id = $this->create_test_staff();
+		$this->login_as( $staff_id, 'staff' );
+
+		$request = new WP_REST_Request( 'PUT', '/' . $this->namespace . '/dashboard/profile/notification-preferences' );
+		$request->set_body_params( array(
+			'new_booking'    => 'daily',
+			'reschedule'     => 'immediate',
+			'cancellation'   => 'weekly',
+			'daily_schedule' => true,
+		) );
+
+		$response = rest_get_server()->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertTrue( $data['success'] );
+		$this->assertEquals( 'daily', $data['preferences']['new_booking'] );
+		$this->assertEquals( 'immediate', $data['preferences']['reschedule'] );
+		$this->assertEquals( 'weekly', $data['preferences']['cancellation'] );
+		$this->assertTrue( (bool) $data['preferences']['daily_schedule'] );
+
+		$get_request  = new WP_REST_Request( 'GET', '/' . $this->namespace . '/dashboard/profile' );
+		$get_response = rest_get_server()->dispatch( $get_request );
+		$this->assertEquals( 200, $get_response->get_status() );
+
+		$profile = $get_response->get_data()['profile'];
+		$this->assertEquals( $data['preferences'], $profile['notification_preferences'] );
+	}
+
+	/**
+	 * Test preferences endpoint validates frequency values or falls back to defaults.
+	 *
+	 * @covers Bookit_Dashboard_Bookings_API::update_notification_preferences
+	 */
+	public function test_preferences_endpoint_validates_frequency_values() {
+		$staff_id = $this->create_test_staff();
+		$this->login_as( $staff_id, 'staff' );
+
+		$request = new WP_REST_Request( 'PUT', '/' . $this->namespace . '/dashboard/profile/notification-preferences' );
+		$request->set_body_params( array(
+			'new_booking' => 'never',
+		) );
+
+		$response = rest_get_server()->dispatch( $request );
+		$status   = $response->get_status();
+
+		if ( 400 === $status ) {
+			$this->assertTrue( $response->is_error() );
+			return;
+		}
+
+		$this->assertEquals( 200, $status );
+
+		$data = $response->get_data();
+		$this->assertTrue( $data['success'] );
+		$this->assertEquals( 'immediate', $data['preferences']['new_booking'] );
+
+		$get_request  = new WP_REST_Request( 'GET', '/' . $this->namespace . '/dashboard/profile' );
+		$get_response = rest_get_server()->dispatch( $get_request );
+		$profile      = $get_response->get_data()['profile'];
+		$this->assertNotEquals( 'never', $profile['notification_preferences']['new_booking'] );
+	}
+
+	/**
+	 * Test preferences endpoint requires authentication.
+	 *
+	 * @covers Bookit_Dashboard_Bookings_API::check_dashboard_permission
+	 */
+	public function test_preferences_endpoint_requires_authentication() {
+		$_SESSION = array();
+
+		$request  = new WP_REST_Request( 'PUT', '/' . $this->namespace . '/dashboard/profile/notification-preferences' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertTrue( $response->is_error() );
+		$this->assertEquals( 401, $response->get_status() );
+	}
+
+	/**
+	 * Test get profile includes notification preferences keys.
+	 *
+	 * @covers Bookit_Dashboard_Bookings_API::get_my_profile
+	 */
+	public function test_get_profile_includes_notification_preferences() {
+		$staff_id = $this->create_test_staff();
+		$this->login_as( $staff_id, 'staff' );
+
+		$request  = new WP_REST_Request( 'GET', '/' . $this->namespace . '/dashboard/profile' );
+		$response = rest_get_server()->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$profile = $response->get_data()['profile'];
+		$this->assertArrayHasKey( 'notification_preferences', $profile );
+		$this->assertArrayHasKey( 'new_booking', $profile['notification_preferences'] );
+		$this->assertArrayHasKey( 'reschedule', $profile['notification_preferences'] );
+		$this->assertArrayHasKey( 'cancellation', $profile['notification_preferences'] );
+		$this->assertArrayHasKey( 'daily_schedule', $profile['notification_preferences'] );
+	}
+
+	/**
+	 * Test preferences default when not set.
+	 *
+	 * @covers Bookit_Dashboard_Bookings_API::get_my_profile
+	 */
+	public function test_preferences_default_to_immediate_when_not_set() {
+		$staff_id = $this->create_test_staff( array(
+			'notification_preferences' => null,
+		) );
+		$this->login_as( $staff_id, 'staff' );
+
+		$request  = new WP_REST_Request( 'GET', '/' . $this->namespace . '/dashboard/profile' );
+		$response = rest_get_server()->dispatch( $request );
+		$this->assertEquals( 200, $response->get_status() );
+
+		$prefs = $response->get_data()['profile']['notification_preferences'];
+		$this->assertEquals( 'immediate', $prefs['new_booking'] );
+		$this->assertEquals( 'immediate', $prefs['reschedule'] );
+		$this->assertEquals( 'immediate', $prefs['cancellation'] );
+		$this->assertFalse( (bool) $prefs['daily_schedule'] );
 	}
 
 	// ========== HELPER METHODS ==========
@@ -391,6 +522,7 @@ class Test_Profile_API extends WP_UnitTestCase {
 			'google_calendar_id' => null,
 			'is_active'          => 1,
 			'display_order'      => 0,
+			'notification_preferences' => null,
 			'created_at'         => current_time( 'mysql' ),
 			'updated_at'         => current_time( 'mysql' ),
 			'deleted_at'         => null,
@@ -401,7 +533,7 @@ class Test_Profile_API extends WP_UnitTestCase {
 		$wpdb->insert(
 			$wpdb->prefix . 'bookings_staff',
 			$data,
-			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s' )
+			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s', '%s' )
 		);
 		return (int) $wpdb->insert_id;
 	}

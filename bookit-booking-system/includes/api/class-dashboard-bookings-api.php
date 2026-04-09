@@ -1354,6 +1354,36 @@ class Bookit_Dashboard_Bookings_API {
 			)
 		);
 
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/profile/notification-preferences',
+			array(
+				'methods'             => 'PUT',
+				'callback'            => array( $this, 'update_notification_preferences' ),
+				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+				'args'                => array(
+					'new_booking'    => array(
+						'type'              => 'string',
+						'enum'              => array( 'immediate', 'daily', 'weekly' ),
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'reschedule'     => array(
+						'type'              => 'string',
+						'enum'              => array( 'immediate', 'daily', 'weekly' ),
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'cancellation'   => array(
+						'type'              => 'string',
+						'enum'              => array( 'immediate', 'daily', 'weekly' ),
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'daily_schedule' => array(
+						'type' => 'boolean',
+					),
+				),
+			)
+		);
+
 		// Change password.
 		register_rest_route(
 			self::NAMESPACE,
@@ -6775,6 +6805,24 @@ class Bookit_Dashboard_Bookings_API {
 		$staff['id']        = (int) $staff['id'];
 		$staff['full_name'] = $staff['first_name'] . ' ' . $staff['last_name'];
 
+		// Decode notification preferences with defaults.
+		$raw_prefs = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT notification_preferences FROM {$wpdb->prefix}bookings_staff WHERE id = %d",
+				$current_staff['id']
+			)
+		);
+		$pref_defaults = array(
+			'new_booking'    => 'immediate',
+			'reschedule'     => 'immediate',
+			'cancellation'   => 'immediate',
+			'daily_schedule' => false,
+		);
+		$parsed                          = ! empty( $raw_prefs ) ? json_decode( $raw_prefs, true ) : null;
+		$staff['notification_preferences'] = is_array( $parsed )
+			? array_merge( $pref_defaults, $parsed )
+			: $pref_defaults;
+
 		return rest_ensure_response(
 			array(
 				'success' => true,
@@ -6877,6 +6925,61 @@ class Bookit_Dashboard_Bookings_API {
 				'success' => true,
 				'message' => 'Profile updated successfully.',
 				'profile' => $profile_response->data['profile'],
+			)
+		);
+	}
+
+	/**
+	 * Update notification preferences for current user.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function update_notification_preferences( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		global $wpdb;
+
+		$current_staff = Bookit_Auth::get_current_staff();
+		if ( ! $current_staff ) {
+			return new WP_Error( 'unauthorized', 'Could not retrieve staff information.', array( 'status' => 401 ) );
+		}
+
+		$defaults = array(
+			'new_booking'    => 'immediate',
+			'reschedule'     => 'immediate',
+			'cancellation'   => 'immediate',
+			'daily_schedule' => false,
+		);
+
+		$valid_frequencies = array( 'immediate', 'daily', 'weekly' );
+
+		$new_booking  = $request->get_param( 'new_booking' );
+		$reschedule   = $request->get_param( 'reschedule' );
+		$cancellation = $request->get_param( 'cancellation' );
+		$daily_sched  = $request->get_param( 'daily_schedule' );
+
+		$prefs = array(
+			'new_booking'    => in_array( $new_booking, $valid_frequencies, true ) ? $new_booking : $defaults['new_booking'],
+			'reschedule'     => in_array( $reschedule, $valid_frequencies, true ) ? $reschedule : $defaults['reschedule'],
+			'cancellation'   => in_array( $cancellation, $valid_frequencies, true ) ? $cancellation : $defaults['cancellation'],
+			'daily_schedule' => null !== $daily_sched ? (bool) $daily_sched : $defaults['daily_schedule'],
+		);
+
+		$result = $wpdb->update(
+			$wpdb->prefix . 'bookings_staff',
+			array( 'notification_preferences' => wp_json_encode( $prefs ) ),
+			array( 'id' => (int) $current_staff['id'] ),
+			array( '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error( 'update_failed', 'Failed to save notification preferences.', array( 'status' => 500 ) );
+		}
+
+		return rest_ensure_response(
+			array(
+				'success'     => true,
+				'preferences' => $prefs,
 			)
 		);
 	}

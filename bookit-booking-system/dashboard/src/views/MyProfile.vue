@@ -292,6 +292,101 @@
         </form>
       </div>
 
+      <!-- Notification Preferences Card -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">Notification Preferences</h2>
+          <p class="text-sm text-gray-500 mt-1">
+            Control when you receive email notifications about your bookings
+          </p>
+        </div>
+
+        <form @submit.prevent="savePreferences" class="px-4 sm:px-6 py-6 space-y-5">
+
+          <!-- New Booking -->
+          <div class="flex items-center justify-between">
+            <label class="text-sm font-medium text-gray-700">New Booking</label>
+            <select
+              v-model="notificationPrefs.new_booking"
+              class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="immediate">Immediate</option>
+              <option value="daily">Daily digest</option>
+              <option value="weekly">Weekly digest</option>
+            </select>
+          </div>
+
+          <!-- Reschedule -->
+          <div class="flex items-center justify-between">
+            <label class="text-sm font-medium text-gray-700">Reschedule</label>
+            <select
+              v-model="notificationPrefs.reschedule"
+              class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="immediate">Immediate</option>
+              <option value="daily">Daily digest</option>
+              <option value="weekly">Weekly digest</option>
+            </select>
+          </div>
+
+          <!-- Cancellation -->
+          <div class="flex items-center justify-between">
+            <label class="text-sm font-medium text-gray-700">Cancellation</label>
+            <select
+              v-model="notificationPrefs.cancellation"
+              class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="immediate">Immediate</option>
+              <option value="daily">Daily digest</option>
+              <option value="weekly">Weekly digest</option>
+            </select>
+          </div>
+
+          <!-- Daily Schedule Toggle -->
+          <div class="flex items-start justify-between pt-2 border-t border-gray-100">
+            <div>
+              <p class="text-sm font-medium text-gray-700">Daily Schedule Email</p>
+              <p class="text-xs text-gray-500 mt-0.5">
+                Receive a summary of today's bookings each morning
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              :aria-checked="notificationPrefs.daily_schedule"
+              @click="notificationPrefs.daily_schedule = !notificationPrefs.daily_schedule"
+              class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 mt-0.5"
+              :class="notificationPrefs.daily_schedule ? 'bg-primary-600' : 'bg-gray-200'"
+            >
+              <span
+                class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                :class="notificationPrefs.daily_schedule ? 'translate-x-5' : 'translate-x-0'"
+              />
+            </button>
+          </div>
+
+          <!-- Error / Success -->
+          <div v-if="prefsError" role="alert" aria-live="assertive" class="bg-red-50 border border-red-200 rounded p-3">
+            <p class="text-sm text-red-800">{{ prefsError }}</p>
+          </div>
+          <div v-if="prefsSuccess" role="status" aria-live="polite" class="bg-green-50 border border-green-200 rounded p-3">
+            <p class="text-sm text-green-800">&#10003; {{ prefsSuccess }}</p>
+          </div>
+
+          <!-- Save Button -->
+          <div class="flex justify-end pt-4 border-t border-gray-200">
+            <button
+              type="submit"
+              :disabled="savingPrefs"
+              class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+            >
+              {{ savingPrefs ? 'Saving...' : 'Save Preferences' }}
+            </button>
+          </div>
+
+        </form>
+      </div>
+
       <!-- My Stats Section -->
       <div v-if="showStats" class="bg-white rounded-lg shadow-sm border border-gray-200">
         <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
@@ -351,6 +446,17 @@ const showStats = ref(false)
 const statsLoading = ref(false)
 const stats = ref(null)
 
+const savingPrefs = ref(false)
+const prefsSuccess = ref('')
+const prefsError = ref('')
+
+const notificationPrefs = ref({
+  new_booking: 'immediate',
+  reschedule: 'immediate',
+  cancellation: 'immediate',
+  daily_schedule: false
+})
+
 const profile = ref({
   first_name: '',
   last_name: '',
@@ -383,11 +489,41 @@ const loadProfile = async () => {
     if (response.data.success) {
       profile.value = response.data.profile
       originalEmail.value = response.data.profile.email
+
+      if (response.data.profile.notification_preferences) {
+        notificationPrefs.value = response.data.profile.notification_preferences
+      }
     }
   } catch (err) {
     saveError.value = 'Failed to load profile.'
   } finally {
     loading.value = false
+  }
+}
+
+const savePreferences = async () => {
+  savingPrefs.value = true
+  prefsSuccess.value = ''
+  prefsError.value = ''
+
+  try {
+    const response = await api.put('profile/notification-preferences', {
+      new_booking: notificationPrefs.value.new_booking,
+      reschedule: notificationPrefs.value.reschedule,
+      cancellation: notificationPrefs.value.cancellation,
+      daily_schedule: notificationPrefs.value.daily_schedule
+    })
+
+    if (response.data.success) {
+      prefsSuccess.value = 'Preferences saved.'
+      setTimeout(() => { prefsSuccess.value = '' }, 3000)
+    } else {
+      prefsError.value = response.data.message || 'Failed to save preferences.'
+    }
+  } catch (err) {
+    prefsError.value = err.message || 'Failed to save preferences.'
+  } finally {
+    savingPrefs.value = false
   }
 }
 
