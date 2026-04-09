@@ -367,6 +367,79 @@
             </div>
           </div>
 
+          <!-- Notification Preferences (admin editing only) -->
+          <div v-if="isEditing" class="border-t border-gray-200 pt-4">
+            <h3 class="text-sm font-semibold text-gray-900 mb-3">Notification Preferences</h3>
+            <p class="text-xs text-gray-500 mb-4">
+              Control when this staff member receives email notifications.
+              Staff members can also update these from their own profile.
+            </p>
+
+            <div class="space-y-3">
+              <!-- New Booking -->
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-medium text-gray-700">New Booking</label>
+                <select
+                  v-model="staffNotificationPrefs.new_booking"
+                  class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="immediate">Immediate</option>
+                  <option value="daily">Daily digest</option>
+                  <option value="weekly">Weekly digest</option>
+                </select>
+              </div>
+
+              <!-- Reschedule -->
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-medium text-gray-700">Reschedule</label>
+                <select
+                  v-model="staffNotificationPrefs.reschedule"
+                  class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="immediate">Immediate</option>
+                  <option value="daily">Daily digest</option>
+                  <option value="weekly">Weekly digest</option>
+                </select>
+              </div>
+
+              <!-- Cancellation -->
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-medium text-gray-700">Cancellation</label>
+                <select
+                  v-model="staffNotificationPrefs.cancellation"
+                  class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="immediate">Immediate</option>
+                  <option value="daily">Daily digest</option>
+                  <option value="weekly">Weekly digest</option>
+                </select>
+              </div>
+
+              <!-- Daily Schedule Toggle -->
+              <div class="flex items-start justify-between pt-2 border-t border-gray-100">
+                <div>
+                  <p class="text-sm font-medium text-gray-700">Daily Schedule Email</p>
+                  <p class="text-xs text-gray-500 mt-0.5">
+                    Send a morning summary of today's bookings
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  :aria-checked="staffNotificationPrefs.daily_schedule"
+                  @click="staffNotificationPrefs.daily_schedule = !staffNotificationPrefs.daily_schedule"
+                  class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 mt-0.5"
+                  :class="staffNotificationPrefs.daily_schedule ? 'bg-primary-600' : 'bg-gray-200'"
+                >
+                  <span
+                    class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                    :class="staffNotificationPrefs.daily_schedule ? 'translate-x-5' : 'translate-x-0'"
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Google Calendar ID -->
           <div>
             <label for="staff-gcal-id" class="block text-sm font-medium text-gray-700 mb-1">
@@ -513,6 +586,13 @@ const selectedServices = ref([])
 const customPrices = ref({})
 const staffDetails = ref(null)
 
+const staffNotificationPrefs = ref({
+  new_booking: 'immediate',
+  reschedule: 'immediate',
+  cancellation: 'immediate',
+  daily_schedule: false
+})
+
 // Password reset state
 const showPasswordReset = ref(false)
 const newPassword = ref('')
@@ -604,6 +684,10 @@ const populateForm = (member) => {
         customPrices.value[assignment.service_id] = assignment.custom_price
       }
     })
+  }
+
+  if (member.notification_preferences) {
+    staffNotificationPrefs.value = { ...staffNotificationPrefs.value, ...member.notification_preferences }
   }
 }
 
@@ -731,6 +815,8 @@ const saveStaff = async () => {
 
     if (!isEditing.value) {
       payload.password = formData.value.password
+    } else {
+      payload.notification_preferences = staffNotificationPrefs.value
     }
 
     let response

@@ -419,6 +419,12 @@ class Bookit_Dashboard_Bookings_API {
 								return is_array( $param ) ? $param : array();
 							},
 						),
+						'notification_preferences' => array(
+							'type'              => 'object',
+							'sanitize_callback' => function ( $param ) {
+								return is_array( $param ) ? $param : null;
+							},
+						),
 					),
 				),
 				array(
@@ -2119,6 +2125,19 @@ class Bookit_Dashboard_Bookings_API {
 		$staff['has_working_hours']     = $staff['working_hours_count'] > 0;
 		$staff['service_assignments']   = $service_assignments;
 
+		// Decode notification preferences with defaults.
+		$pref_defaults = array(
+			'new_booking'    => 'immediate',
+			'reschedule'     => 'immediate',
+			'cancellation'   => 'immediate',
+			'daily_schedule' => false,
+		);
+		$raw_prefs = $staff['notification_preferences'] ?? null;
+		$parsed    = ! empty( $raw_prefs ) ? json_decode( $raw_prefs, true ) : null;
+		$staff['notification_preferences'] = is_array( $parsed )
+			? array_merge( $pref_defaults, $parsed )
+			: $pref_defaults;
+
 		// Remove password hash.
 		unset( $staff['password_hash'] );
 
@@ -2293,6 +2312,7 @@ class Bookit_Dashboard_Bookings_API {
 			'is_active'          => filter_var( $request->get_param( 'is_active' ), FILTER_VALIDATE_BOOLEAN ) ? 1 : 0,
 			'display_order'      => (int) $request->get_param( 'display_order' ),
 		);
+		$formats = array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d' );
 
 		// Check for duplicate email (excluding current staff).
 		$duplicate = $wpdb->get_var(
@@ -2312,25 +2332,43 @@ class Bookit_Dashboard_Bookings_API {
 			);
 		}
 
+		// Handle notification_preferences (admin only — staff role blocked by check_admin_permission).
+		$raw_notification_prefs = $request->get_param( 'notification_preferences' );
+		if ( null !== $raw_notification_prefs && is_array( $raw_notification_prefs ) ) {
+			$valid_frequencies = array( 'immediate', 'daily', 'weekly' );
+			$pref_defaults     = array(
+				'new_booking'    => 'immediate',
+				'reschedule'     => 'immediate',
+				'cancellation'   => 'immediate',
+				'daily_schedule' => false,
+			);
+			$sanitized_prefs = array(
+				'new_booking'    => in_array( $raw_notification_prefs['new_booking'] ?? '', $valid_frequencies, true )
+									? $raw_notification_prefs['new_booking']
+									: $pref_defaults['new_booking'],
+				'reschedule'     => in_array( $raw_notification_prefs['reschedule'] ?? '', $valid_frequencies, true )
+									? $raw_notification_prefs['reschedule']
+									: $pref_defaults['reschedule'],
+				'cancellation'   => in_array( $raw_notification_prefs['cancellation'] ?? '', $valid_frequencies, true )
+									? $raw_notification_prefs['cancellation']
+									: $pref_defaults['cancellation'],
+				'daily_schedule' => isset( $raw_notification_prefs['daily_schedule'] )
+									? (bool) $raw_notification_prefs['daily_schedule']
+									: $pref_defaults['daily_schedule'],
+			);
+			$new_data['notification_preferences'] = wp_json_encode( $sanitized_prefs );
+			$formats[]                            = '%s';
+		}
+
+		$new_data['updated_at'] = current_time( 'mysql' );
+		$formats[]              = '%s';
+
 		// Update staff.
 		$result = $wpdb->update(
 			$wpdb->prefix . 'bookings_staff',
-			array(
-				'email'              => $email,
-				'first_name'         => $request->get_param( 'first_name' ),
-				'last_name'          => $request->get_param( 'last_name' ),
-				'phone'              => $request->get_param( 'phone' ),
-				'photo_url'          => $request->get_param( 'photo_url' ),
-				'bio'                => $request->get_param( 'bio' ),
-				'title'              => $request->get_param( 'title' ),
-				'role'               => $request->get_param( 'role' ),
-				'google_calendar_id' => $request->get_param( 'google_calendar_id' ),
-				'is_active'          => filter_var( $request->get_param( 'is_active' ), FILTER_VALIDATE_BOOLEAN ) ? 1 : 0,
-				'display_order'      => (int) $request->get_param( 'display_order' ),
-				'updated_at'         => current_time( 'mysql' ),
-			),
+			$new_data,
 			array( 'id' => $staff_id ),
-			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s' ),
+			$formats,
 			array( '%d' )
 		);
 
