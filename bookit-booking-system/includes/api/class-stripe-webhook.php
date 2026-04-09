@@ -630,7 +630,9 @@ class Booking_System_Stripe_Webhook {
 	}
 
 	/**
-	 * Send customer and business emails after Stripe webhook creates a booking (best-effort; does not block success).
+	 * Send customer confirmation email after Stripe webhook creates a booking (best-effort; does not block success).
+	 *
+	 * Business notifications are handled by Bookit_Staff_Notifier on bookit_after_booking_created.
 	 *
 	 * @param int $booking_id Booking ID.
 	 * @return void
@@ -653,10 +655,8 @@ class Booking_System_Stripe_Webhook {
 					error_log( 'Stripe Webhook: Failed to send customer email - ' . $customer_result->get_error_message() );
 				}
 
-				$business_result = $email_sender->send_business_notification( $booking );
-				if ( is_wp_error( $business_result ) && self::should_log() ) {
-					error_log( 'Stripe Webhook: Failed to send business email - ' . $business_result->get_error_message() );
-				}
+				// Business notification removed Sprint 6A-8 — replaced by Bookit_Staff_Notifier
+				// which sends to all admin-role staff via their preference settings.
 			}
 		} elseif ( self::should_log() ) {
 			error_log( 'Stripe Webhook: Could not retrieve booking #' . $booking_id . ' for emails' );

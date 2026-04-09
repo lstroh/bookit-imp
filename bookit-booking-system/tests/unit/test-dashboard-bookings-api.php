@@ -33,6 +33,7 @@ class Test_Dashboard_Bookings_API extends WP_UnitTestCase {
 
 		bookit_test_truncate_tables(
 			array(
+				'bookit_email_queue',
 				'bookings_package_redemptions',
 				'bookings_customer_packages',
 				'bookings_package_types',
@@ -56,6 +57,7 @@ class Test_Dashboard_Bookings_API extends WP_UnitTestCase {
 	public function tearDown(): void {
 		bookit_test_truncate_tables(
 			array(
+				'bookit_email_queue',
 				'bookings_package_redemptions',
 				'bookings_customer_packages',
 				'bookings_package_types',
@@ -673,6 +675,61 @@ class Test_Dashboard_Bookings_API extends WP_UnitTestCase {
 		$this->assertTrue( $response->is_error() );
 		$error = $response->as_error();
 		$this->assertEquals( 'slot_unavailable', $error->get_error_code() );
+	}
+
+	/**
+	 * Manual booking with send_confirmation must not enqueue legacy business_notification (Sprint 6A-8).
+	 *
+	 * @covers Bookit_Dashboard_Bookings_API::create_manual_booking
+	 */
+	public function test_new_booking_does_not_call_send_business_notification() {
+		global $wpdb;
+
+		$staff    = $this->create_test_staff( array( 'role' => 'staff' ) );
+		$service  = $this->create_test_service( array( 'duration' => 60 ) );
+		$customer = $this->create_test_customer();
+
+		$admin = $this->create_test_staff( array( 'role' => 'admin' ) );
+		$this->login_as( $admin, 'admin' );
+
+		$request = new WP_REST_Request( 'POST', '/' . $this->namespace . '/dashboard/bookings/create' );
+		$request->set_body_params(
+			array(
+				'staff_id'          => $staff,
+				'service_id'        => $service,
+				'customer_id'       => $customer,
+				'booking_date'      => '2026-06-15',
+				'booking_time'      => '10:00',
+				'payment_method'    => 'cash',
+				'amount_paid'       => 50,
+				'send_confirmation' => true,
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertTrue( $data['success'] );
+		$booking_id = (int) $data['booking_id'];
+
+		$biz_count = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}bookit_email_queue WHERE booking_id = %d AND email_type = %s",
+				$booking_id,
+				'business_notification'
+			)
+		);
+		$this->assertSame( 0, $biz_count, 'Legacy send_business_notification must not enqueue business_notification rows.' );
+
+		$customer_confirm = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}bookit_email_queue WHERE booking_id = %d AND email_type = %s",
+				$booking_id,
+				'customer_confirmation'
+			)
+		);
+		$this->assertGreaterThan( 0, $customer_confirm, 'Customer confirmation should still be queued when send_confirmation is true.' );
 	}
 
 	// ========== TESTS FOR: PUT /dashboard/bookings/{id} (update) ==========

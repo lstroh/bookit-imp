@@ -961,16 +961,14 @@ class Test_Stripe_V2_Wiring extends WP_UnitTestCase {
 		$this->assertSame( 'customer_confirmation', $cust['email_type'] );
 		$this->assertSame( 'pending', $cust['status'] );
 
-		$biz = $wpdb->get_row(
+		$biz_count = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT * FROM {$wpdb->prefix}bookit_email_queue WHERE booking_id = %d AND email_type = %s ORDER BY id DESC LIMIT 1",
+				"SELECT COUNT(*) FROM {$wpdb->prefix}bookit_email_queue WHERE booking_id = %d AND email_type = %s",
 				$booking_id,
 				'business_notification'
-			),
-			ARRAY_A
+			)
 		);
-		$this->assertIsArray( $biz );
-		$this->assertSame( 'business_notification', $biz['email_type'] );
+		$this->assertSame( 0, $biz_count, 'Sprint 6A-8: webhook flow must not enqueue legacy business_notification.' );
 
 		$this->clear_email_queue_for_booking( $booking_id );
 		$wpdb->delete( $wpdb->prefix . 'bookings', array( 'id' => $booking_id ), array( '%d' ) );
@@ -1074,16 +1072,14 @@ class Test_Stripe_V2_Wiring extends WP_UnitTestCase {
 		$this->assertIsArray( $cust );
 		$this->assertSame( 'customer_confirmation', $cust['email_type'] );
 
-		$biz = $wpdb->get_row(
+		$biz_count = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT * FROM {$wpdb->prefix}bookit_email_queue WHERE booking_id = %d AND email_type = %s ORDER BY id DESC LIMIT 1",
+				"SELECT COUNT(*) FROM {$wpdb->prefix}bookit_email_queue WHERE booking_id = %d AND email_type = %s",
 				$booking_id,
 				'business_notification'
-			),
-			ARRAY_A
+			)
 		);
-		$this->assertIsArray( $biz );
-		$this->assertSame( 'business_notification', $biz['email_type'] );
+		$this->assertSame( 0, $biz_count, 'Sprint 6A-8: package webhook flow must not enqueue legacy business_notification.' );
 
 		$this->clear_email_queue_for_booking( $booking_id );
 		$wpdb->delete( $wpdb->prefix . 'bookings_package_redemptions', array( 'booking_id' => $booking_id ), array( '%d' ) );
