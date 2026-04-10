@@ -56,13 +56,21 @@ class Bookit_Brevo_Email_Provider implements Bookit_Email_Provider_Interface {
 	 */
 	private function get_template_id_for_email_type( string $email_type ): int {
 		$map = array(
-			'customer_confirmation'       => 'brevo_template_booking_confirmed',
-			'booking_confirmed'           => 'brevo_template_booking_confirmed',
-			'booking_cancelled'           => 'brevo_template_booking_cancelled',
-			'booking_rescheduled'         => 'brevo_template_booking_rescheduled',
-			'magic_link_cancel'           => 'brevo_template_magic_link_cancel',
-			'magic_link_reschedule'       => 'brevo_template_magic_link_reschedule',
-			'business_notification'       => 'brevo_template_business_notification',
+			'customer_confirmation'           => 'brevo_template_booking_confirmed',
+			'booking_confirmed'               => 'brevo_template_booking_confirmed',
+			'booking_cancelled'               => 'brevo_template_booking_cancelled',
+			'booking_rescheduled'             => 'brevo_template_booking_rescheduled',
+			'magic_link_cancel'               => 'brevo_template_magic_link_cancel',
+			'magic_link_reschedule'             => 'brevo_template_magic_link_reschedule',
+			'business_notification'           => 'brevo_template_business_notification',
+			'staff_new_booking_immediate'     => 'brevo_template_staff_new_booking',
+			'staff_reschedule_immediate'      => 'brevo_template_staff_reschedule',
+			'staff_cancellation_immediate'    => 'brevo_template_staff_cancellation',
+			'staff_reassigned_to_immediate'   => 'brevo_template_staff_reassigned_to',
+			'staff_reassigned_away_immediate' => 'brevo_template_staff_reassigned_away',
+			'staff_daily_digest'              => 'brevo_template_staff_daily_digest',
+			'staff_weekly_digest'             => 'brevo_template_staff_weekly_digest',
+			'staff_daily_schedule'            => 'brevo_template_staff_daily_schedule',
 		);
 
 		$setting_key = $map[ $email_type ] ?? '';
@@ -114,6 +122,11 @@ class Bookit_Brevo_Email_Provider implements Bookit_Email_Provider_Interface {
 			$template_id = 0;
 		}
 
+		// Build template params — strip internal dispatcher keys before forwarding.
+		$template_params = $params;
+		unset( $template_params['email_type'] );
+		unset( $template_params['template_id'] );
+
 		$request_values = array(
 			'sender' => new \Brevo\TransactionalEmails\Types\SendTransacEmailRequestSender(
 				array(
@@ -133,6 +146,9 @@ class Bookit_Brevo_Email_Provider implements Bookit_Email_Provider_Interface {
 
 		if ( $template_id > 0 ) {
 			$request_values['templateId'] = $template_id;
+			if ( ! empty( $template_params ) ) {
+				$request_values['params'] = $template_params;
+			}
 		} else {
 			$request_values['subject']     = $subject;
 			$request_values['htmlContent'] = $html_body;

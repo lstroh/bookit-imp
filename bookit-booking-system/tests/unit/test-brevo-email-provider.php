@@ -154,6 +154,88 @@ class Test_Brevo_Email_Provider extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @covers Bookit_Brevo_Email_Provider::send
+	 */
+	public function test_brevo_provider_passes_params_when_template_id_set() {
+		$this->set_setting( 'brevo_api_key', 'sk_test_brevo_key' );
+		$this->set_setting( 'brevo_template_booking_confirmed', '42' );
+
+		$provider = new Bookit_Brevo_Email_Provider_TestDouble();
+		$result   = $provider->send(
+			array(
+				'email' => 'test@example.com',
+				'name'  => 'Test',
+			),
+			'Subject Line',
+			'<p>HTML body</p>',
+			array(
+				'email_type'    => 'customer_confirmation',
+				'customer_name' => 'Jane Smith',
+				'service_name'  => 'Haircut',
+			)
+		);
+
+		$this->assertTrue( $result );
+		$this->assertNotNull( $provider->last_request );
+		$this->assertSame( 42, $provider->last_request->templateId );
+		$this->assertIsArray( $provider->last_request->params );
+		$this->assertSame( 'Jane Smith', $provider->last_request->params['customer_name'] );
+		$this->assertSame( 'Haircut', $provider->last_request->params['service_name'] );
+		$this->assertArrayNotHasKey( 'email_type', $provider->last_request->params );
+	}
+
+	/**
+	 * @covers Bookit_Brevo_Email_Provider::send
+	 */
+	public function test_brevo_provider_ignores_params_when_using_html_fallback() {
+		$this->set_setting( 'brevo_api_key', 'sk_test_brevo_key' );
+
+		$provider = new Bookit_Brevo_Email_Provider_TestDouble();
+		$result   = $provider->send(
+			array(
+				'email' => 'test@example.com',
+				'name'  => 'Test',
+			),
+			'Subject Line',
+			'<p>HTML body</p>',
+			array(
+				'email_type'    => 'customer_confirmation',
+				'customer_name' => 'Jane Smith',
+				'service_name'  => 'Haircut',
+			)
+		);
+
+		$this->assertTrue( $result );
+		$this->assertNotNull( $provider->last_request );
+		$this->assertNull( $provider->last_request->templateId );
+		$this->assertSame( '<p>HTML body</p>', $provider->last_request->htmlContent );
+		$this->assertNull( $provider->last_request->params );
+	}
+
+	/**
+	 * @covers Bookit_Brevo_Email_Provider::send
+	 */
+	public function test_brevo_provider_maps_staff_new_booking_to_template_setting() {
+		$this->set_setting( 'brevo_api_key', 'sk_test_brevo_key' );
+		$this->set_setting( 'brevo_template_staff_new_booking', '99' );
+
+		$provider = new Bookit_Brevo_Email_Provider_TestDouble();
+		$result   = $provider->send(
+			array(
+				'email' => 'staff@example.com',
+				'name'  => 'Staff',
+			),
+			'Subject',
+			'<p>HTML</p>',
+			array( 'email_type' => 'staff_new_booking_immediate' )
+		);
+
+		$this->assertTrue( $result );
+		$this->assertNotNull( $provider->last_request );
+		$this->assertSame( 99, $provider->last_request->templateId );
+	}
+
+	/**
 	 * Insert/update a single setting row in bookings_settings.
 	 *
 	 * @param string $key   Setting key.

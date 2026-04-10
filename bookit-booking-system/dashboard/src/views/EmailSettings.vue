@@ -167,6 +167,70 @@
                 />
                 <p class="text-xs text-gray-500 mt-1">Brevo template ID for business new-booking alerts</p>
               </div>
+
+              <!-- Staff Notification Templates -->
+              <div class="pt-4 border-t border-gray-200">
+                <h4 class="text-sm font-semibold text-gray-800 mb-3">Staff Notifications</h4>
+                <div class="space-y-4">
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Staff: New booking assigned</label>
+                    <input v-model="settings.brevo_template_staff_new_booking" type="number" min="1" step="1"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                    <p class="text-xs text-gray-500 mt-1">Brevo template ID for staff new booking notification</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Staff: Booking rescheduled</label>
+                    <input v-model="settings.brevo_template_staff_reschedule" type="number" min="1" step="1"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                    <p class="text-xs text-gray-500 mt-1">Brevo template ID for staff reschedule notification</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Staff: Booking cancelled</label>
+                    <input v-model="settings.brevo_template_staff_cancellation" type="number" min="1" step="1"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                    <p class="text-xs text-gray-500 mt-1">Brevo template ID for staff cancellation notification</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Staff: Booking assigned to you</label>
+                    <input v-model="settings.brevo_template_staff_reassigned_to" type="number" min="1" step="1"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                    <p class="text-xs text-gray-500 mt-1">Brevo template ID for staff reassignment (new assignee)</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Staff: Booking removed from schedule</label>
+                    <input v-model="settings.brevo_template_staff_reassigned_away" type="number" min="1" step="1"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                    <p class="text-xs text-gray-500 mt-1">Brevo template ID for staff reassignment (previous assignee)</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Staff: Daily digest</label>
+                    <input v-model="settings.brevo_template_staff_daily_digest" type="number" min="1" step="1"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                    <p class="text-xs text-gray-500 mt-1">Brevo template ID for staff daily event digest</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Staff: Weekly digest</label>
+                    <input v-model="settings.brevo_template_staff_weekly_digest" type="number" min="1" step="1"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                    <p class="text-xs text-gray-500 mt-1">Brevo template ID for staff weekly event digest</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Staff: Daily schedule summary</label>
+                    <input v-model="settings.brevo_template_staff_daily_schedule" type="number" min="1" step="1"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500" />
+                    <p class="text-xs text-gray-500 mt-1">Brevo template ID for staff daily schedule summary</p>
+                  </div>
+
+                </div>
+              </div>
             </div>
           </div>
 
@@ -606,10 +670,18 @@ const settings = ref({
   brevo_template_booking_rescheduled: '',
   brevo_template_magic_link_cancel: '',
   brevo_template_magic_link_reschedule: '',
-  brevo_template_business_notification: ''
+  brevo_template_business_notification: '',
+  brevo_template_staff_new_booking: '',
+  brevo_template_staff_reschedule: '',
+  brevo_template_staff_cancellation: '',
+  brevo_template_staff_reassigned_to: '',
+  brevo_template_staff_reassigned_away: '',
+  brevo_template_staff_daily_digest: '',
+  brevo_template_staff_weekly_digest: '',
+  brevo_template_staff_daily_schedule: ''
 })
 
-const SETTING_KEYS = 'smtp_enabled,smtp_host,smtp_port,smtp_encryption,smtp_username,smtp_password,smtp_from_name,smtp_from_email,email_provider,brevo_api_key,brevo_from_name,brevo_from_email,brevo_template_booking_confirmed,brevo_template_booking_cancelled,brevo_template_booking_rescheduled,brevo_template_magic_link_cancel,brevo_template_magic_link_reschedule,brevo_template_business_notification,sms_provider,brevo_sms_api_key,staff_digest_send_time,staff_schedule_send_time,staff_digest_weekly_day'
+const SETTING_KEYS = 'smtp_enabled,smtp_host,smtp_port,smtp_encryption,smtp_username,smtp_password,smtp_from_name,smtp_from_email,email_provider,brevo_api_key,brevo_from_name,brevo_from_email,brevo_template_booking_confirmed,brevo_template_booking_cancelled,brevo_template_booking_rescheduled,brevo_template_magic_link_cancel,brevo_template_magic_link_reschedule,brevo_template_business_notification,brevo_template_staff_new_booking,brevo_template_staff_reschedule,brevo_template_staff_cancellation,brevo_template_staff_reassigned_to,brevo_template_staff_reassigned_away,brevo_template_staff_daily_digest,brevo_template_staff_weekly_digest,brevo_template_staff_daily_schedule,sms_provider,brevo_sms_api_key,staff_digest_send_time,staff_schedule_send_time,staff_digest_weekly_day'
 
 const loadSettings = async () => {
   loading.value = true
