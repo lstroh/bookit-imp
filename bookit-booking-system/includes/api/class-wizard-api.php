@@ -656,9 +656,12 @@ class Bookit_Wizard_API {
 			return $payload;
 		}
 
-		$ics                = $payload['ics'];
-		$booking_ref_file   = $payload['booking_reference'];
-		$filename           = 'booking-' . $booking_ref_file . '.ics';
+		$ics              = $payload['ics'];
+		$booking_ref_file = sanitize_file_name( (string) $payload['booking_reference'] );
+		if ( '' === $booking_ref_file ) {
+			$booking_ref_file = 'booking-' . (string) $booking_id;
+		}
+		$filename = 'booking-' . $booking_ref_file . '.ics';
 
 		add_filter(
 			'rest_pre_serve_request',

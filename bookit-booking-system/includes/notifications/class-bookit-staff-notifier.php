@@ -222,10 +222,12 @@ class Bookit_Staff_Notifier {
 	}
 
 	private static function build_subject( string $email_type, array $booking ): string {
-		$customer = trim( (string) ( $booking['customer_first_name'] ?? '' ) . ' ' . (string) ( $booking['customer_last_name'] ?? '' ) );
-		$service  = (string) ( $booking['service_name'] ?? 'Service' );
-		$date     = self::format_booking_date( (string) ( $booking['booking_date'] ?? '' ) );
-		$time     = self::format_booking_time( (string) ( $booking['start_time'] ?? '' ) );
+		$customer = sanitize_text_field(
+			trim( (string) ( $booking['customer_first_name'] ?? '' ) . ' ' . (string) ( $booking['customer_last_name'] ?? '' ) )
+		);
+		$service = sanitize_text_field( (string) ( $booking['service_name'] ?? 'Service' ) );
+		$date    = sanitize_text_field( self::format_booking_date( (string) ( $booking['booking_date'] ?? '' ) ) );
+		$time    = sanitize_text_field( self::format_booking_time( (string) ( $booking['start_time'] ?? '' ) ) );
 
 		switch ( $email_type ) {
 			case 'staff_new_booking_immediate':
