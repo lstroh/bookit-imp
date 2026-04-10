@@ -45,6 +45,7 @@
             <file>./tests/unit/test-dashboard-staff-api.php</file>
             <file>./tests/unit/test-sprint6a-hooks.php</file>
             <file>./tests/unit/test-sprint6a-migrations.php</file>
+            <file>./tests/unit/test-google-calendar-migrations.php</file>
             <file>./tests/unit/test-sprint5a-schema-fixes.php</file>
             <file>./tests/unit/test-bulk-working-hours-api.php</file>
             <file>./tests/unit/test-profile-api.php</file>

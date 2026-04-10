@@ -22,6 +22,7 @@ Thumbs.db
 # Composer
 /vendor/
 booking-system/vendor/
+bookit-booking-system/vendor/
 composer.lock
 
 # PHPUnit
