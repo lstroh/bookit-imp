@@ -7732,6 +7732,9 @@ class Bookit_Dashboard_Bookings_API {
 			'reschedule_fee_amount',
 			'cancellation_policy_text',
 			'auto_refund_enabled',
+			'google_client_id',
+			'google_client_secret',
+			'google_calendar_fallback_enabled',
 			'bookit_confirmed_v2_url',
 		);
 	}
@@ -7785,6 +7788,7 @@ class Bookit_Dashboard_Bookings_API {
 			'paypal_client_secret',
 			'brevo_api_key',
 			'brevo_sms_api_key',
+			'google_client_secret',
 		);
 	}
 

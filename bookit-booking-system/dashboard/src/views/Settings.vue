@@ -109,6 +109,94 @@
       </div>
     </div>
 
+    <!-- Google Calendar OAuth credentials -->
+    <div v-if="isAdmin" class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">Google Calendar</h2>
+        <p class="text-sm text-gray-500 mt-1">
+          OAuth credentials for Google Calendar integration.
+        </p>
+      </div>
+
+      <div class="px-4 sm:px-6 py-6 space-y-4">
+        <div>
+          <label for="google-client-id" class="block text-sm font-medium text-gray-700 mb-1">
+            Google Client ID
+          </label>
+          <input
+            id="google-client-id"
+            v-model="googleClientId"
+            type="text"
+            autocomplete="off"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            placeholder="xxx.apps.googleusercontent.com"
+            :disabled="savingGoogleCalendar"
+          />
+        </div>
+
+        <div>
+          <label for="google-client-secret" class="block text-sm font-medium text-gray-700 mb-1">
+            Google Client Secret
+          </label>
+          <div class="relative">
+            <input
+              id="google-client-secret"
+              v-model="googleClientSecret"
+              :type="showGoogleClientSecret ? 'text' : 'password'"
+              :placeholder="googleClientSecretPlaceholder"
+              autocomplete="off"
+              class="w-full px-3 py-2 pr-16 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              :disabled="savingGoogleCalendar"
+              @input="onGoogleClientSecretInput"
+              @focus="onGoogleClientSecretFocus"
+            />
+            <button
+              type="button"
+              class="absolute inset-y-0 right-0 px-3 text-sm text-gray-600 hover:text-gray-900"
+              :disabled="savingGoogleCalendar"
+              @click="showGoogleClientSecret = !showGoogleClientSecret"
+            >
+              {{ showGoogleClientSecret ? '🙈' : '👁️' }}
+            </button>
+          </div>
+          <p class="text-xs text-gray-500 mt-1">
+            Stored securely. When a value is saved, the field stays empty until you enter a new secret.
+          </p>
+        </div>
+
+        <div class="flex items-start justify-between gap-4 pt-2 border-t border-gray-100">
+          <div>
+            <p id="google-fallback-label" class="text-sm font-medium text-gray-900">Business Fallback Calendar</p>
+            <p class="text-sm text-gray-500 mt-1">
+              When enabled, bookings assigned to staff without a connected Google Calendar will sync to the first admin calendar that is connected
+            </p>
+          </div>
+          <label class="flex items-center cursor-pointer shrink-0">
+            <input
+              id="google-fallback-toggle"
+              v-model="googleCalendarFallbackEnabled"
+              type="checkbox"
+              class="sr-only peer"
+              aria-labelledby="google-fallback-label"
+              :disabled="savingGoogleCalendar"
+            />
+            <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-disabled:opacity-50 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+          </label>
+        </div>
+
+        <div class="flex justify-end pt-2">
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+            :disabled="savingGoogleCalendar"
+            @click="saveGoogleCalendarSettings"
+          >
+            {{ savingGoogleCalendar ? 'Saving...' : 'Save Google Calendar Settings' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div v-if="isAdmin" class="bg-white rounded-lg shadow-sm border border-gray-200">
       <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
         <h2 class="text-lg font-semibold text-gray-900">Branding</h2>
@@ -237,8 +325,33 @@ const api = useApi()
 const { success: toastSuccess, error: toastError } = useToast()
 
 const HEX_PATTERN = /^#[0-9A-Fa-f]{6}$/
+const GOOGLE_CALENDAR_SETTING_KEYS =
+  'google_client_id,google_client_secret,google_calendar_fallback_enabled'
+const SAVED_SENTINEL = 'SAVED'
+
 const currentUserRole = window.BOOKIT_DASHBOARD?.staff?.role || ''
 const isAdmin = computed(() => currentUserRole === 'admin' || currentUserRole === 'bookit_admin')
+
+const googleClientId = ref('')
+const googleClientSecret = ref('')
+const googleClientSecretSaved = ref(false)
+const showGoogleClientSecret = ref(false)
+const googleCalendarFallbackEnabled = ref(false)
+const savingGoogleCalendar = ref(false)
+
+const googleClientSecretPlaceholder = computed(() =>
+  googleClientSecretSaved.value ? '••••••••••••' : 'GOCSPX-...'
+)
+
+const onGoogleClientSecretInput = () => {
+  googleClientSecretSaved.value = false
+}
+
+const onGoogleClientSecretFocus = () => {
+  if (googleClientSecretSaved.value) {
+    googleClientSecretSaved.value = false
+  }
+}
 
 const settings = ref({
   bookit_confirmed_v2_url: ''
@@ -344,6 +457,60 @@ const loadPackagesEnabled = async () => {
     }
   } catch {
     // Fall back to false
+  }
+}
+
+const loadGoogleCalendarSettings = async () => {
+  if (!isAdmin.value) {
+    return
+  }
+
+  try {
+    const response = await api.get(`settings?keys=${GOOGLE_CALENDAR_SETTING_KEYS}`)
+    if (response.data.success && response.data.settings) {
+      const s = response.data.settings
+      googleClientId.value = String(s.google_client_id ?? '')
+      googleClientSecretSaved.value = s.google_client_secret === SAVED_SENTINEL
+      googleClientSecret.value = googleClientSecretSaved.value
+        ? ''
+        : String(s.google_client_secret ?? '')
+      googleCalendarFallbackEnabled.value = Boolean(s.google_calendar_fallback_enabled ?? false)
+    }
+  } catch {
+    googleClientId.value = ''
+    googleClientSecret.value = ''
+    googleClientSecretSaved.value = false
+    googleCalendarFallbackEnabled.value = false
+  }
+}
+
+const saveGoogleCalendarSettings = async () => {
+  savingGoogleCalendar.value = true
+
+  try {
+    const payload = {
+      google_client_id: googleClientId.value || '',
+      google_calendar_fallback_enabled: Boolean(googleCalendarFallbackEnabled.value)
+    }
+
+    if ((googleClientSecret.value || '').trim() !== '' || !googleClientSecretSaved.value) {
+      payload.google_client_secret = googleClientSecret.value || ''
+    }
+
+    const response = await api.post('settings', {
+      settings: payload
+    })
+
+    if (response.data.success) {
+      toastSuccess('Settings saved successfully.')
+      await loadGoogleCalendarSettings()
+    } else {
+      toastError(response.data.message || 'Failed to save settings.')
+    }
+  } catch (err) {
+    toastError(err.message || 'Failed to save settings.')
+  } finally {
+    savingGoogleCalendar.value = false
   }
 }
 
@@ -473,6 +640,7 @@ onMounted(async () => {
   await loadShowStaffEarnings()
   await loadBookingConfirmedUrl()
   await loadPackagesEnabled()
+  await loadGoogleCalendarSettings()
   await loadBranding()
 })
 </script>

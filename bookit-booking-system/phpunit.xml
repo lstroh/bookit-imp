@@ -52,6 +52,7 @@
             <file>./tests/unit/test-settings-email-api.php</file>
             <file>./tests/unit/test-cancellation-policy-settings.php</file>
             <file>./tests/unit/test-payment-settings.php</file>
+            <file>./tests/unit/test-google-calendar-settings.php</file>
             <file>./tests/unit/test-deposit-settings.php</file>
             <file>./tests/unit/test-reorder-api.php</file>
             <file>./tests/integration/test-wizard-flow.php</file>
