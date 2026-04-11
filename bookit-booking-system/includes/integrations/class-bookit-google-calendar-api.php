@@ -52,6 +52,9 @@ class Bookit_Google_Calendar_Api {
 		$client->setAccessType( 'offline' );
 		$client->setPrompt( 'consent' );
 		$client->addScope( self::get_calendar_events_scope() );
+		// OpenID Connect — ensures id_token (with email) in the token response.
+		$client->addScope( 'openid' );
+		$client->addScope( 'email' );
 
 		return (string) $client->createAuthUrl();
 	}
@@ -66,13 +69,8 @@ class Bookit_Google_Calendar_Api {
 	public static function handle_callback( string $code, string $state ): int {
 		$state = wp_unslash( $state );
 
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
-		error_log( '[Bookit OAuth Debug] callback received - state: ' . substr( $state, 0, 50 ) . ' code present: ' . ( ! empty( $code ) ? 'yes' : 'no' ) );
-
 		$decoded = base64_decode( $state, true );
 		if ( false === $decoded || '' === $decoded ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
-			error_log( '[Bookit OAuth Debug] reason: invalid_state_encoding' );
 			Bookit_Audit_Logger::log(
 				'google_calendar.oauth_failed',
 				'staff',
@@ -86,8 +84,6 @@ class Bookit_Google_Calendar_Api {
 
 		$parts = explode( ':', $decoded );
 		if ( count( $parts ) !== 4 ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
-			error_log( '[Bookit OAuth Debug] reason: invalid_state_format - parts: ' . count( $parts ) );
 			Bookit_Audit_Logger::log(
 				'google_calendar.oauth_failed',
 				'staff',
@@ -106,8 +102,6 @@ class Bookit_Google_Calendar_Api {
 		$staff_id     = (int) $staff_id_str;
 
 		if ( $staff_id < 1 ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
-			error_log( '[Bookit OAuth Debug] reason: invalid_state_staff - staff_id_str: ' . $staff_id_str );
 			Bookit_Audit_Logger::log(
 				'google_calendar.oauth_failed',
 				'staff',
@@ -120,8 +114,6 @@ class Bookit_Google_Calendar_Api {
 		}
 
 		if ( time() > (int) $expires_str ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
-			error_log( '[Bookit OAuth Debug] reason: state_expired - expires: ' . $expires_str . ' now: ' . time() );
 			Bookit_Audit_Logger::log(
 				'google_calendar.oauth_failed',
 				'staff',
@@ -137,8 +129,6 @@ class Bookit_Google_Calendar_Api {
 		$expected_sig = hash_hmac( 'sha256', $payload, wp_salt( 'auth' ) );
 
 		if ( ! hash_equals( $expected_sig, $received_sig ) ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
-			error_log( '[Bookit OAuth Debug] reason: invalid_state_sig' );
 			Bookit_Audit_Logger::log(
 				'google_calendar.oauth_failed',
 				'staff',
@@ -152,8 +142,6 @@ class Bookit_Google_Calendar_Api {
 
 		$client = self::create_configured_client();
 		if ( ! $client ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
-			error_log( '[Bookit OAuth Debug] reason: oauth_client_not_configured' );
 			Bookit_Audit_Logger::log(
 				'google_calendar.oauth_failed',
 				'staff',
@@ -167,8 +155,6 @@ class Bookit_Google_Calendar_Api {
 
 		$token = static::exchange_auth_code_for_tokens( $client, $code );
 		if ( isset( $token['error'] ) ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
-			error_log( '[Bookit OAuth Debug] token response: ' . print_r( $token, true ) );
 			Bookit_Audit_Logger::log(
 				'google_calendar.oauth_failed',
 				'staff',
@@ -184,8 +170,6 @@ class Bookit_Google_Calendar_Api {
 		$refresh_token = isset( $token['refresh_token'] ) ? (string) $token['refresh_token'] : '';
 		$expires_in    = isset( $token['expires_in'] ) ? (int) $token['expires_in'] : 3600;
 		if ( '' === $access_token ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
-			error_log( '[Bookit OAuth Debug] token response (missing access_token): ' . print_r( $token, true ) );
 			Bookit_Audit_Logger::log(
 				'google_calendar.oauth_failed',
 				'staff',
@@ -197,22 +181,7 @@ class Bookit_Google_Calendar_Api {
 			return 0;
 		}
 
-		$client->setAccessToken( $token );
-
-		$email = static::fetch_google_account_email( $client );
-		if ( '' === $email ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
-			error_log( '[Bookit OAuth Debug] reason: could_not_fetch_google_email' );
-			Bookit_Audit_Logger::log(
-				'google_calendar.oauth_failed',
-				'staff',
-				$staff_id,
-				array(
-					'notes' => 'Could not read Google account email.',
-				)
-			);
-			return 0;
-		}
+		$email = static::fetch_google_account_email( $token );
 
 		$expiry_mysql = date( 'Y-m-d H:i:s', time() + max( 1, $expires_in ) );
 
@@ -225,7 +194,7 @@ class Bookit_Google_Calendar_Api {
 				'google_oauth_access_token'  => Bookit_Encryption::encrypt( $access_token ),
 				'google_oauth_refresh_token'   => '' !== $refresh_token ? Bookit_Encryption::encrypt( $refresh_token ) : null,
 				'google_oauth_token_expiry'    => $expiry_mysql,
-				'google_calendar_email'        => $email,
+				'google_calendar_email'        => '' !== $email ? $email : null,
 				'google_calendar_connected'    => 1,
 				'updated_at'                   => current_time( 'mysql' ),
 			),
@@ -235,8 +204,6 @@ class Bookit_Google_Calendar_Api {
 		);
 
 		if ( false === $updated ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
-			error_log( '[Bookit OAuth Debug] reason: database_update_failed - last_error: ' . $wpdb->last_error );
 			Bookit_Audit_Logger::log(
 				'google_calendar.oauth_failed',
 				'staff',
@@ -309,45 +276,45 @@ class Bookit_Google_Calendar_Api {
 	}
 
 	/**
-	 * Load primary Google account email via OAuth2 userinfo (test override).
+	 * Read Google account email from the OpenID Connect id_token (JWT) in the token response.
 	 *
-	 * Uses the userinfo endpoint so we do not require a separate apiclient-services
-	 * package beyond Calendar (Composer cleanup does not ship a standalone Oauth2 service).
+	 * No outbound HTTP — avoids firewalls blocking Google APIs from the server.
+	 * Missing or invalid id_token/email is non-fatal; connection still succeeds with a null email.
 	 *
-	 * @param \Google\Client $client Authorized client.
-	 * @return string Email or empty.
+	 * @param array $token Token array from fetchAccessTokenWithAuthCode().
+	 * @return string Sanitized email or empty string.
 	 */
-	protected static function fetch_google_account_email( \Google\Client $client ): string {
-		$token = $client->getAccessToken();
-		if ( empty( $token['access_token'] ) || ! is_string( $token['access_token'] ) ) {
+	protected static function fetch_google_account_email( array $token ): string {
+		try {
+			if ( empty( $token['id_token'] ) || ! is_string( $token['id_token'] ) ) {
+				return '';
+			}
+
+			$parts = explode( '.', $token['id_token'] );
+			if ( count( $parts ) !== 3 ) {
+				return '';
+			}
+
+			$b64 = str_replace( array( '-', '_' ), array( '+', '/' ), $parts[1] );
+			$pad = strlen( $b64 ) % 4;
+			if ( $pad > 0 ) {
+				$b64 .= str_repeat( '=', 4 - $pad );
+			}
+
+			$payload = base64_decode( $b64, true );
+			if ( false === $payload || '' === $payload ) {
+				return '';
+			}
+
+			$data = json_decode( $payload, true );
+			if ( ! is_array( $data ) || empty( $data['email'] ) ) {
+				return '';
+			}
+
+			return sanitize_email( (string) $data['email'] );
+		} catch ( \Exception $e ) {
 			return '';
 		}
-
-		$response = wp_remote_get(
-			'https://www.googleapis.com/oauth2/v2/userinfo',
-			array(
-				'timeout' => 15,
-				'headers' => array(
-					'Authorization' => 'Bearer ' . $token['access_token'],
-				),
-			)
-		);
-
-		if ( is_wp_error( $response ) ) {
-			return '';
-		}
-
-		$code = wp_remote_retrieve_response_code( $response );
-		if ( $code < 200 || $code >= 300 ) {
-			return '';
-		}
-
-		$data = json_decode( wp_remote_retrieve_body( $response ), true );
-		if ( ! is_array( $data ) || empty( $data['email'] ) ) {
-			return '';
-		}
-
-		return sanitize_email( (string) $data['email'] );
 	}
 
 	/**

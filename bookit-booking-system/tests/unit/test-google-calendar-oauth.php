@@ -7,9 +7,39 @@
  */
 
 /**
- * Test double: skip real Google HTTP for token + userinfo.
+ * Test double: mock token exchange; id_token carries email for JWT parsing.
  */
 class Bookit_Google_Calendar_Api_TestDouble extends Bookit_Google_Calendar_Api {
+
+	/**
+	 * @param \Google\Client $client Client.
+	 * @param string         $code  Code.
+	 * @return array
+	 */
+	protected static function exchange_auth_code_for_tokens( \Google\Client $client, string $code ): array {
+		$payload_json = wp_json_encode(
+			array(
+				'email' => 'sarah@gmail.com',
+				'sub'   => 'oauth-test-sub',
+			)
+		);
+		$header_b64  = rtrim( strtr( base64_encode( '{"alg":"HS256","typ":"JWT"}' ), '+/', '-_' ), '=' );
+		$payload_b64 = rtrim( strtr( base64_encode( (string) $payload_json ), '+/', '-_' ), '=' );
+		$id_token    = $header_b64 . '.' . $payload_b64 . '.mock-signature';
+
+		return array(
+			'access_token'  => 'RAW_ACCESS_TOKEN_PLAIN',
+			'refresh_token' => 'RAW_REFRESH_TOKEN_PLAIN',
+			'expires_in'    => 3600,
+			'id_token'      => $id_token,
+		);
+	}
+}
+
+/**
+ * Token response without id_token — email extraction returns empty; flow still completes.
+ */
+class Bookit_Google_Calendar_Api_TestDouble_No_Id_Token extends Bookit_Google_Calendar_Api {
 
 	/**
 	 * @param \Google\Client $client Client.
@@ -22,14 +52,6 @@ class Bookit_Google_Calendar_Api_TestDouble extends Bookit_Google_Calendar_Api {
 			'refresh_token' => 'RAW_REFRESH_TOKEN_PLAIN',
 			'expires_in'    => 3600,
 		);
-	}
-
-	/**
-	 * @param \Google\Client $client Client.
-	 * @return string
-	 */
-	protected static function fetch_google_account_email( \Google\Client $client ): string {
-		return 'sarah@gmail.com';
 	}
 }
 
@@ -241,6 +263,63 @@ class Test_Google_Calendar_OAuth extends WP_UnitTestCase {
 		$this->assertNull( $row['google_oauth_token_expiry'] );
 		$this->assertNull( $row['google_calendar_email'] );
 		$this->assertEquals( '0', (string) $row['google_calendar_connected'] );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar_Api::fetch_google_account_email
+	 */
+	public function test_email_extracted_from_id_token(): void {
+		$payload_json = wp_json_encode(
+			array(
+				'email' => 'jwt-user@example.com',
+				'sub'   => '123',
+			)
+		);
+		$header_b64  = rtrim( strtr( base64_encode( '{"alg":"HS256","typ":"JWT"}' ), '+/', '-_' ), '=' );
+		$payload_b64 = rtrim( strtr( base64_encode( (string) $payload_json ), '+/', '-_' ), '=' );
+		$id_token    = $header_b64 . '.' . $payload_b64 . '.sig';
+
+		$method = new ReflectionMethod( Bookit_Google_Calendar_Api::class, 'fetch_google_account_email' );
+		$method->setAccessible( true );
+		$email = $method->invoke( null, array( 'id_token' => $id_token ) );
+
+		$this->assertSame( 'jwt-user@example.com', $email );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar_Api::fetch_google_account_email
+	 */
+	public function test_missing_id_token_returns_empty_string(): void {
+		$method = new ReflectionMethod( Bookit_Google_Calendar_Api::class, 'fetch_google_account_email' );
+		$method->setAccessible( true );
+		$email = $method->invoke( null, array( 'access_token' => 'only-access' ) );
+
+		$this->assertSame( '', $email );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar_Api::handle_callback
+	 */
+	public function test_could_not_fetch_email_does_not_block_connection(): void {
+		$this->seed_google_oauth_settings();
+
+		$staff_id = $this->create_test_staff();
+		$state    = $this->build_signed_oauth_state( $staff_id, time() + 600 );
+
+		$result = Bookit_Google_Calendar_Api_TestDouble_No_Id_Token::handle_callback( 'fake-code', $state );
+		$this->assertEquals( $staff_id, $result );
+
+		global $wpdb;
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT google_calendar_connected, google_calendar_email FROM {$wpdb->prefix}bookings_staff WHERE id = %d",
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		$this->assertEquals( '1', (string) $row['google_calendar_connected'] );
+		$this->assertTrue( null === $row['google_calendar_email'] || '' === $row['google_calendar_email'] );
 	}
 
 	/**
