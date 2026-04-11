@@ -14,6 +14,12 @@
       <div v-if="saveError" role="alert" aria-live="assertive" class="bg-red-50 border border-red-200 rounded p-3">
         <p class="text-sm text-red-800">{{ saveError }}</p>
       </div>
+      <div v-if="googleOauthSuccess" role="status" aria-live="polite" class="bg-green-50 border border-green-200 rounded p-3">
+        <p class="text-sm text-green-800">&#10003; {{ googleOauthSuccess }}</p>
+      </div>
+      <div v-if="googleOauthError" role="alert" aria-live="assertive" class="bg-red-50 border border-red-200 rounded p-3">
+        <p class="text-sm text-red-800">{{ googleOauthError }}</p>
+      </div>
 
       <!-- Profile Information Card -->
       <div class="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -387,6 +393,55 @@
         </form>
       </div>
 
+      <!-- Google Calendar -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">Google Calendar</h2>
+          <p class="text-sm text-gray-500 mt-1">
+            Sync your bookings to your Google Calendar automatically
+          </p>
+        </div>
+        <div class="px-4 sm:px-6 py-6 space-y-4">
+          <div v-if="googleCalError" role="alert" class="bg-red-50 border border-red-200 rounded p-3">
+            <p class="text-sm text-red-800">{{ googleCalError }}</p>
+          </div>
+
+          <div v-if="profile.google_calendar_connected" class="space-y-3">
+            <div class="flex items-start gap-2">
+              <span class="mt-1 h-2 w-2 rounded-full bg-green-500 flex-shrink-0" aria-hidden="true" />
+              <div>
+                <p class="text-sm font-medium text-gray-900">
+                  Connected<span v-if="profile.google_calendar_email"> ({{ profile.google_calendar_email }})</span>
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              :disabled="googleCalLoading"
+              class="px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 disabled:opacity-50"
+              @click="disconnectGoogleCalendar"
+            >
+              {{ googleCalLoading ? 'Working…' : 'Disconnect' }}
+            </button>
+          </div>
+
+          <div v-else class="space-y-3">
+            <div class="flex items-start gap-2">
+              <span class="mt-1 h-2 w-2 rounded-full border-2 border-gray-300 flex-shrink-0" aria-hidden="true" />
+              <p class="text-sm text-gray-700">Not connected</p>
+            </div>
+            <button
+              type="button"
+              :disabled="googleCalLoading"
+              class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+              @click="connectGoogleCalendar"
+            >
+              {{ googleCalLoading ? 'Connecting…' : 'Connect Google Calendar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- My Stats Section -->
       <div v-if="showStats" class="bg-white rounded-lg shadow-sm border border-gray-200">
         <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
@@ -428,9 +483,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useApi } from '../composables/useApi'
 
 const api = useApi()
+const route = useRoute()
+const router = useRouter()
 
 const loading = ref(false)
 const savingProfile = ref(false)
@@ -449,6 +507,10 @@ const stats = ref(null)
 const savingPrefs = ref(false)
 const prefsSuccess = ref('')
 const prefsError = ref('')
+const googleOauthSuccess = ref('')
+const googleOauthError = ref('')
+const googleCalLoading = ref(false)
+const googleCalError = ref('')
 
 const notificationPrefs = ref({
   new_booking: 'immediate',
@@ -465,7 +527,9 @@ const profile = ref({
   title: '',
   bio: '',
   photo_url: '',
-  role: ''
+  role: '',
+  google_calendar_connected: false,
+  google_calendar_email: ''
 })
 
 const passwordForm = ref({
@@ -492,6 +556,12 @@ const loadProfile = async () => {
 
       if (response.data.profile.notification_preferences) {
         notificationPrefs.value = response.data.profile.notification_preferences
+      }
+      if (typeof response.data.profile.google_calendar_connected !== 'undefined') {
+        profile.value.google_calendar_connected = Boolean(response.data.profile.google_calendar_connected)
+      }
+      if (typeof response.data.profile.google_calendar_email !== 'undefined') {
+        profile.value.google_calendar_email = response.data.profile.google_calendar_email || ''
       }
     }
   } catch (err) {
@@ -703,6 +773,50 @@ const getInitials = (fullName) => {
   return (names[0][0] + names[names.length - 1][0]).toUpperCase()
 }
 
+const clearGoogleOAuthQueryParams = () => {
+  const q = { ...route.query }
+  delete q.google_connected
+  delete q.google_error
+  router.replace({ path: route.path, query: q })
+}
+
+const connectGoogleCalendar = async () => {
+  googleCalError.value = ''
+  googleCalLoading.value = true
+  try {
+    const restBase = window.BOOKIT_DASHBOARD?.restBase || ''
+    const response = await api.get(`${restBase}google-calendar/auth-url`)
+    const url = response.data?.url
+    if (url) {
+      window.location.href = url
+    } else {
+      googleCalError.value = 'Could not start Google Calendar connection.'
+    }
+  } catch (err) {
+    googleCalError.value = err.message || 'Failed to connect Google Calendar.'
+  } finally {
+    googleCalLoading.value = false
+  }
+}
+
+const disconnectGoogleCalendar = async () => {
+  googleCalError.value = ''
+  googleCalLoading.value = true
+  try {
+    const response = await api.post('profile/google-calendar/disconnect')
+    if (response.data?.success) {
+      profile.value.google_calendar_connected = false
+      profile.value.google_calendar_email = ''
+    } else {
+      googleCalError.value = 'Could not disconnect Google Calendar.'
+    }
+  } catch (err) {
+    googleCalError.value = err.message || 'Failed to disconnect.'
+  } finally {
+    googleCalLoading.value = false
+  }
+}
+
 const getColorForInitials = (name) => {
   const colors = [
     '#3B82F6', '#8B5CF6', '#EC4899', '#10B981',
@@ -719,6 +833,18 @@ const getColorForInitials = (name) => {
 
 onMounted(() => {
   loadProfile()
+    .then(() => {
+      if (route.query.google_connected === '1') {
+        googleOauthSuccess.value = 'Google Calendar connected successfully'
+        clearGoogleOAuthQueryParams()
+        setTimeout(() => { googleOauthSuccess.value = '' }, 5000)
+      }
+      if (route.query.google_error === '1') {
+        googleOauthError.value = 'Google Calendar connection failed. Please try again.'
+        clearGoogleOAuthQueryParams()
+        setTimeout(() => { googleOauthError.value = '' }, 8000)
+      }
+    })
   loadStats()
 })
 </script>

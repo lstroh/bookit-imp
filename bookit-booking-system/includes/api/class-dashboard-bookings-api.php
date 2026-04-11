@@ -6824,7 +6824,8 @@ class Bookit_Dashboard_Bookings_API {
 		$staff = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT
-					id, email, first_name, last_name, phone, photo_url, bio, title, role
+					id, email, first_name, last_name, phone, photo_url, bio, title, role,
+					google_calendar_connected, google_calendar_email
 				FROM {$wpdb->prefix}bookings_staff
 				WHERE id = %d AND deleted_at IS NULL",
 				$current_staff['id']
@@ -6842,6 +6843,11 @@ class Bookit_Dashboard_Bookings_API {
 
 		$staff['id']        = (int) $staff['id'];
 		$staff['full_name'] = $staff['first_name'] . ' ' . $staff['last_name'];
+
+		$staff['google_calendar_connected'] = ! empty( $staff['google_calendar_connected'] );
+		$staff['google_calendar_email']       = ! empty( $staff['google_calendar_email'] )
+			? (string) $staff['google_calendar_email']
+			: '';
 
 		// Decode notification preferences with defaults.
 		$raw_prefs = $wpdb->get_var(

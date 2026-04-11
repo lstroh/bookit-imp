@@ -1,0 +1,304 @@
+<?php
+/**
+ * Google Calendar OAuth (per staff) — encryption, callback, REST, profile fields.
+ *
+ * @package    Bookit_Booking_System
+ * @subpackage Tests
+ */
+
+/**
+ * Test double: skip real Google HTTP for token + userinfo.
+ */
+class Bookit_Google_Calendar_Api_TestDouble extends Bookit_Google_Calendar_Api {
+
+	/**
+	 * @param \Google\Client $client Client.
+	 * @param string         $code  Code.
+	 * @return array
+	 */
+	protected static function exchange_auth_code_for_tokens( \Google\Client $client, string $code ): array {
+		return array(
+			'access_token'  => 'RAW_ACCESS_TOKEN_PLAIN',
+			'refresh_token' => 'RAW_REFRESH_TOKEN_PLAIN',
+			'expires_in'    => 3600,
+		);
+	}
+
+	/**
+	 * @param \Google\Client $client Client.
+	 * @return string
+	 */
+	protected static function fetch_google_account_email( \Google\Client $client ): string {
+		return 'sarah@gmail.com';
+	}
+}
+
+/**
+ * @covers Bookit_Encryption
+ * @covers Bookit_Google_Calendar_Api
+ * @covers Bookit_Google_Calendar_Rest_Controller
+ * @covers Bookit_Dashboard_Bookings_API::get_my_profile
+ */
+class Test_Google_Calendar_OAuth extends WP_UnitTestCase {
+
+	/**
+	 * REST namespace.
+	 *
+	 * @var string
+	 */
+	private $namespace = 'bookit/v1';
+
+	/**
+	 * Set up.
+	 */
+	public function setUp(): void {
+		parent::setUp();
+
+		global $wpdb;
+
+		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_staff" );
+		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_settings" );
+
+		$_SESSION = array();
+
+		do_action( 'rest_api_init' );
+	}
+
+	/**
+	 * Tear down.
+	 */
+	public function tearDown(): void {
+		global $wpdb;
+
+		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_staff" );
+		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_settings" );
+
+		$_SESSION = array();
+
+		parent::tearDown();
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar_Rest_Controller::is_authenticated
+	 */
+	public function test_auth_url_endpoint_requires_authentication(): void {
+		$_SESSION = array();
+
+		$request  = new WP_REST_Request( 'GET', '/' . $this->namespace . '/google-calendar/auth-url' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertTrue( $response->is_error() );
+		$this->assertEquals( 401, $response->get_status() );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar_Api::handle_callback
+	 */
+	public function test_callback_validates_state_nonce(): void {
+		$this->seed_google_oauth_settings();
+
+		$staff_id = $this->create_test_staff();
+		$state    = 'invalidnonce:' . $staff_id;
+
+		$result = Bookit_Google_Calendar_Api::handle_callback( 'fake-code', $state );
+		$this->assertEquals( 0, $result );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar_Api::handle_callback
+	 */
+	public function test_callback_stores_encrypted_tokens(): void {
+		$this->seed_google_oauth_settings();
+
+		$staff_id = $this->create_test_staff();
+		$nonce    = wp_create_nonce( 'google_oauth_' . $staff_id );
+		$state    = $nonce . ':' . $staff_id;
+
+		$result = Bookit_Google_Calendar_Api_TestDouble::handle_callback( 'fake-code', $state );
+		$this->assertEquals( $staff_id, $result );
+
+		global $wpdb;
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT google_oauth_access_token, google_oauth_refresh_token, google_calendar_connected, google_calendar_email FROM {$wpdb->prefix}bookings_staff WHERE id = %d",
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		$this->assertNotEmpty( $row['google_oauth_access_token'] );
+		$this->assertNotEquals( 'RAW_ACCESS_TOKEN_PLAIN', $row['google_oauth_access_token'] );
+		$this->assertNotEmpty( $row['google_oauth_refresh_token'] );
+		$this->assertNotEquals( 'RAW_REFRESH_TOKEN_PLAIN', $row['google_oauth_refresh_token'] );
+		$this->assertEquals( '1', (string) $row['google_calendar_connected'] );
+		$this->assertEquals( 'sarah@gmail.com', $row['google_calendar_email'] );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar_Api::disconnect
+	 */
+	public function test_disconnect_clears_token_columns(): void {
+		global $wpdb;
+
+		$staff_id = $this->create_test_staff();
+
+		$wpdb->update(
+			$wpdb->prefix . 'bookings_staff',
+			array(
+				'google_oauth_access_token'  => 'x',
+				'google_oauth_refresh_token' => 'y',
+				'google_oauth_token_expiry'  => current_time( 'mysql' ),
+				'google_calendar_email'      => 'keep@example.com',
+				'google_calendar_connected'  => 1,
+			),
+			array( 'id' => $staff_id ),
+			array( '%s', '%s', '%s', '%s', '%d' ),
+			array( '%d' )
+		);
+
+		Bookit_Google_Calendar_Api::disconnect( $staff_id );
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT google_oauth_access_token, google_oauth_refresh_token, google_oauth_token_expiry, google_calendar_email, google_calendar_connected FROM {$wpdb->prefix}bookings_staff WHERE id = %d",
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		$this->assertNull( $row['google_oauth_access_token'] );
+		$this->assertNull( $row['google_oauth_refresh_token'] );
+		$this->assertNull( $row['google_oauth_token_expiry'] );
+		$this->assertNull( $row['google_calendar_email'] );
+		$this->assertEquals( '0', (string) $row['google_calendar_connected'] );
+	}
+
+	/**
+	 * @covers Bookit_Encryption::encrypt
+	 * @covers Bookit_Encryption::decrypt
+	 */
+	public function test_encryption_round_trip(): void {
+		$plain = 'secret-token-value-123';
+		$enc   = Bookit_Encryption::encrypt( $plain );
+		$this->assertNotSame( $plain, $enc );
+		$this->assertSame( $plain, Bookit_Encryption::decrypt( $enc ) );
+	}
+
+	/**
+	 * @covers Bookit_Dashboard_Bookings_API::get_my_profile
+	 */
+	public function test_get_profile_includes_google_calendar_fields(): void {
+		global $wpdb;
+
+		$staff_id = $this->create_test_staff();
+		$wpdb->update(
+			$wpdb->prefix . 'bookings_staff',
+			array(
+				'google_calendar_connected' => 1,
+				'google_calendar_email'     => 'gcal@test.com',
+			),
+			array( 'id' => $staff_id ),
+			array( '%d', '%s' ),
+			array( '%d' )
+		);
+
+		$this->login_as( $staff_id, 'staff' );
+
+		$request  = new WP_REST_Request( 'GET', '/' . $this->namespace . '/dashboard/profile' );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertEquals( 200, $response->get_status() );
+		$profile = $response->get_data()['profile'];
+		$this->assertArrayHasKey( 'google_calendar_connected', $profile );
+		$this->assertArrayHasKey( 'google_calendar_email', $profile );
+		$this->assertTrue( (bool) $profile['google_calendar_connected'] );
+		$this->assertEquals( 'gcal@test.com', $profile['google_calendar_email'] );
+	}
+
+	/**
+	 * Insert Google OAuth client settings.
+	 *
+	 * @return void
+	 */
+	private function seed_google_oauth_settings(): void {
+		global $wpdb;
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_settings',
+			array(
+				'setting_key'   => 'google_client_id',
+				'setting_value' => 'test-client-id.apps.googleusercontent.com',
+				'setting_type'  => 'string',
+			),
+			array( '%s', '%s', '%s' )
+		);
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_settings',
+			array(
+				'setting_key'   => 'google_client_secret',
+				'setting_value' => 'test-client-secret',
+				'setting_type'  => 'string',
+			),
+			array( '%s', '%s', '%s' )
+		);
+	}
+
+	/**
+	 * @param int    $staff_id Staff ID.
+	 * @param string $role     Role.
+	 */
+	private function login_as( $staff_id, $role = 'staff' ): void {
+		global $wpdb;
+
+		$staff = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, email, first_name, last_name FROM {$wpdb->prefix}bookings_staff WHERE id = %d",
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		$_SESSION['staff_id']      = (int) $staff['id'];
+		$_SESSION['staff_email']   = $staff['email'];
+		$_SESSION['staff_role']    = $role;
+		$_SESSION['staff_name']    = trim( $staff['first_name'] . ' ' . $staff['last_name'] );
+		$_SESSION['is_logged_in']  = true;
+		$_SESSION['last_activity'] = time();
+	}
+
+	/**
+	 * @param array $args Args.
+	 * @return int
+	 */
+	private function create_test_staff( $args = array() ) {
+		global $wpdb;
+
+		$defaults = array(
+			'email'                    => 'staff-' . wp_generate_password( 6, false ) . '@test.com',
+			'password_hash'            => password_hash( 'password123', PASSWORD_BCRYPT ),
+			'first_name'               => 'Test',
+			'last_name'                => 'Staff',
+			'phone'                    => '07700900000',
+			'photo_url'                => null,
+			'bio'                      => 'Test bio',
+			'title'                    => 'Therapist',
+			'role'                     => 'staff',
+			'google_calendar_id'       => null,
+			'is_active'                => 1,
+			'display_order'            => 0,
+			'notification_preferences' => null,
+			'created_at'               => current_time( 'mysql' ),
+			'updated_at'               => current_time( 'mysql' ),
+			'deleted_at'               => null,
+		);
+
+		$data = wp_parse_args( $args, $defaults );
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_staff',
+			$data,
+			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s', '%s' )
+		);
+		return (int) $wpdb->insert_id;
+	}
+}

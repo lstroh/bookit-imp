@@ -131,6 +131,12 @@ class Bookit_Loader {
 		require_once BOOKIT_PLUGIN_DIR . 'includes/booking/class-booking-creator.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-stripe-webhook.php';
 
+		// Google Calendar OAuth (per staff) — encryption + REST.
+		require_once BOOKIT_PLUGIN_DIR . 'includes/utils/class-bookit-encryption.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/integrations/class-bookit-google-calendar-api.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-bookit-google-calendar-rest-controller.php';
+		Bookit_Google_Calendar_Rest_Controller::init();
+
 		// Dashboard Bookings API (Today's Schedule).
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-dashboard-bookings-api.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-audit-log-api.php';
