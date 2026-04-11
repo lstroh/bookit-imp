@@ -92,16 +92,87 @@ class Test_Google_Calendar_OAuth extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Build HMAC-signed OAuth state (same algorithm as get_auth_url()).
+	 *
+	 * @param int $staff_id Staff ID.
+	 * @param int $expires  Unix expiry time for the state.
+	 * @return string Base64 state parameter.
+	 */
+	private function build_signed_oauth_state( int $staff_id, int $expires ): string {
+		$token   = bin2hex( random_bytes( 16 ) );
+		$payload = $staff_id . ':' . $token . ':' . $expires;
+		$sig     = hash_hmac( 'sha256', $payload, wp_salt( 'auth' ) );
+
+		return base64_encode( $payload . ':' . $sig );
+	}
+
+	/**
 	 * @covers Bookit_Google_Calendar_Api::handle_callback
 	 */
-	public function test_callback_validates_state_nonce(): void {
+	public function test_callback_rejects_invalid_base64_state(): void {
 		$this->seed_google_oauth_settings();
 
-		$staff_id = $this->create_test_staff();
-		$state    = 'invalidnonce:' . $staff_id;
+		$result = Bookit_Google_Calendar_Api::handle_callback( 'fake-code', '%%%not-valid-base64%%%' );
+		$this->assertEquals( 0, $result );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar_Api::handle_callback
+	 */
+	public function test_callback_rejects_malformed_state_wrong_part_count(): void {
+		$this->seed_google_oauth_settings();
+
+		// Three colon-separated segments after decode — need exactly four.
+		$state = base64_encode( '1:tok:123' );
 
 		$result = Bookit_Google_Calendar_Api::handle_callback( 'fake-code', $state );
 		$this->assertEquals( 0, $result );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar_Api::handle_callback
+	 */
+	public function test_callback_rejects_expired_oauth_state(): void {
+		$this->seed_google_oauth_settings();
+
+		$staff_id = $this->create_test_staff();
+		$state    = $this->build_signed_oauth_state( $staff_id, time() - 1 );
+
+		$result = Bookit_Google_Calendar_Api::handle_callback( 'fake-code', $state );
+		$this->assertEquals( 0, $result );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar_Api::handle_callback
+	 */
+	public function test_callback_rejects_tampered_oauth_signature(): void {
+		$this->seed_google_oauth_settings();
+
+		$staff_id = $this->create_test_staff();
+		$state    = $this->build_signed_oauth_state( $staff_id, time() + 600 );
+		$decoded  = base64_decode( $state, true );
+		$this->assertNotFalse( $decoded );
+		$parts           = explode( ':', $decoded );
+		$parts[3]        = 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef';
+		$tampered_state  = base64_encode( implode( ':', $parts ) );
+
+		$result = Bookit_Google_Calendar_Api::handle_callback( 'fake-code', $tampered_state );
+		$this->assertEquals( 0, $result );
+	}
+
+	/**
+	 * Valid signed state succeeds through validation (full token path mocked).
+	 *
+	 * @covers Bookit_Google_Calendar_Api::handle_callback
+	 */
+	public function test_callback_accepts_valid_signed_state(): void {
+		$this->seed_google_oauth_settings();
+
+		$staff_id = $this->create_test_staff();
+		$state    = $this->build_signed_oauth_state( $staff_id, time() + 600 );
+
+		$result = Bookit_Google_Calendar_Api_TestDouble::handle_callback( 'fake-code', $state );
+		$this->assertEquals( $staff_id, $result );
 	}
 
 	/**
@@ -111,8 +182,7 @@ class Test_Google_Calendar_OAuth extends WP_UnitTestCase {
 		$this->seed_google_oauth_settings();
 
 		$staff_id = $this->create_test_staff();
-		$nonce    = wp_create_nonce( 'google_oauth_' . $staff_id );
-		$state    = $nonce . ':' . $staff_id;
+		$state    = $this->build_signed_oauth_state( $staff_id, time() + 600 );
 
 		$result = Bookit_Google_Calendar_Api_TestDouble::handle_callback( 'fake-code', $state );
 		$this->assertEquals( $staff_id, $result );

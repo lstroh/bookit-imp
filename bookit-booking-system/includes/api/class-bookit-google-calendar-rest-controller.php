@@ -68,7 +68,9 @@ class Bookit_Google_Calendar_Rest_Controller {
 					'state' => array(
 						'required'          => false,
 						'type'              => 'string',
-						'sanitize_callback' => 'sanitize_text_field',
+						'sanitize_callback' => static function ( $param ) {
+							return is_string( $param ) ? wp_unslash( $param ) : (string) $param;
+						},
 					),
 				),
 			)

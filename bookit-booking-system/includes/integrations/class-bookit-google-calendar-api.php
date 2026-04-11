@@ -42,8 +42,11 @@ class Bookit_Google_Calendar_Api {
 			return '';
 		}
 
-		$nonce = wp_create_nonce( 'google_oauth_' . $staff_id );
-		$state = $nonce . ':' . $staff_id;
+		$token   = bin2hex( random_bytes( 16 ) );
+		$expires = time() + 600; // 10 minutes.
+		$payload = $staff_id . ':' . $token . ':' . $expires;
+		$sig     = hash_hmac( 'sha256', $payload, wp_salt( 'auth' ) );
+		$state   = base64_encode( $payload . ':' . $sig );
 
 		$client->setState( $state );
 		$client->setAccessType( 'offline' );
@@ -57,28 +60,100 @@ class Bookit_Google_Calendar_Api {
 	 * OAuth callback: exchange code, store encrypted tokens, set connected flag.
 	 *
 	 * @param string $code  Authorization code.
-	 * @param string $state State parameter (nonce:staff_id).
+	 * @param string $state State parameter (base64 HMAC payload).
 	 * @return int Staff ID on success, 0 on failure.
 	 */
 	public static function handle_callback( string $code, string $state ): int {
-		$state = sanitize_text_field( $state );
-		$parts = explode( ':', $state, 2 );
-		if ( count( $parts ) < 2 ) {
+		$state = wp_unslash( $state );
+
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
+		error_log( '[Bookit OAuth Debug] callback received - state: ' . substr( $state, 0, 50 ) . ' code present: ' . ( ! empty( $code ) ? 'yes' : 'no' ) );
+
+		$decoded = base64_decode( $state, true );
+		if ( false === $decoded || '' === $decoded ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
+			error_log( '[Bookit OAuth Debug] reason: invalid_state_encoding' );
+			Bookit_Audit_Logger::log(
+				'google_calendar.oauth_failed',
+				'staff',
+				0,
+				array(
+					'notes' => 'invalid_state_encoding',
+				)
+			);
 			return 0;
 		}
 
-		$nonce    = $parts[0];
-		$staff_id = absint( $parts[1] );
+		$parts = explode( ':', $decoded );
+		if ( count( $parts ) !== 4 ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
+			error_log( '[Bookit OAuth Debug] reason: invalid_state_format - parts: ' . count( $parts ) );
+			Bookit_Audit_Logger::log(
+				'google_calendar.oauth_failed',
+				'staff',
+				0,
+				array(
+					'notes' => 'invalid_state_format',
+				)
+			);
+			return 0;
+		}
+
+		$staff_id_str = $parts[0];
+		$token_str    = $parts[1];
+		$expires_str  = $parts[2];
+		$received_sig = $parts[3];
+		$staff_id     = (int) $staff_id_str;
+
 		if ( $staff_id < 1 ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
+			error_log( '[Bookit OAuth Debug] reason: invalid_state_staff - staff_id_str: ' . $staff_id_str );
+			Bookit_Audit_Logger::log(
+				'google_calendar.oauth_failed',
+				'staff',
+				0,
+				array(
+					'notes' => 'invalid_state_staff',
+				)
+			);
 			return 0;
 		}
 
-		if ( ! wp_verify_nonce( $nonce, 'google_oauth_' . $staff_id ) ) {
+		if ( time() > (int) $expires_str ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
+			error_log( '[Bookit OAuth Debug] reason: state_expired - expires: ' . $expires_str . ' now: ' . time() );
+			Bookit_Audit_Logger::log(
+				'google_calendar.oauth_failed',
+				'staff',
+				$staff_id,
+				array(
+					'notes' => 'state_expired',
+				)
+			);
+			return 0;
+		}
+
+		$payload      = $staff_id . ':' . $token_str . ':' . $expires_str;
+		$expected_sig = hash_hmac( 'sha256', $payload, wp_salt( 'auth' ) );
+
+		if ( ! hash_equals( $expected_sig, $received_sig ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
+			error_log( '[Bookit OAuth Debug] reason: invalid_state_sig' );
+			Bookit_Audit_Logger::log(
+				'google_calendar.oauth_failed',
+				'staff',
+				$staff_id,
+				array(
+					'notes' => 'invalid_state_sig',
+				)
+			);
 			return 0;
 		}
 
 		$client = self::create_configured_client();
 		if ( ! $client ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
+			error_log( '[Bookit OAuth Debug] reason: oauth_client_not_configured' );
 			Bookit_Audit_Logger::log(
 				'google_calendar.oauth_failed',
 				'staff',
@@ -92,6 +167,8 @@ class Bookit_Google_Calendar_Api {
 
 		$token = static::exchange_auth_code_for_tokens( $client, $code );
 		if ( isset( $token['error'] ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
+			error_log( '[Bookit OAuth Debug] token response: ' . print_r( $token, true ) );
 			Bookit_Audit_Logger::log(
 				'google_calendar.oauth_failed',
 				'staff',
@@ -107,6 +184,8 @@ class Bookit_Google_Calendar_Api {
 		$refresh_token = isset( $token['refresh_token'] ) ? (string) $token['refresh_token'] : '';
 		$expires_in    = isset( $token['expires_in'] ) ? (int) $token['expires_in'] : 3600;
 		if ( '' === $access_token ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
+			error_log( '[Bookit OAuth Debug] token response (missing access_token): ' . print_r( $token, true ) );
 			Bookit_Audit_Logger::log(
 				'google_calendar.oauth_failed',
 				'staff',
@@ -122,6 +201,8 @@ class Bookit_Google_Calendar_Api {
 
 		$email = static::fetch_google_account_email( $client );
 		if ( '' === $email ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
+			error_log( '[Bookit OAuth Debug] reason: could_not_fetch_google_email' );
 			Bookit_Audit_Logger::log(
 				'google_calendar.oauth_failed',
 				'staff',
@@ -154,6 +235,8 @@ class Bookit_Google_Calendar_Api {
 		);
 
 		if ( false === $updated ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary OAuth debug logging.
+			error_log( '[Bookit OAuth Debug] reason: database_update_failed - last_error: ' . $wpdb->last_error );
 			Bookit_Audit_Logger::log(
 				'google_calendar.oauth_failed',
 				'staff',
