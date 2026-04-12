@@ -85,6 +85,25 @@ class Bookit_Google_Calendar_Rest_Controller {
 				'permission_callback' => array( $this, 'is_authenticated' ),
 			)
 		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/staff/(?P<id>\d+)/google-calendar/disconnect',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'admin_disconnect_staff_google_calendar' ),
+				'permission_callback' => array( 'Bookit_Dashboard_Bookings_API', 'check_admin_permission_callback' ),
+				'args'                => array(
+					'id' => array(
+						'required'          => true,
+						'type'              => 'integer',
+						'validate_callback' => static function ( $param ) {
+							return is_numeric( $param ) && (int) $param > 0;
+						},
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -182,6 +201,56 @@ class Bookit_Google_Calendar_Rest_Controller {
 		}
 
 		Bookit_Google_Calendar_Api::disconnect( (int) $staff['id'] );
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+			)
+		);
+	}
+
+	/**
+	 * POST dashboard/staff/{id}/google-calendar/disconnect — admin disconnects a staff member's Google Calendar.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function admin_disconnect_staff_google_calendar( $request ) {
+		$raw_id = $request->get_param( 'id' );
+		if ( null === $raw_id || '' === $raw_id || ! is_numeric( $raw_id ) ) {
+			return new WP_Error(
+				'invalid_staff_id',
+				__( 'A valid staff ID is required.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$staff_id = (int) $raw_id;
+		if ( $staff_id < 1 ) {
+			return new WP_Error(
+				'invalid_staff_id',
+				__( 'A valid staff ID is required.', 'bookit-booking-system' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		global $wpdb;
+		$exists = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_staff WHERE id = %d AND deleted_at IS NULL",
+				$staff_id
+			)
+		);
+
+		if ( ! $exists ) {
+			return new WP_Error(
+				'staff_not_found',
+				__( 'Staff member not found.', 'bookit-booking-system' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		Bookit_Google_Calendar_Api::disconnect( $staff_id );
 
 		return rest_ensure_response(
 			array(

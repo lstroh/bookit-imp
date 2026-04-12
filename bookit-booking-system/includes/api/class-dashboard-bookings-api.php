@@ -1592,6 +1592,15 @@ class Bookit_Dashboard_Bookings_API {
 	 * @return bool|WP_Error
 	 */
 	public function check_admin_permission() {
+		return self::check_admin_permission_callback();
+	}
+
+	/**
+	 * Static permission callback for REST routes outside this class instance.
+	 *
+	 * @return bool|WP_Error
+	 */
+	public static function check_admin_permission_callback() {
 		// Load auth classes if not loaded.
 		if ( ! class_exists( 'Bookit_Session' ) ) {
 			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'class-bookit-session.php';
@@ -2090,6 +2099,11 @@ class Bookit_Dashboard_Bookings_API {
 			);
 		}
 
+		// Never expose OAuth token material in API responses.
+		unset( $staff['google_oauth_access_token'] );
+		unset( $staff['google_oauth_refresh_token'] );
+		unset( $staff['google_oauth_token_expiry'] );
+
 		// Get service assignments with custom pricing.
 		$service_assignments = $wpdb->get_results(
 			$wpdb->prepare(
@@ -2140,6 +2154,13 @@ class Bookit_Dashboard_Bookings_API {
 
 		// Remove password hash.
 		unset( $staff['password_hash'] );
+
+		// Google Calendar — safe summary fields for admin staff GET (tokens never exposed).
+		$staff['google_calendar_connected'] = (bool) (int) ( $staff['google_calendar_connected'] ?? 0 );
+		$gcal_email                           = $staff['google_calendar_email'] ?? null;
+		$staff['google_calendar_email']     = ( null !== $gcal_email && '' !== (string) $gcal_email )
+			? (string) $gcal_email
+			: null;
 
 		return rest_ensure_response(
 			array(

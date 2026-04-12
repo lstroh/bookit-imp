@@ -440,6 +440,53 @@
             </div>
           </div>
 
+          <!-- Google Calendar connection (edit mode, admin view — read-only status + admin disconnect) -->
+          <div v-if="isEditing" class="border-t border-gray-200 pt-4">
+            <h3 class="text-sm font-semibold text-gray-900 mb-3">Google Calendar</h3>
+            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span
+                    v-if="googleCalendarConnected"
+                    class="inline-block h-2.5 w-2.5 rounded-full bg-green-500 flex-shrink-0"
+                    aria-hidden="true"
+                  />
+                  <span
+                    v-else
+                    class="inline-block h-2.5 w-2.5 rounded-full bg-gray-300 flex-shrink-0"
+                    aria-hidden="true"
+                  />
+                  <div class="text-sm text-gray-800 min-w-0">
+                    <template v-if="googleCalendarConnected">
+                      <span class="font-medium text-green-800">Connected</span>
+                      <span v-if="googleCalendarEmail" class="text-gray-600">
+                        ({{ googleCalendarEmail }})
+                      </span>
+                    </template>
+                    <template v-else>
+                      <span class="text-gray-600">Not connected</span>
+                    </template>
+                  </div>
+                </div>
+                <button
+                  v-if="googleCalendarConnected"
+                  type="button"
+                  :disabled="disconnectingGoogleCalendar"
+                  @click="disconnectGoogleCalendar"
+                  class="px-3 py-1.5 text-sm font-medium text-red-700 bg-white border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {{ disconnectingGoogleCalendar ? 'Disconnecting...' : 'Disconnect' }}
+                </button>
+              </div>
+              <p v-if="googleCalendarDisconnectError" role="alert" class="text-sm text-red-700">
+                {{ googleCalendarDisconnectError }}
+              </p>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+              Staff members can connect their Google Calendar from their profile page
+            </p>
+          </div>
+
           <!-- Google Calendar ID -->
           <div>
             <label for="staff-gcal-id" class="block text-sm font-medium text-gray-700 mb-1">
@@ -599,6 +646,13 @@ const newPassword = ref('')
 const sendPasswordEmail = ref(true)
 const resettingPassword = ref(false)
 
+const disconnectingGoogleCalendar = ref(false)
+const googleCalendarDisconnectError = ref('')
+
+/** Google OAuth summary from GET staff (explicit refs so the UI updates reliably). */
+const googleCalendarConnected = ref(false)
+const googleCalendarEmail = ref(null)
+
 const formData = ref({
   email: '',
   password: '',
@@ -689,6 +743,14 @@ const populateForm = (member) => {
   if (member.notification_preferences) {
     staffNotificationPrefs.value = { ...staffNotificationPrefs.value, ...member.notification_preferences }
   }
+
+  const rawGcal = member.google_calendar_connected
+  googleCalendarConnected.value =
+    rawGcal === true ||
+    rawGcal === 1 ||
+    rawGcal === '1'
+  const em = member.google_calendar_email
+  googleCalendarEmail.value = em != null && String(em).trim() !== '' ? String(em) : null
 }
 
 // Handle service checkbox toggle.
@@ -785,6 +847,40 @@ const resetPassword = async () => {
   }
 }
 
+// Admin: disconnect staff member's Google Calendar (OAuth tokens cleared server-side).
+const disconnectGoogleCalendar = async () => {
+  if (!props.staffMember?.id || disconnectingGoogleCalendar.value) {
+    return
+  }
+
+  disconnectingGoogleCalendar.value = true
+  googleCalendarDisconnectError.value = ''
+
+  try {
+    const response = await api.post(`staff/${props.staffMember.id}/google-calendar/disconnect`, {})
+
+    if (response.data?.success) {
+      googleCalendarConnected.value = false
+      googleCalendarEmail.value = null
+      if (staffDetails.value) {
+        staffDetails.value = {
+          ...staffDetails.value,
+          google_calendar_connected: false,
+          google_calendar_email: null
+        }
+      }
+    } else {
+      googleCalendarDisconnectError.value = response.data?.message || 'Failed to disconnect Google Calendar.'
+    }
+  } catch (err) {
+    console.error('Error disconnecting Google Calendar:', err)
+    googleCalendarDisconnectError.value = err.message || 'Failed to disconnect Google Calendar.'
+    toastError(googleCalendarDisconnectError.value)
+  } finally {
+    disconnectingGoogleCalendar.value = false
+  }
+}
+
 // Save staff member (create or update).
 const saveStaff = async () => {
   if (!isValid.value || saving.value) return
@@ -859,6 +955,9 @@ onMounted(async () => {
 
   if (props.staffMember) {
     await loadStaffDetails(props.staffMember.id)
+  } else {
+    googleCalendarConnected.value = false
+    googleCalendarEmail.value = null
   }
 })
 
