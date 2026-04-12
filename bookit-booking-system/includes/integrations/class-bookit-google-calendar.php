@@ -211,7 +211,7 @@ class Bookit_Google_Calendar {
 			)
 		);
 
-		return is_string( $name ) ? $name : '';
+		return is_string( $name ) ? trim( $name ) : '';
 	}
 
 	/**
@@ -282,6 +282,17 @@ class Bookit_Google_Calendar {
 		if ( '' !== $company_name ) {
 			$event->setLocation( $company_name );
 		}
+
+		$reminder = new \Google\Service\Calendar\EventReminder();
+		$reminder->setMethod( 'popup' );
+		$reminder->setMinutes( 15 );
+
+		$reminders = new \Google\Service\Calendar\EventReminders();
+		$reminders->setUseDefault( false );
+		$reminders->setOverrides( array( $reminder ) );
+
+		$event->setReminders( $reminders );
+		$event->setColorId( '7' );
 
 		return $event;
 	}

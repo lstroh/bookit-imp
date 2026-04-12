@@ -273,6 +273,165 @@ class Test_Google_Calendar_Sync extends WP_UnitTestCase {
 	/**
 	 * @covers Bookit_Google_Calendar::create_event
 	 */
+	/**
+	 * @covers Bookit_Google_Calendar::build_calendar_event_from_booking
+	 */
+	public function test_event_summary_format(): void {
+		$booking = array(
+			'staff_id'          => 1,
+			'date'              => '2026-06-15',
+			'start_time'        => '14:30:00',
+			'end_time'          => '15:30:00',
+			'service_name'      => 'Deep Tissue',
+			'customer_first'    => 'Sam',
+			'customer_last'     => 'Rivera',
+			'customer_phone'    => '07700900111',
+			'booking_reference' => 'BKTEST-AB12',
+			'special_requests'  => '',
+			'company_name'      => 'Studio',
+		);
+
+		$event = $this->invoke_build_calendar_event_from_booking( $booking );
+		$this->assertSame( 'Deep Tissue — Sam Rivera', $event->getSummary() );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar::build_calendar_event_from_booking
+	 */
+	public function test_event_description_omits_special_requests_when_empty(): void {
+		$booking = array(
+			'staff_id'          => 1,
+			'date'              => '2026-06-15',
+			'start_time'        => '14:30:00',
+			'end_time'          => '15:30:00',
+			'service_name'      => 'Cut',
+			'customer_first'    => 'A',
+			'customer_last'     => 'B',
+			'customer_phone'    => '07700900222',
+			'booking_reference' => 'BKTEST-XY99',
+			'special_requests'  => '',
+			'company_name'      => '',
+		);
+
+		$event = $this->invoke_build_calendar_event_from_booking( $booking );
+		$desc = (string) $event->getDescription();
+		$this->assertStringNotContainsString( 'Special requests:', $desc );
+
+		$booking['special_requests'] = '   ';
+		$event2 = $this->invoke_build_calendar_event_from_booking( $booking );
+		$this->assertStringNotContainsString( 'Special requests:', (string) $event2->getDescription() );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar::build_calendar_event_from_booking
+	 */
+	public function test_event_description_includes_special_requests_when_present(): void {
+		$booking = array(
+			'staff_id'          => 1,
+			'date'              => '2026-06-15',
+			'start_time'        => '14:30:00',
+			'end_time'          => '15:30:00',
+			'service_name'      => 'Cut',
+			'customer_first'    => 'A',
+			'customer_last'     => 'B',
+			'customer_phone'    => '07700900222',
+			'booking_reference' => 'BKTEST-XY99',
+			'special_requests'  => 'Ground floor only',
+			'company_name'      => '',
+		);
+
+		$event = $this->invoke_build_calendar_event_from_booking( $booking );
+		$this->assertStringContainsString( 'Special requests: Ground floor only', (string) $event->getDescription() );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar::build_calendar_event_from_booking
+	 */
+	public function test_event_has_15_minute_popup_reminder(): void {
+		$booking = array(
+			'staff_id'          => 1,
+			'date'              => '2026-06-15',
+			'start_time'        => '14:30:00',
+			'end_time'          => '15:30:00',
+			'service_name'      => 'S',
+			'customer_first'    => 'X',
+			'customer_last'     => 'Y',
+			'customer_phone'    => '1',
+			'booking_reference' => 'R',
+			'special_requests'  => '',
+			'company_name'      => '',
+		);
+
+		$event   = $this->invoke_build_calendar_event_from_booking( $booking );
+		$reminds = $event->getReminders();
+		$this->assertInstanceOf( \Google\Service\Calendar\EventReminders::class, $reminds );
+		$this->assertFalse( (bool) $reminds->getUseDefault() );
+		$overrides = $reminds->getOverrides();
+		$this->assertIsArray( $overrides );
+		$this->assertCount( 1, $overrides );
+		$this->assertSame( 'popup', $overrides[0]->getMethod() );
+		$this->assertSame( 15, (int) $overrides[0]->getMinutes() );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar::build_calendar_event_from_booking
+	 */
+	public function test_event_color_is_blue(): void {
+		$booking = array(
+			'staff_id'          => 1,
+			'date'              => '2026-06-15',
+			'start_time'        => '14:30:00',
+			'end_time'          => '15:30:00',
+			'service_name'      => 'S',
+			'customer_first'    => 'X',
+			'customer_last'     => 'Y',
+			'customer_phone'    => '1',
+			'booking_reference' => 'R',
+			'special_requests'  => '',
+			'company_name'      => '',
+		);
+
+		$event = $this->invoke_build_calendar_event_from_booking( $booking );
+		$this->assertSame( '7', $event->getColorId() );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar::build_calendar_event_from_booking
+	 */
+	public function test_event_location_omitted_when_business_name_empty(): void {
+		$booking = array(
+			'staff_id'          => 1,
+			'date'              => '2026-06-15',
+			'start_time'        => '14:30:00',
+			'end_time'          => '15:30:00',
+			'service_name'      => 'S',
+			'customer_first'    => 'X',
+			'customer_last'     => 'Y',
+			'customer_phone'    => '1',
+			'booking_reference' => 'R',
+			'special_requests'  => '',
+			'company_name'      => '',
+		);
+
+		$event = $this->invoke_build_calendar_event_from_booking( $booking );
+		$loc = $event->getLocation();
+		$this->assertTrue( null === $loc || '' === $loc, 'Location must be unset when business name is empty.' );
+	}
+
+	/**
+	 * @param array $booking Booking payload for calendar event builder.
+	 * @return \Google\Service\Calendar\Event
+	 */
+	private function invoke_build_calendar_event_from_booking( array $booking ): \Google\Service\Calendar\Event {
+		$ref    = new \ReflectionClass( Bookit_Google_Calendar::class );
+		$method = $ref->getMethod( 'build_calendar_event_from_booking' );
+		$method->setAccessible( true );
+		return $method->invoke( null, $booking );
+	}
+
+	/**
+	 * @covers Bookit_Google_Calendar::create_event
+	 */
 	public function test_create_event_returns_event_id(): void {
 		global $wpdb;
 
