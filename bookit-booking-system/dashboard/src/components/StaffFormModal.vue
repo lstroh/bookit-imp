@@ -442,49 +442,106 @@
 
           <!-- Google Calendar connection (edit mode, admin view — read-only status + admin disconnect) -->
           <div v-if="isEditing" class="border-t border-gray-200 pt-4">
-            <h3 class="text-sm font-semibold text-gray-900 mb-3">Google Calendar</h3>
-            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-3">
-              <div class="flex flex-wrap items-center justify-between gap-3">
-                <div class="flex items-center gap-2 min-w-0">
-                  <span
-                    v-if="googleCalendarConnected"
-                    class="inline-block h-2.5 w-2.5 rounded-full bg-green-500 flex-shrink-0"
-                    aria-hidden="true"
-                  />
-                  <span
-                    v-else
-                    class="inline-block h-2.5 w-2.5 rounded-full bg-gray-300 flex-shrink-0"
-                    aria-hidden="true"
-                  />
-                  <div class="text-sm text-gray-800 min-w-0">
-                    <template v-if="googleCalendarConnected">
-                      <span class="font-medium text-green-800">Connected</span>
-                      <span v-if="googleCalendarEmail" class="text-gray-600">
-                        ({{ googleCalendarEmail }})
-                      </span>
-                    </template>
-                    <template v-else>
-                      <span class="text-gray-600">Not connected</span>
-                    </template>
+            <!-- Connected -->
+            <div
+              v-if="googleCalendarConnected"
+              class="rounded-lg border border-green-200 bg-green-50 p-4 shadow-sm"
+            >
+              <div class="flex gap-3">
+                <span
+                  class="mt-1.5 h-4 w-4 shrink-0 rounded-full bg-green-500 ring-2 ring-green-200"
+                  aria-hidden="true"
+                />
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <svg
+                          class="h-5 w-5 shrink-0 text-green-700"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          aria-hidden="true"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                        <h3 class="text-base font-semibold text-gray-900">
+                          Google Calendar
+                        </h3>
+                      </div>
+                      <p class="mt-2 text-base font-semibold text-green-700">
+                        Connected
+                      </p>
+                      <p class="mt-1 text-sm break-all">
+                        <span v-if="googleCalendarEmail" class="text-gray-600">
+                          ({{ googleCalendarEmail }})
+                        </span>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      :disabled="disconnectingGoogleCalendar"
+                      class="ml-auto shrink-0 px-3 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg shadow-sm hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      @click="disconnectGoogleCalendar"
+                    >
+                      {{ disconnectingGoogleCalendar ? 'Disconnecting...' : 'Disconnect' }}
+                    </button>
                   </div>
+                  <p
+                    v-if="googleCalendarDisconnectError"
+                    role="alert"
+                    class="mt-3 text-sm text-red-800"
+                  >
+                    {{ googleCalendarDisconnectError }}
+                  </p>
                 </div>
-                <button
-                  v-if="googleCalendarConnected"
-                  type="button"
-                  :disabled="disconnectingGoogleCalendar"
-                  @click="disconnectGoogleCalendar"
-                  class="px-3 py-1.5 text-sm font-medium text-red-700 bg-white border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {{ disconnectingGoogleCalendar ? 'Disconnecting...' : 'Disconnect' }}
-                </button>
               </div>
-              <p v-if="googleCalendarDisconnectError" role="alert" class="text-sm text-red-700">
-                {{ googleCalendarDisconnectError }}
-              </p>
             </div>
-            <p class="text-xs text-gray-500 mt-2">
-              Staff members can connect their Google Calendar from their profile page
-            </p>
+
+            <!-- Not connected -->
+            <div
+              v-else
+              class="rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm"
+            >
+              <div class="flex gap-3">
+                <span
+                  class="mt-1.5 h-4 w-4 shrink-0 rounded-full border-2 border-gray-300 bg-white"
+                  aria-hidden="true"
+                />
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <svg
+                      class="h-5 w-5 shrink-0 text-gray-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                    <h3 class="text-base font-semibold text-gray-900">
+                      Google Calendar
+                    </h3>
+                  </div>
+                  <p class="mt-2 text-base text-gray-500">
+                    Not connected
+                  </p>
+                  <p class="mt-1 text-xs italic text-gray-500">
+                    Staff can connect from their profile
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Google Calendar ID -->
