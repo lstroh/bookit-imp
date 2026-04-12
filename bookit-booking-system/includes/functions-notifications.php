@@ -66,3 +66,27 @@ function bookit_enqueue_email(
 
 	return $queue_id;
 }
+
+/**
+ * Enqueue a Google Calendar sync job for async processing.
+ *
+ * @param string $operation  'create', 'update', or 'delete'
+ * @param int    $booking_id Booking ID
+ * @return void
+ */
+function bookit_enqueue_calendar_sync( string $operation, int $booking_id ): void {
+	if ( function_exists( 'as_schedule_single_action' ) ) {
+		as_schedule_single_action(
+			time() + 1,
+			'bookit_process_calendar_sync',
+			array( 'operation' => $operation, 'booking_id' => $booking_id ),
+			'bookit-calendar'
+		);
+	} else {
+		wp_schedule_single_event(
+			time() + 1,
+			'bookit_process_calendar_sync',
+			array( $operation, $booking_id )
+		);
+	}
+}

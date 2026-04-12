@@ -134,6 +134,7 @@ class Bookit_Loader {
 		// Google Calendar OAuth (per staff) — encryption + REST.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/utils/class-bookit-encryption.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/integrations/class-bookit-google-calendar-api.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/integrations/class-bookit-google-calendar.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/api/class-bookit-google-calendar-rest-controller.php';
 		Bookit_Google_Calendar_Rest_Controller::init();
 
@@ -374,6 +375,14 @@ class Bookit_Loader {
 			function( int $queue_id ) {
 				Bookit_Notification_Dispatcher::process_email_queue_item( $queue_id );
 			}
+		);
+
+		// Google Calendar sync processor -- fired by Action Scheduler or WP-Cron.
+		add_action(
+			'bookit_process_calendar_sync',
+			array( 'Bookit_Google_Calendar', 'process_sync_job' ),
+			10,
+			2
 		);
 
 		// Cancel pending queue items when a booking is cancelled or rescheduled.
