@@ -456,6 +456,9 @@ class Bookit_Google_Calendar {
 		try {
 			$client = static::get_client_for_staff( $staff_id );
 			if ( null === $client ) {
+				$client = static::get_client_for_calendar_delete_fallback();
+			}
+			if ( null === $client ) {
 				return;
 			}
 
@@ -534,13 +537,53 @@ class Bookit_Google_Calendar {
 	}
 
 	/**
+	 * OAuth client for delete when the assigned staff has no connection but fallback is enabled (same rules as sync enqueue).
+	 *
+	 * @param int $assigned_staff_id Booking staff ID (already failed direct OAuth).
+	 * @return \Google\Client|null
+	 */
+	private static function get_client_for_calendar_delete_fallback(): ?\Google\Client {
+		global $wpdb;
+
+		$fallback_raw = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT setting_value FROM {$wpdb->prefix}bookings_settings WHERE setting_key = %s",
+				'google_calendar_fallback_enabled'
+			)
+		);
+
+		$s = is_string( $fallback_raw ) ? strtolower( trim( $fallback_raw ) ) : (string) (int) $fallback_raw;
+		if ( ! in_array( $s, array( '1', 'true', 'yes', 'on' ), true ) ) {
+			return null;
+		}
+
+		$table   = $wpdb->prefix . 'bookings_staff';
+		$admin_id = $wpdb->get_var(
+			"SELECT id FROM {$table}
+			WHERE role = 'admin'
+			AND google_calendar_connected = 1
+			AND deleted_at IS NULL
+			AND is_active = 1
+			ORDER BY id ASC
+			LIMIT 1"
+		);
+
+		if ( null === $admin_id ) {
+			return null;
+		}
+
+		return static::get_client_for_staff( (int) $admin_id );
+	}
+
+	/**
 	 * Action Scheduler / cron entry: run one calendar sync job.
 	 *
-	 * @param string $operation  create|update|delete.
-	 * @param int    $booking_id Booking ID.
+	 * @param string   $operation           create|update|delete.
+	 * @param int      $booking_id          Booking ID.
+	 * @param int|null $calendar_staff_id   When set, OAuth runs as this staff (e.g. fallback admin); booking row staff_id is unchanged.
 	 * @return void
 	 */
-	public static function process_sync_job( string $operation, int $booking_id ): void {
+	public static function process_sync_job( string $operation, int $booking_id, ?int $calendar_staff_id = null ): void {
 		switch ( $operation ) {
 			case 'create':
 				$booking = static::load_booking_for_calendar_sync( $booking_id );
@@ -552,6 +595,9 @@ class Bookit_Google_Calendar {
 						array( 'notes' => 'booking_not_found' )
 					);
 					return;
+				}
+				if ( null !== $calendar_staff_id && $calendar_staff_id > 0 ) {
+					$booking['staff_id'] = $calendar_staff_id;
 				}
 				static::create_event( $booking_id, $booking );
 				break;
@@ -565,6 +611,9 @@ class Bookit_Google_Calendar {
 						array( 'notes' => 'booking_not_found' )
 					);
 					return;
+				}
+				if ( null !== $calendar_staff_id && $calendar_staff_id > 0 ) {
+					$booking['staff_id'] = $calendar_staff_id;
 				}
 				static::update_event( $booking_id, $booking );
 				break;

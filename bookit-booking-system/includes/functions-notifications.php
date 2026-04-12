@@ -70,23 +70,38 @@ function bookit_enqueue_email(
 /**
  * Enqueue a Google Calendar sync job for async processing.
  *
- * @param string $operation  'create', 'update', or 'delete'
- * @param int    $booking_id Booking ID
+ * @param string   $operation           'create', 'update', or 'delete'.
+ * @param int      $booking_id          Booking ID.
+ * @param int|null $calendar_staff_id   Staff ID whose Google OAuth should run the job (fallback admin when assigned staff has no calendar). Null lets the processor use the booking’s staff_id only.
  * @return void
  */
-function bookit_enqueue_calendar_sync( string $operation, int $booking_id ): void {
+function bookit_enqueue_calendar_sync( string $operation, int $booking_id, ?int $calendar_staff_id = null ): void {
+	$booking_id = absint( $booking_id );
+	if ( $booking_id < 1 ) {
+		return;
+	}
+
 	if ( function_exists( 'as_schedule_single_action' ) ) {
 		as_schedule_single_action(
 			time() + 1,
 			'bookit_process_calendar_sync',
-			array( 'operation' => $operation, 'booking_id' => $booking_id ),
+			array( $operation, $booking_id, $calendar_staff_id ),
 			'bookit-calendar'
 		);
 	} else {
 		wp_schedule_single_event(
 			time() + 1,
 			'bookit_process_calendar_sync',
-			array( $operation, $booking_id )
+			array( $operation, $booking_id, $calendar_staff_id )
 		);
 	}
+
+	/**
+	 * Fires after a calendar sync job is queued (including Action Scheduler and WP-Cron).
+	 *
+	 * @param string   $operation           Operation name.
+	 * @param int      $booking_id          Booking ID.
+	 * @param int|null $calendar_staff_id   OAuth staff override, if any.
+	 */
+	do_action( 'bookit_calendar_sync_enqueued', $operation, $booking_id, $calendar_staff_id );
 }

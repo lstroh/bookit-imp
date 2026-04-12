@@ -188,6 +188,7 @@ class Bookit_Loader {
 		// Notification queue and dispatcher.
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-email-queue.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/functions-notifications.php';
+		require_once BOOKIT_PLUGIN_DIR . 'includes/integrations/class-bookit-google-calendar-sync.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-notification-dispatcher.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/notifications/class-bookit-staff-notifier.php';
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-staff-digest-daily.php';
@@ -382,7 +383,7 @@ class Bookit_Loader {
 			'bookit_process_calendar_sync',
 			array( 'Bookit_Google_Calendar', 'process_sync_job' ),
 			10,
-			2
+			3
 		);
 
 		// Cancel pending queue items when a booking is cancelled or rescheduled.
@@ -406,6 +407,7 @@ class Bookit_Loader {
 
 		require_once BOOKIT_PLUGIN_DIR . 'includes/cron/class-bookit-package-expiry.php';
 		Bookit_Package_Expiry::init();
+		Bookit_Google_Calendar_Sync::init();
 		Bookit_Staff_Notifier::init();
 		Bookit_Staff_Digest_Daily::init();
 		Bookit_Staff_Digest_Weekly::init();

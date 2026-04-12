@@ -650,7 +650,7 @@ class Test_Google_Calendar_Sync extends WP_UnitTestCase {
 					continue;
 				}
 				foreach ( $hooks['bookit_process_calendar_sync'] as $detail ) {
-					if ( isset( $detail['args'] ) && array( 'create', 1 ) === $detail['args'] ) {
+					if ( isset( $detail['args'] ) && array( 'create', 1, null ) === $detail['args'] ) {
 						$found = true;
 						break 2;
 					}
