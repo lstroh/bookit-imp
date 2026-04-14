@@ -1263,8 +1263,50 @@ class Bookit_Wizard_API {
 			$subject   = __( 'Booking cancelled', 'bookit-booking-system' );
 			$html_body = '<p>' . __( 'Your booking has been cancelled.', 'bookit-booking-system' ) . '</p>';
 		} else {
+			// Build a full HTML body to match the confirmation email (Sprint 6C hotfix).
 			$subject   = __( 'Booking rescheduled', 'bookit-booking-system' );
 			$html_body = '<p>' . __( 'Your booking has been rescheduled.', 'bookit-booking-system' ) . '</p>';
+
+			// Load email sender if needed.
+			if ( ! class_exists( 'Booking_System_Email_Sender' ) ) {
+				require_once BOOKIT_PLUGIN_DIR . 'includes/email/class-email-sender.php';
+			}
+
+			// Fetch full booking details for the rich email template.
+			$booking = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT
+						b.*,
+						c.first_name AS customer_first_name,
+						c.last_name  AS customer_last_name,
+						c.email      AS customer_email,
+						c.phone      AS customer_phone,
+						s.name       AS service_name,
+						s.duration,
+						st.first_name AS staff_first_name,
+						st.last_name  AS staff_last_name
+					FROM {$wpdb->prefix}bookings b
+					INNER JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
+					INNER JOIN {$wpdb->prefix}bookings_services s ON b.service_id = s.id
+					INNER JOIN {$wpdb->prefix}bookings_staff st ON b.staff_id = st.id
+					WHERE b.id = %d",
+					$booking_id
+				),
+				ARRAY_A
+			);
+
+			if ( is_array( $booking ) && ! empty( $booking ) ) {
+				// Add composite name fields expected by the email sender.
+				$booking['customer_name'] = (string) ( $booking['customer_first_name'] ?? '' ) . ' ' . (string) ( $booking['customer_last_name'] ?? '' );
+				$booking['staff_name']    = (string) ( $booking['staff_first_name'] ?? '' ) . ' ' . (string) ( $booking['staff_last_name'] ?? '' );
+
+				$email_sender = new Booking_System_Email_Sender();
+				$html_body    = $email_sender->generate_customer_email( $booking );
+				$subject      = sprintf(
+					__( 'Booking Rescheduled — %s', 'bookit-booking-system' ),
+					(string) ( $booking['service_name'] ?? '' )
+				);
+			}
 		}
 
 		Bookit_Notification_Dispatcher::enqueue_email(

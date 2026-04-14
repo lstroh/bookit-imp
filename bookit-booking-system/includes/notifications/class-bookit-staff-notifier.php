@@ -213,7 +213,7 @@ class Bookit_Staff_Notifier {
 				INNER JOIN {$wpdb->prefix}bookings_customers c  ON b.customer_id  = c.id
 				INNER JOIN {$wpdb->prefix}bookings_services  s  ON b.service_id   = s.id
 				INNER JOIN {$wpdb->prefix}bookings_staff     st ON b.staff_id     = st.id
-				WHERE b.id = %d AND b.deleted_at IS NULL",
+				WHERE b.id = %d",
 				$booking_id
 			),
 			ARRAY_A
