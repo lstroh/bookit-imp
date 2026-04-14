@@ -818,6 +818,8 @@ const onServiceToggle = (service) => {
 }
 
 // Open WordPress media library for photo selection.
+// wp.media() requires wp_enqueue_media() on the dashboard page; that was removed (Sprint 6C hotfix) to fix Vue mount.
+// Until replaced (e.g. file input + REST upload, or lazy wp_enqueue_media), the fallback prompt below applies.
 const openMediaLibrary = () => {
   if (typeof wp !== 'undefined' && wp.media) {
     const mediaFrame = wp.media({

@@ -44,8 +44,6 @@ $dashboard_js_data = array(
 // Allow extensions to enrich dashboard bootstrap payload passed to Vue.
 $dashboard_js_data = apply_filters( 'bookit_dashboard_js_data', $dashboard_js_data );
 
-// Enqueue WordPress media library for photo uploads.
-wp_enqueue_media();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -55,7 +53,7 @@ wp_enqueue_media();
 	<title>Bookit Dashboard</title>
 
 	<?php if ( file_exists( BOOKIT_PLUGIN_DIR . 'dashboard/dist/style.css' ) ) : ?>
-		<link rel="stylesheet" href="<?php echo esc_url( add_query_arg( 'v', BOOKIT_VERSION, BOOKIT_PLUGIN_URL . 'dashboard/dist/style.css' ) ); ?>">
+		<link rel="stylesheet" href="<?php echo esc_url( BOOKIT_PLUGIN_URL . 'dashboard/dist/style.css' ); ?>">
 	<?php endif; ?>
 
 	<?php wp_print_styles(); ?>
@@ -83,14 +81,8 @@ wp_enqueue_media();
 		};
 	</script>
 
-	<?php
-	// Print WordPress media library scripts and templates.
-	wp_print_scripts();
-	wp_print_media_templates();
-	?>
-
 	<?php if ( file_exists( BOOKIT_PLUGIN_DIR . 'dashboard/dist/index.js' ) ) : ?>
-		<script type="module" src="<?php echo esc_url( add_query_arg( 'v', BOOKIT_VERSION, BOOKIT_PLUGIN_URL . 'dashboard/dist/index.js' ) ); ?>"></script>
+		<script type="module" src="<?php echo esc_url( BOOKIT_PLUGIN_URL . 'dashboard/dist/index.js' ); ?>"></script>
 	<?php else : ?>
 		<script type="module" src="http://localhost:5173/@vite/client"></script>
 		<script type="module" src="http://localhost:5173/src/main.js"></script>
