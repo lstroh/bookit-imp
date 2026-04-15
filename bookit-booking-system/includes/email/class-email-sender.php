@@ -79,6 +79,104 @@ class Booking_System_Email_Sender {
 	}
 
 	/**
+	 * Send customer cancellation email.
+	 *
+	 * @param array $booking Booking data with customer, service, staff details.
+	 * @return bool|WP_Error True on success, WP_Error on failure.
+	 */
+	public function send_customer_cancellation( array $booking ) {
+		// Allow tests to bypass actual email sending.
+		$bypass = apply_filters( 'bookit_send_email', true );
+		if ( $bypass === false ) {
+			return true; // Test mode - don't send.
+		}
+
+		$subject = sprintf(
+			__( 'Booking Cancelled — %s', 'bookit-booking-system' ),
+			$booking['service_name']
+		);
+
+		$recipient = array(
+			'email' => sanitize_email( $booking['customer_email'] ),
+			'name'  => trim(
+				( $booking['customer_first_name'] ?? '' ) . ' ' .
+				( $booking['customer_last_name'] ?? '' )
+			),
+		);
+
+		$html_body = $this->generate_cancellation_email( $booking );
+
+		$queue_id = bookit_enqueue_email(
+			'customer_cancellation',
+			$recipient,
+			$subject,
+			$html_body,
+			(int) ( $booking['id'] ?? 0 )
+		);
+
+		if ( false === $queue_id ) {
+			if ( self::should_log() ) {
+				error_log( 'Email Sender: Failed to enqueue customer cancellation for ' . ( $booking['customer_email'] ?? '' ) );
+			}
+			return new \WP_Error( 'email_queue_failed', 'Failed to queue cancellation email' );
+		}
+
+		if ( self::should_log() ) {
+			error_log( 'Email Sender: Customer cancellation queued (queue_id=' . $queue_id . ') for ' . ( $booking['customer_email'] ?? '' ) );
+		}
+		return true;
+	}
+
+	/**
+	 * Send customer reschedule email.
+	 *
+	 * @param array $booking Booking data with customer, service, staff details.
+	 * @return bool|WP_Error True on success, WP_Error on failure.
+	 */
+	public function send_customer_reschedule( array $booking ) {
+		// Allow tests to bypass actual email sending.
+		$bypass = apply_filters( 'bookit_send_email', true );
+		if ( $bypass === false ) {
+			return true; // Test mode - don't send.
+		}
+
+		$subject = sprintf(
+			__( 'Booking Rescheduled — %s', 'bookit-booking-system' ),
+			$booking['service_name']
+		);
+
+		$recipient = array(
+			'email' => sanitize_email( $booking['customer_email'] ),
+			'name'  => trim(
+				( $booking['customer_first_name'] ?? '' ) . ' ' .
+				( $booking['customer_last_name'] ?? '' )
+			),
+		);
+
+		$html_body = $this->generate_reschedule_email( $booking );
+
+		$queue_id = bookit_enqueue_email(
+			'customer_reschedule',
+			$recipient,
+			$subject,
+			$html_body,
+			(int) ( $booking['id'] ?? 0 )
+		);
+
+		if ( false === $queue_id ) {
+			if ( self::should_log() ) {
+				error_log( 'Email Sender: Failed to enqueue customer reschedule for ' . ( $booking['customer_email'] ?? '' ) );
+			}
+			return new \WP_Error( 'email_queue_failed', 'Failed to queue reschedule email' );
+		}
+
+		if ( self::should_log() ) {
+			error_log( 'Email Sender: Customer reschedule queued (queue_id=' . $queue_id . ') for ' . ( $booking['customer_email'] ?? '' ) );
+		}
+		return true;
+	}
+
+	/**
 	 * Send business notification email.
 	 *
 	 * @param array $booking Booking data.
@@ -396,6 +494,244 @@ class Booking_System_Email_Sender {
 		<?php
 
 		return ob_get_clean();
+	}
+
+	/**
+	 * Generate customer cancellation email HTML.
+	 *
+	 * @param array $booking Booking data.
+	 * @return string HTML email body.
+	 */
+	private function generate_cancellation_email( array $booking ): string {
+		$date_formatted = $this->format_date( $booking['booking_date'] );
+		$time_formatted = $this->format_time( $booking['start_time'] );
+		$book_again_url = home_url( '/bookit/' );
+
+		ob_start();
+		?>
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<meta charset="UTF-8">
+			<style>
+				body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+				.container { max-width: 600px; margin: 0 auto; padding: 20px; }
+				.header { background: #0073aa; color: white; padding: 20px; text-align: center; }
+				.content { background: #f9f9f9; padding: 20px; }
+				.booking-details { background: white; padding: 15px; margin: 15px 0; border-left: 4px solid #0073aa; }
+				.detail-row { padding: 8px 0; border-bottom: 1px solid #eee; }
+				.label { font-weight: bold; color: #666; }
+				.value { color: #333; }
+				.footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+			</style>
+		</head>
+		<body>
+			<div class="container">
+				<div class="header">
+					<h1><?php esc_html_e( 'Your Booking Has Been Cancelled', 'bookit-booking-system' ); ?></h1>
+				</div>
+
+				<div class="content">
+					<p><?php printf( esc_html__( 'Hi %s,', 'bookit-booking-system' ), esc_html( $booking['customer_first_name'] ) ); ?></p>
+
+					<div class="booking-details">
+						<div class="detail-row">
+							<span class="label"><?php esc_html_e( 'Service:', 'bookit-booking-system' ); ?></span>
+							<span class="value"><?php echo esc_html( $booking['service_name'] ); ?></span>
+						</div>
+
+						<div class="detail-row">
+							<span class="label"><?php esc_html_e( 'Date:', 'bookit-booking-system' ); ?></span>
+							<span class="value"><?php echo esc_html( $date_formatted ); ?></span>
+						</div>
+
+						<div class="detail-row">
+							<span class="label"><?php esc_html_e( 'Time:', 'bookit-booking-system' ); ?></span>
+							<span class="value"><?php echo esc_html( $time_formatted ); ?></span>
+						</div>
+
+						<div class="detail-row">
+							<span class="label"><?php esc_html_e( 'Staff:', 'bookit-booking-system' ); ?></span>
+							<span class="value"><?php echo esc_html( $booking['staff_name'] ); ?></span>
+						</div>
+					</div>
+
+					<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0;">
+						<tr>
+							<td style="padding: 24px 0 8px; border-top: 1px solid #E5E7EB;">
+								<table cellpadding="0" cellspacing="0" border="0">
+									<tr>
+										<td>
+											<a href="<?php echo esc_url( $book_again_url ); ?>"
+												style="display:inline-block; padding: 10px 20px; background-color: #005FB8;
+													color: #ffffff; text-decoration: none; border-radius: 4px;
+													font-size: 14px; font-family: Arial, sans-serif; font-weight: 600;">
+												<?php esc_html_e( 'Book Again', 'bookit-booking-system' ); ?>
+											</a>
+										</td>
+									</tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+				</div>
+
+				<div class="footer">
+					<p><?php echo esc_html( get_bloginfo( 'name' ) ); ?></p>
+				</div>
+			</div>
+		</body>
+		</html>
+		<?php
+
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Generate customer reschedule email HTML.
+	 *
+	 * @param array $booking Booking data.
+	 * @return string HTML email body.
+	 */
+	private function generate_reschedule_email( array $booking ): string {
+		$date_formatted = $this->format_date( $booking['booking_date'] );
+		$time_formatted = $this->format_time( $booking['start_time'] );
+
+		ob_start();
+		?>
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<meta charset="UTF-8">
+			<style>
+				body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+				.container { max-width: 600px; margin: 0 auto; padding: 20px; }
+				.header { background: #0073aa; color: white; padding: 20px; text-align: center; }
+				.content { background: #f9f9f9; padding: 20px; }
+				.booking-details { background: white; padding: 15px; margin: 15px 0; border-left: 4px solid #0073aa; }
+				.detail-row { padding: 8px 0; border-bottom: 1px solid #eee; }
+				.label { font-weight: bold; color: #666; }
+				.value { color: #333; }
+				.footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+			</style>
+		</head>
+		<body>
+			<div class="container">
+				<div class="header">
+					<h1><?php esc_html_e( 'Your Booking Has Been Rescheduled', 'bookit-booking-system' ); ?></h1>
+				</div>
+
+				<div class="content">
+					<p><?php printf( esc_html__( 'Hi %s,', 'bookit-booking-system' ), esc_html( $booking['customer_first_name'] ) ); ?></p>
+
+					<div class="booking-details">
+						<div class="detail-row">
+							<span class="label"><?php esc_html_e( 'Service:', 'bookit-booking-system' ); ?></span>
+							<span class="value"><?php echo esc_html( $booking['service_name'] ); ?></span>
+						</div>
+
+						<div class="detail-row">
+							<span class="label"><?php esc_html_e( 'Date:', 'bookit-booking-system' ); ?></span>
+							<span class="value"><?php echo esc_html( $date_formatted ); ?></span>
+						</div>
+
+						<div class="detail-row">
+							<span class="label"><?php esc_html_e( 'Time:', 'bookit-booking-system' ); ?></span>
+							<span class="value"><?php echo esc_html( $time_formatted ); ?></span>
+						</div>
+
+						<div class="detail-row">
+							<span class="label"><?php esc_html_e( 'Staff:', 'bookit-booking-system' ); ?></span>
+							<span class="value"><?php echo esc_html( $booking['staff_name'] ); ?></span>
+						</div>
+					</div>
+
+					<?php
+					global $wpdb;
+					$booking_id       = (int) ( $booking['id'] ?? 0 );
+					$magic_link_token = isset( $booking['magic_link_token'] )
+						? $booking['magic_link_token']
+						: $wpdb->get_var(
+							$wpdb->prepare(
+								"SELECT magic_link_token FROM {$wpdb->prefix}bookings WHERE id = %d",
+								$booking_id
+							)
+						);
+					if ( ! empty( $magic_link_token ) ) {
+						$ical_url       = add_query_arg(
+							array(
+								'booking_id' => $booking_id,
+								'token'      => $magic_link_token,
+							),
+							rest_url( 'bookit/v1/wizard/ical' )
+						);
+						$cancel_url     = add_query_arg(
+							array(
+								'booking_id' => $booking_id,
+								'token'      => $magic_link_token,
+							),
+							home_url( '/bookit-cancel/' )
+						);
+						$reschedule_url = add_query_arg(
+							array(
+								'booking_id' => $booking_id,
+								'token'      => $magic_link_token,
+							),
+							home_url( '/bookit-reschedule/' )
+						);
+						?>
+					<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0;">
+						<tr>
+							<td style="padding: 24px 0 8px; border-top: 1px solid #E5E7EB;">
+								<p style="margin: 0 0 12px; font-size: 14px; color: #6B7280; font-family: Arial, sans-serif;">
+									<?php esc_html_e( 'Need to make changes?', 'bookit-booking-system' ); ?>
+								</p>
+								<table cellpadding="0" cellspacing="0" border="0">
+									<tr>
+										<td style="padding-right: 12px;">
+											<a href="<?php echo esc_url( $ical_url ); ?>"
+												style="display:inline-block; padding: 10px 20px; background-color: #005FB8;
+													color: #ffffff; text-decoration: none; border-radius: 4px;
+													font-size: 14px; font-family: Arial, sans-serif; font-weight: 600;">
+												<?php esc_html_e( '📅 Add to Calendar', 'bookit-booking-system' ); ?>
+											</a>
+										</td>
+										<td style="padding-right: 12px;">
+											<a href="<?php echo esc_url( $reschedule_url ); ?>"
+												style="display:inline-block; padding: 10px 20px; background-color: #005FB8;
+													color: #ffffff; text-decoration: none; border-radius: 4px;
+													font-size: 14px; font-family: Arial, sans-serif; font-weight: 600;">
+												<?php esc_html_e( 'Reschedule', 'bookit-booking-system' ); ?>
+											</a>
+										</td>
+										<td>
+											<a href="<?php echo esc_url( $cancel_url ); ?>"
+												style="display:inline-block; padding: 10px 20px; background-color: #ffffff;
+													color: #374151; text-decoration: none; border-radius: 4px;
+													font-size: 14px; font-family: Arial, sans-serif; font-weight: 600;
+													border: 1px solid #D1D5DB;">
+												<?php esc_html_e( 'Cancel Booking', 'bookit-booking-system' ); ?>
+											</a>
+										</td>
+									</tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+						<?php
+					}
+					?>
+				</div>
+
+				<div class="footer">
+					<p><?php echo esc_html( get_bloginfo( 'name' ) ); ?></p>
+				</div>
+			</div>
+		</body>
+		</html>
+		<?php
+
+		return (string) ob_get_clean();
 	}
 
 	/**

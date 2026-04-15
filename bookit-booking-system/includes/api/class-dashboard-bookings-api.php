@@ -4446,7 +4446,11 @@ class Bookit_Dashboard_Bookings_API {
 			$booking['staff_name']    = $booking['staff_first_name'] . ' ' . $booking['staff_last_name'];
 
 			$email_sender = new Booking_System_Email_Sender();
-			$email_sender->send_customer_confirmation( $booking );
+			if ( $date_changed || $time_changed ) {
+				$email_sender->send_customer_reschedule( $booking );
+			} else {
+				$email_sender->send_customer_confirmation( $booking );
+			}
 		}
 
 		// Get updated booking for response.
@@ -4636,9 +4640,7 @@ class Bookit_Dashboard_Bookings_API {
 			$booking['staff_name']    = $booking['staff_first_name'] . ' ' . $booking['staff_last_name'];
 
 			$email_sender = new Booking_System_Email_Sender();
-			// TODO: Add specific cancellation email template in future.
-			// For now, reuse confirmation template.
-			$email_sender->send_customer_confirmation( $booking );
+			$email_sender->send_customer_cancellation( $booking );
 		}
 
 		Bookit_Audit_Logger::log(

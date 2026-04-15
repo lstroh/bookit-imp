@@ -170,6 +170,361 @@ class Test_6C_Hotfix extends WP_UnitTestCase {
 		$this->assertSame( $admin_id, (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$wpdb->prefix}bookings_staff WHERE email = %s", 'admin@example.com' ) ) );
 	}
 
+	public function test_cancellation_email_subject_contains_service_name(): void {
+		global $wpdb;
+
+		$staff_id    = $this->insert_staff( array( 'email' => 'assigned@example.com' ) );
+		$service_id  = $this->insert_service( array( 'name' => 'Deep Tissue Massage' ) );
+		$customer_id = $this->insert_customer(
+			array(
+				'email'      => 'customer@example.com',
+				'first_name' => 'Test',
+				'last_name'  => 'Customer',
+			)
+		);
+		$booking_id  = $this->insert_booking( $customer_id, $service_id, $staff_id );
+
+		$sender = new Booking_System_Email_Sender();
+		$sender->send_customer_cancellation(
+			array(
+				'id'                  => $booking_id,
+				'customer_email'      => 'customer@example.com',
+				'customer_first_name' => 'Test',
+				'customer_last_name'  => 'Customer',
+				'service_name'        => 'Deep Tissue Massage',
+				'booking_date'        => gmdate( 'Y-m-d', strtotime( '+10 days' ) ),
+				'start_time'          => '10:00:00',
+				'staff_name'          => 'Test Staff',
+			)
+		);
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT subject FROM {$wpdb->prefix}bookit_email_queue
+				WHERE booking_id = %d AND email_type = %s
+				ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'customer_cancellation'
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $row );
+		$this->assertStringContainsString( 'Cancelled', (string) $row['subject'] );
+		$this->assertStringContainsString( 'Deep Tissue Massage', (string) $row['subject'] );
+	}
+
+	public function test_cancellation_email_includes_booking_details(): void {
+		global $wpdb;
+
+		$staff_id    = $this->insert_staff( array( 'email' => 'assigned@example.com' ) );
+		$service_id  = $this->insert_service( array( 'name' => 'Facial' ) );
+		$customer_id = $this->insert_customer(
+			array(
+				'email'      => 'customer@example.com',
+				'first_name' => 'Test',
+				'last_name'  => 'Customer',
+			)
+		);
+		$booking_id  = $this->insert_booking( $customer_id, $service_id, $staff_id );
+
+		$sender = new Booking_System_Email_Sender();
+		$sender->send_customer_cancellation(
+			array(
+				'id'                  => $booking_id,
+				'customer_email'      => 'customer@example.com',
+				'customer_first_name' => 'Test',
+				'customer_last_name'  => 'Customer',
+				'service_name'        => 'Facial',
+				'booking_date'        => gmdate( 'Y-m-d', strtotime( '+10 days' ) ),
+				'start_time'          => '10:00:00',
+				'staff_name'          => 'Assigned Staff',
+			)
+		);
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT html_body FROM {$wpdb->prefix}bookit_email_queue
+				WHERE booking_id = %d AND email_type = %s
+				ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'customer_cancellation'
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $row );
+		$html = (string) $row['html_body'];
+		$this->assertStringContainsString( 'Facial', $html );
+		$this->assertStringContainsString( 'Assigned Staff', $html );
+		$this->assertNotFalse( strpos( $html, 'Date:' ) );
+	}
+
+	public function test_cancellation_email_includes_book_again_button(): void {
+		global $wpdb;
+
+		$staff_id    = $this->insert_staff( array( 'email' => 'assigned@example.com' ) );
+		$service_id  = $this->insert_service( array( 'name' => 'Test Service' ) );
+		$customer_id = $this->insert_customer( array( 'email' => 'customer@example.com' ) );
+		$booking_id  = $this->insert_booking( $customer_id, $service_id, $staff_id );
+
+		$sender = new Booking_System_Email_Sender();
+		$sender->send_customer_cancellation(
+			array(
+				'id'                  => $booking_id,
+				'customer_email'      => 'customer@example.com',
+				'customer_first_name' => 'Test',
+				'customer_last_name'  => 'Customer',
+				'service_name'        => 'Test Service',
+				'booking_date'        => gmdate( 'Y-m-d', strtotime( '+10 days' ) ),
+				'start_time'          => '10:00:00',
+				'staff_name'          => 'Test Staff',
+			)
+		);
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT html_body FROM {$wpdb->prefix}bookit_email_queue
+				WHERE booking_id = %d AND email_type = %s
+				ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'customer_cancellation'
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $row );
+		$this->assertStringContainsString( 'Book Again', (string) $row['html_body'] );
+	}
+
+	public function test_cancellation_email_does_not_include_confirmed_heading(): void {
+		global $wpdb;
+
+		$staff_id    = $this->insert_staff( array( 'email' => 'assigned@example.com' ) );
+		$service_id  = $this->insert_service( array( 'name' => 'Test Service' ) );
+		$customer_id = $this->insert_customer( array( 'email' => 'customer@example.com' ) );
+		$booking_id  = $this->insert_booking( $customer_id, $service_id, $staff_id );
+
+		$sender = new Booking_System_Email_Sender();
+		$sender->send_customer_cancellation(
+			array(
+				'id'                  => $booking_id,
+				'customer_email'      => 'customer@example.com',
+				'customer_first_name' => 'Test',
+				'customer_last_name'  => 'Customer',
+				'service_name'        => 'Test Service',
+				'booking_date'        => gmdate( 'Y-m-d', strtotime( '+10 days' ) ),
+				'start_time'          => '10:00:00',
+				'staff_name'          => 'Test Staff',
+			)
+		);
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT html_body FROM {$wpdb->prefix}bookit_email_queue
+				WHERE booking_id = %d AND email_type = %s
+				ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'customer_cancellation'
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $row );
+		$this->assertStringNotContainsString( 'Booking Confirmed', (string) $row['html_body'] );
+	}
+
+	public function test_reschedule_customer_email_subject_contains_rescheduled(): void {
+		global $wpdb;
+
+		$staff_id    = $this->insert_staff( array( 'email' => 'assigned@example.com' ) );
+		$service_id  = $this->insert_service( array( 'name' => 'Consultation' ) );
+		$customer_id = $this->insert_customer(
+			array(
+				'email'      => 'customer@example.com',
+				'first_name' => 'Test',
+				'last_name'  => 'Customer',
+			)
+		);
+		$booking_id  = $this->insert_booking(
+			$customer_id,
+			$service_id,
+			$staff_id,
+			array( 'magic_link_token' => 'tok_test_456' )
+		);
+
+		$sender = new Booking_System_Email_Sender();
+		$sender->send_customer_reschedule(
+			array(
+				'id'                  => $booking_id,
+				'customer_email'      => 'customer@example.com',
+				'customer_first_name' => 'Test',
+				'customer_last_name'  => 'Customer',
+				'service_name'        => 'Consultation',
+				'booking_date'        => gmdate( 'Y-m-d', strtotime( '+12 days' ) ),
+				'start_time'          => '14:30:00',
+				'staff_name'          => 'Test Staff',
+				'magic_link_token'    => 'tok_test_456',
+			)
+		);
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT subject FROM {$wpdb->prefix}bookit_email_queue
+				WHERE booking_id = %d AND email_type = %s
+				ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'customer_reschedule'
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $row );
+		$this->assertStringContainsString( 'Rescheduled', (string) $row['subject'] );
+		$this->assertStringContainsString( 'Consultation', (string) $row['subject'] );
+	}
+
+	public function test_reschedule_customer_email_includes_booking_details(): void {
+		global $wpdb;
+
+		$staff_id    = $this->insert_staff( array( 'email' => 'assigned@example.com' ) );
+		$service_id  = $this->insert_service( array( 'name' => 'Checkup' ) );
+		$customer_id = $this->insert_customer(
+			array(
+				'email'      => 'customer@example.com',
+				'first_name' => 'Test',
+				'last_name'  => 'Customer',
+			)
+		);
+		$booking_id  = $this->insert_booking(
+			$customer_id,
+			$service_id,
+			$staff_id,
+			array( 'magic_link_token' => 'tok_test_789' )
+		);
+
+		$sender = new Booking_System_Email_Sender();
+		$sender->send_customer_reschedule(
+			array(
+				'id'                  => $booking_id,
+				'customer_email'      => 'customer@example.com',
+				'customer_first_name' => 'Test',
+				'customer_last_name'  => 'Customer',
+				'service_name'        => 'Checkup',
+				'booking_date'        => gmdate( 'Y-m-d', strtotime( '+12 days' ) ),
+				'start_time'          => '14:30:00',
+				'staff_name'          => 'Assigned Staff',
+				'magic_link_token'    => 'tok_test_789',
+			)
+		);
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT html_body FROM {$wpdb->prefix}bookit_email_queue
+				WHERE booking_id = %d AND email_type = %s
+				ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'customer_reschedule'
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $row );
+		$html = (string) $row['html_body'];
+		$this->assertStringContainsString( 'Checkup', $html );
+		$this->assertStringContainsString( 'Assigned Staff', $html );
+		$this->assertNotFalse( strpos( $html, 'Date:' ) );
+	}
+
+	public function test_reschedule_customer_email_includes_action_buttons(): void {
+		global $wpdb;
+
+		$staff_id    = $this->insert_staff( array( 'email' => 'assigned@example.com' ) );
+		$service_id  = $this->insert_service( array( 'name' => 'Test Service' ) );
+		$customer_id = $this->insert_customer( array( 'email' => 'customer@example.com' ) );
+		$booking_id  = $this->insert_booking(
+			$customer_id,
+			$service_id,
+			$staff_id,
+			array( 'magic_link_token' => 'tok_test_actions' )
+		);
+
+		$sender = new Booking_System_Email_Sender();
+		$sender->send_customer_reschedule(
+			array(
+				'id'                  => $booking_id,
+				'customer_email'      => 'customer@example.com',
+				'customer_first_name' => 'Test',
+				'customer_last_name'  => 'Customer',
+				'service_name'        => 'Test Service',
+				'booking_date'        => gmdate( 'Y-m-d', strtotime( '+12 days' ) ),
+				'start_time'          => '14:30:00',
+				'staff_name'          => 'Test Staff',
+				'magic_link_token'    => 'tok_test_actions',
+			)
+		);
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT html_body FROM {$wpdb->prefix}bookit_email_queue
+				WHERE booking_id = %d AND email_type = %s
+				ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'customer_reschedule'
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $row );
+		$html = (string) $row['html_body'];
+		$this->assertStringContainsString( 'Add to Calendar', $html );
+		$this->assertStringContainsString( 'Reschedule', $html );
+		$this->assertStringContainsString( 'Cancel Booking', $html );
+	}
+
+	public function test_reschedule_customer_email_does_not_include_confirmed_heading(): void {
+		global $wpdb;
+
+		$staff_id    = $this->insert_staff( array( 'email' => 'assigned@example.com' ) );
+		$service_id  = $this->insert_service( array( 'name' => 'Test Service' ) );
+		$customer_id = $this->insert_customer( array( 'email' => 'customer@example.com' ) );
+		$booking_id  = $this->insert_booking(
+			$customer_id,
+			$service_id,
+			$staff_id,
+			array( 'magic_link_token' => 'tok_test_no_confirm' )
+		);
+
+		$sender = new Booking_System_Email_Sender();
+		$sender->send_customer_reschedule(
+			array(
+				'id'                  => $booking_id,
+				'customer_email'      => 'customer@example.com',
+				'customer_first_name' => 'Test',
+				'customer_last_name'  => 'Customer',
+				'service_name'        => 'Test Service',
+				'booking_date'        => gmdate( 'Y-m-d', strtotime( '+12 days' ) ),
+				'start_time'          => '14:30:00',
+				'staff_name'          => 'Test Staff',
+				'magic_link_token'    => 'tok_test_no_confirm',
+			)
+		);
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT html_body FROM {$wpdb->prefix}bookit_email_queue
+				WHERE booking_id = %d AND email_type = %s
+				ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'customer_reschedule'
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $row );
+		$this->assertStringNotContainsString( 'Booking Confirmed', (string) $row['html_body'] );
+	}
+
 	/**
 	 * Helper: enqueue a magic_link_reschedule email and return html_body.
 	 *
