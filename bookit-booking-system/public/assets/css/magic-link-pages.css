@@ -242,6 +242,11 @@
 	margin: 0 0 0.75rem;
 }
 
+.bookit-magic-link-page .bookit-v2-wizard-container .bookit-v2-calendar-nav:disabled {
+	opacity: 0.35;
+	cursor: not-allowed;
+}
+
 @media (max-width: 500px) {
 	.bookit-magic-link-page .bookit-confirmation-card {
 		padding: 1.125rem 1rem;
