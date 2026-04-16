@@ -605,7 +605,7 @@ if ( ! $within_window ) {
 		if (!selectedDate || !selectedTime) return;
 
 		confirmBtn.disabled    = true;
-		confirmBtn.textContent = '<?php echo esc_js( __( 'Rescheduling…', 'bookit-booking-system' ) ); ?>';
+		confirmBtn.textContent = '<?php echo esc_js( __( 'Rescheduling...', 'bookit-booking-system' ) ); ?>';
 
 		fetch(confirmBtn.dataset.restUrl, {
 			method: 'POST',
@@ -622,7 +622,7 @@ if ( ! $within_window ) {
 				msgEl.style.display = 'block';
 				if (data.success) {
 					msgEl.className   = 'bookit-magic-message bookit-magic-message--success';
-					msgEl.textContent = '<?php echo esc_js( __( 'Your booking has been rescheduled ✓', 'bookit-booking-system' ) ); ?>';
+					msgEl.textContent = '<?php echo esc_js( __( 'Your booking has been rescheduled', 'bookit-booking-system' ) ); ?> \u2713';
 					confirmBtn.disabled = false;
 					confirmBtn.textContent = confirmBtnDefault;
 					if (prevMonthBtn) prevMonthBtn.disabled = true;
