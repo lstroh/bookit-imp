@@ -98,6 +98,104 @@ class Test_6C_Hotfix extends WP_UnitTestCase {
 		$this->assertSame( 1, did_action( 'bookit_test_staff_notifier_rescheduled_called' ) );
 	}
 
+	public function test_staff_notifier_passes_booking_params_to_dispatcher(): void {
+		global $wpdb;
+
+		$staff_id    = $this->insert_staff( array( 'email' => 'assigned@example.com' ) );
+		$service_id  = $this->insert_service( array( 'name' => 'Test Service Param' ) );
+		$customer_id = $this->insert_customer();
+		$booking_id  = $this->insert_booking( $customer_id, $service_id, $staff_id );
+
+		do_action( 'bookit_after_booking_created', $booking_id, array() );
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT params FROM {$wpdb->prefix}bookit_email_queue
+				WHERE booking_id = %d AND recipient_email = %s AND email_type = %s
+				ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'assigned@example.com',
+				'staff_new_booking_immediate'
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $row );
+		$params = json_decode( (string) ( $row['params'] ?? '' ), true );
+		$this->assertIsArray( $params );
+		$this->assertNotEmpty( $params );
+		$this->assertArrayHasKey( 'service_name', $params );
+		$this->assertArrayHasKey( 'booking_date', $params );
+		$this->assertArrayHasKey( 'start_time', $params );
+		$this->assertArrayHasKey( 'customer_first', $params );
+		$this->assertArrayHasKey( 'customer_last', $params );
+		$this->assertArrayHasKey( 'booking_reference', $params );
+		$this->assertArrayHasKey( 'dashboard_url', $params );
+		$this->assertArrayHasKey( 'preferences_url', $params );
+	}
+
+	public function test_staff_notifier_params_include_service_name(): void {
+		global $wpdb;
+
+		$staff_id    = $this->insert_staff( array( 'email' => 'assigned@example.com' ) );
+		$service_id  = $this->insert_service( array( 'name' => 'Deep Tissue Massage' ) );
+		$customer_id = $this->insert_customer();
+		$booking_id  = $this->insert_booking( $customer_id, $service_id, $staff_id );
+
+		do_action( 'bookit_after_booking_created', $booking_id, array() );
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT params FROM {$wpdb->prefix}bookit_email_queue
+				WHERE booking_id = %d AND recipient_email = %s AND email_type = %s
+				ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'assigned@example.com',
+				'staff_new_booking_immediate'
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $row );
+		$params = json_decode( (string) ( $row['params'] ?? '' ), true );
+		$this->assertIsArray( $params );
+		$this->assertSame( 'Deep Tissue Massage', (string) ( $params['service_name'] ?? '' ) );
+	}
+
+	public function test_staff_notifier_params_include_customer_name(): void {
+		global $wpdb;
+
+		$staff_id   = $this->insert_staff( array( 'email' => 'assigned@example.com' ) );
+		$service_id = $this->insert_service();
+		$customer_id = $this->insert_customer(
+			array(
+				'first_name' => 'Alice',
+				'last_name'  => 'Smith',
+			)
+		);
+		$booking_id = $this->insert_booking( $customer_id, $service_id, $staff_id );
+
+		do_action( 'bookit_after_booking_created', $booking_id, array() );
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT params FROM {$wpdb->prefix}bookit_email_queue
+				WHERE booking_id = %d AND recipient_email = %s AND email_type = %s
+				ORDER BY id DESC LIMIT 1",
+				$booking_id,
+				'assigned@example.com',
+				'staff_new_booking_immediate'
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $row );
+		$params = json_decode( (string) ( $row['params'] ?? '' ), true );
+		$this->assertIsArray( $params );
+		$this->assertSame( 'Alice', (string) ( $params['customer_first'] ?? '' ) );
+		$this->assertSame( 'Smith', (string) ( $params['customer_last'] ?? '' ) );
+	}
+
 	public function test_staff_notifier_fires_on_booking_cancelled_hook(): void {
 		$staff_id    = $this->insert_staff( array( 'email' => 'assigned@example.com' ) );
 		$service_id  = $this->insert_service();

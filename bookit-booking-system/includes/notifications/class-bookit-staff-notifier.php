@@ -150,13 +150,25 @@ class Bookit_Staff_Notifier {
 			$subject   = self::build_subject( $email_type, $booking_full );
 			$html_body = self::build_html_body( $email_type, $booking_full );
 
+			$params = array(
+				'service_name'      => (string) ( $booking_full['service_name'] ?? '' ),
+				'booking_date'      => (string) ( $booking_full['booking_date'] ?? '' ),
+				'start_time'        => (string) ( $booking_full['start_time'] ?? '' ),
+				'customer_first'    => (string) ( $booking_full['customer_first_name'] ?? '' ),
+				'customer_last'     => (string) ( $booking_full['customer_last_name'] ?? '' ),
+				'customer_phone'    => (string) ( $booking_full['customer_phone'] ?? '' ),
+				'booking_reference' => (string) ( $booking_full['booking_reference'] ?? '' ),
+				'dashboard_url'     => home_url( '/bookit-dashboard/app/bookings' ),
+				'preferences_url'   => home_url( '/bookit-dashboard/app/profile' ),
+			);
+
 			Bookit_Notification_Dispatcher::enqueue_email(
 				$email_type,
 				$recipient,
 				$subject,
 				$html_body,
 				(int) $booking_full['id'],
-				array()
+				$params
 			);
 		} elseif ( in_array( $frequency, array( 'daily', 'weekly' ), true ) ) {
 			$digest_event = $event_type;
@@ -206,6 +218,7 @@ class Bookit_Staff_Notifier {
 						c.first_name  AS customer_first_name,
 						c.last_name   AS customer_last_name,
 						c.email       AS customer_email,
+						c.phone       AS customer_phone,
 						s.name        AS service_name,
 						st.first_name AS staff_first_name,
 						st.last_name  AS staff_last_name
