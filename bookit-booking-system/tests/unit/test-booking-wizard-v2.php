@@ -59,6 +59,7 @@ class Test_Booking_Wizard_V2 extends WP_UnitTestCase {
 	public function test_v2_shortcode_renders_wizard_container() {
 		$output = do_shortcode( '[bookit_wizard_v2]' );
 		$this->assertStringContainsString( 'bookit-v2-wizard-container', $output );
+		$this->assertStringContainsString( 'data-step', $output, 'Shell must expose data-step so booking-wizard-v2.js can tell wizard pages from reschedule/cancel calendar markup.' );
 	}
 
 	/**

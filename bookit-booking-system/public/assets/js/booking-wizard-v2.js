@@ -7,7 +7,8 @@
 	'use strict';
 
 	document.addEventListener( 'DOMContentLoaded', function() {
-		if ( ! document.querySelector( '.bookit-v2-wizard-container' ) ) {
+		// Only the V2 wizard shell adds data-step; reschedule/cancel reuse calendar markup inside .bookit-v2-wizard-container without it.
+		if ( ! document.querySelector( '.bookit-v2-wizard-container[data-step]' ) ) {
 			return;
 		}
 

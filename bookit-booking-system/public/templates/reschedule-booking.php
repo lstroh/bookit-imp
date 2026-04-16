@@ -298,150 +298,151 @@ if ( ! $within_window ) {
 	<?php if ( ! $within_window ) : ?>
 <script>
 (function () {
-	var calendar    = document.getElementById('bookit-reschedule-calendar');
-	var slotsWrap   = document.getElementById('bookit-reschedule-slots');
-	var slotsList   = document.getElementById('bookit-reschedule-slots-list');
-	var slotsEmpty  = document.getElementById('bookit-reschedule-slots-empty');
-	var slotsLoading= document.getElementById('bookit-reschedule-slots-loading');
-	var confirmBtn  = document.getElementById('bookit-reschedule-confirm');
-	var msgEl       = document.getElementById('bookit-reschedule-message');
-	var prevMonthBtn= document.getElementById('bookit-reschedule-prev-month');
-	var nextMonthBtn= document.getElementById('bookit-reschedule-next-month');
-	var calTitleEl  = calendar ? calendar.querySelector('.bookit-v2-calendar-title') : null;
-	var calGridEl   = calendar ? calendar.querySelector('.bookit-v2-calendar-grid') : null;
+	'use strict';
 
-	if (!calendar || !confirmBtn) return;
+	var calendar     = document.getElementById( 'bookit-reschedule-calendar' );
+	var slotsWrap    = document.getElementById( 'bookit-reschedule-slots' );
+	var slotsList    = document.getElementById( 'bookit-reschedule-slots-list' );
+	var slotsEmpty   = document.getElementById( 'bookit-reschedule-slots-empty' );
+	var slotsLoading = document.getElementById( 'bookit-reschedule-slots-loading' );
+	var confirmBtn   = document.getElementById( 'bookit-reschedule-confirm' );
+	var msgEl        = document.getElementById( 'bookit-reschedule-message' );
+	var prevBtn      = document.getElementById( 'bookit-reschedule-prev-month' );
+	var nextBtn      = document.getElementById( 'bookit-reschedule-next-month' );
 
-	var staffId     = calendar.dataset.staffId;
-	var serviceId   = calendar.dataset.serviceId;
-	var timeslotsUrl= calendar.dataset.timeslotsUrl;
-	var selectedDate= null;
-	var selectedTime= null;
-	var emptySlotsDefault = slotsEmpty ? slotsEmpty.textContent : '';
-	var confirmBtnDefault = confirmBtn.textContent;
+	if ( ! calendar || ! confirmBtn ) { return; }
 
-	var dowLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-	var today     = new Date();
-	var todayYear = today.getFullYear();
-	var todayMonth= today.getMonth(); // 0-based
-	var todayDay  = today.getDate();
+	var calTitle = calendar.querySelector( '.bookit-v2-calendar-title' );
+	var calGrid  = calendar.querySelector( '.bookit-v2-calendar-grid' );
 
-	var currentYear  = todayYear;
-	var currentMonth = todayMonth;
+	var staffId      = calendar.dataset.staffId;
+	var serviceId    = calendar.dataset.serviceId;
+	var slotsUrl     = calendar.dataset.timeslotsUrl;
+	var restUrl      = confirmBtn.dataset.restUrl;
+	var bookingId    = parseInt( confirmBtn.dataset.bookingId, 10 );
+	var token        = confirmBtn.dataset.token;
 
-	function pad2(n) {
-		return String(n).padStart(2, '0');
+	var selectedDate = null;
+	var selectedTime = null;
+
+	var today      = new Date();
+	var todayY     = today.getFullYear();
+	var todayM     = today.getMonth();  // 0-based
+	var todayD     = today.getDate();
+	var currentY   = todayY;
+	var currentM   = todayM;
+
+	var DOW = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ];
+
+	/* ---- helpers ---- */
+	function pad( n ) { return String( n ).padStart( 2, '0' ); }
+
+	function ymd( y, m0, d ) {
+		return y + '-' + pad( m0 + 1 ) + '-' + pad( d );
 	}
 
-	function formatDateStr(year, month0, day) {
-		return String(year) + '-' + pad2(month0 + 1) + '-' + pad2(day);
+	function updateHeader() {
+		if ( ! calTitle ) { return; }
+		var dt = new Date( currentY, currentM, 1 );
+		calTitle.textContent = dt.toLocaleString( undefined, { month: 'long', year: 'numeric' } );
 	}
 
-	function updateCalendarHeader() {
-		if (!calTitleEl) return;
-		var dt = new Date(currentYear, currentMonth, 1);
-		try {
-			calTitleEl.textContent = dt.toLocaleString(undefined, { month: 'long', year: 'numeric' });
-		} catch (e) {
-			calTitleEl.textContent = dt.toLocaleString();
-		}
+	function updatePrev() {
+		if ( ! prevBtn ) { return; }
+		prevBtn.disabled = ( currentY === todayY && currentM === todayM );
 	}
 
-	function updatePrevNavState() {
-		if (!prevMonthBtn) return;
-		var isCurrentMonth = (currentYear === todayYear && currentMonth === todayMonth);
-		prevMonthBtn.disabled = isCurrentMonth;
-	}
-
-	function resetSelectionAndSlots() {
+	/* ---- reset slots panel ---- */
+	function resetSlots() {
 		selectedDate = null;
 		selectedTime = null;
 		confirmBtn.disabled = true;
-		confirmBtn.textContent = confirmBtnDefault;
-
-		if (calGridEl) {
-			calGridEl.querySelectorAll('.bookit-v2-day--selected')
-				.forEach(function (d) { d.classList.remove('bookit-v2-day--selected'); });
-		}
-
-		if (slotsWrap) {
-			slotsWrap.style.display = 'none';
-		}
-		if (slotsList) {
-			slotsList.innerHTML = '';
-		}
-		if (slotsLoading) {
-			slotsLoading.style.display = 'none';
-		}
-		if (slotsEmpty) {
-			slotsEmpty.style.display = 'none';
-			if (emptySlotsDefault) {
-				slotsEmpty.textContent = emptySlotsDefault;
-			}
-		}
+		if ( slotsWrap )    { slotsWrap.style.display    = 'none'; }
+		if ( slotsList )    { slotsList.innerHTML         = ''; }
+		if ( slotsLoading ) { slotsLoading.style.display  = 'none'; }
+		if ( slotsEmpty )   { slotsEmpty.style.display    = 'none'; }
+		calGrid.querySelectorAll( '.bookit-v2-day--selected' )
+			.forEach( function ( b ) { b.classList.remove( 'bookit-v2-day--selected' ); } );
 	}
 
-	function renderCalendarGrid() {
-		if (!calGridEl) return;
+	/* ---- build calendar grid ---- */
+	function buildGrid() {
+		if ( ! calGrid ) { return; }
+		calGrid.innerHTML = '';
 
-		calGridEl.innerHTML = '';
-		dowLabels.forEach(function (label) {
-			var d = document.createElement('div');
-			d.className = 'bookit-v2-calendar-dow';
+		DOW.forEach( function ( label ) {
+			var d = document.createElement( 'div' );
+			d.className   = 'bookit-v2-calendar-dow';
 			d.textContent = label;
-			calGridEl.appendChild(d);
-		});
+			calGrid.appendChild( d );
+		} );
 
-		var first = new Date(currentYear, currentMonth, 1);
-		var jsDow = first.getDay(); // 0..6 (Sun..Sat)
-		var isoDow = jsDow === 0 ? 7 : jsDow; // 1..7 (Mon..Sun)
-		var padCount = isoDow - 1;
-		for (var i = 0; i < padCount; i++) {
-			var pad = document.createElement('span');
-			pad.className = 'bookit-v2-day-empty';
-			calGridEl.appendChild(pad);
+		var first  = new Date( currentY, currentM, 1 );
+		var dow    = first.getDay();               // 0=Sun
+		var iso    = ( dow === 0 ) ? 7 : dow;     // 1=Mon..7=Sun
+		var pads   = iso - 1;
+		var days   = new Date( currentY, currentM + 1, 0 ).getDate();
+
+		for ( var p = 0; p < pads; p++ ) {
+			var sp = document.createElement( 'span' );
+			sp.className = 'bookit-v2-day-empty';
+			calGrid.appendChild( sp );
 		}
 
-		var daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-		for (var day = 1; day <= daysInMonth; day++) {
-			var dateStr = formatDateStr(currentYear, currentMonth, day);
-			var btn = document.createElement('button');
-			btn.type = 'button';
-			btn.className = 'bookit-v2-day';
-			btn.textContent = String(day);
-			btn.dataset.date = dateStr;
-
-			var isPastMonth = (currentYear < todayYear) || (currentYear === todayYear && currentMonth < todayMonth);
-			var isPastDayInCurrentMonth = (currentYear === todayYear && currentMonth === todayMonth && day < todayDay);
-			var isDisabled = isPastMonth || isPastDayInCurrentMonth;
-
-			if (currentYear === todayYear && currentMonth === todayMonth && day === todayDay) {
-				btn.classList.add('bookit-v2-day--today');
+		for ( var day = 1; day <= days; day++ ) {
+			var dateStr  = ymd( currentY, currentM, day );
+			var isPast   = ( currentY < todayY ) ||
+				( currentY === todayY && currentM < todayM ) ||
+				( currentY === todayY && currentM === todayM && day < todayD );
+			var btn      = document.createElement( 'button' );
+			btn.type      = 'button';
+			btn.className = 'bookit-v2-day' + ( isPast ? ' bookit-v2-day--disabled' : ' bookit-v2-day--available' );
+			if ( currentY === todayY && currentM === todayM && day === todayD ) {
+				btn.classList.add( 'bookit-v2-day--today' );
 			}
-
-			if (isDisabled) {
-				btn.classList.add('bookit-v2-day--disabled');
-				btn.disabled = true;
-				btn.setAttribute('aria-disabled', 'true');
-			} else {
-				btn.classList.add('bookit-v2-day--available');
-			}
-
-			calGridEl.appendChild(btn);
+			btn.textContent    = String( day );
+			btn.dataset.date   = dateStr;
+			btn.disabled       = isPast;
+			if ( isPast ) { btn.setAttribute( 'aria-disabled', 'true' ); }
+			calGrid.appendChild( btn );
 		}
 
-		updateCalendarHeader();
-		updatePrevNavState();
+		updateHeader();
+		updatePrev();
 	}
 
-	function selectDateAndFetch(dayBtn) {
-		if (!dayBtn || dayBtn.classList.contains('bookit-v2-day--disabled') || dayBtn.disabled) return;
+	/* ---- flatten timeslots response ---- */
+	function flatSlots( data ) {
+		if ( ! data ) { return []; }
+		if ( Array.isArray( data ) ) { return data; }
+		var raw = data.slots;
+		if ( ! raw ) { return []; }
+		if ( Array.isArray( raw ) ) { return raw; }
+		var out = [];
+		[ 'morning', 'afternoon', 'evening' ].forEach( function ( p ) {
+			if ( raw[ p ] ) { out = out.concat( raw[ p ] ); }
+		} );
+		return out;
+	}
 
-		calGridEl.querySelectorAll('.bookit-v2-day--selected')
-			.forEach(function (d) { d.classList.remove('bookit-v2-day--selected'); });
-		dayBtn.classList.add('bookit-v2-day--selected');
+	function slotTime( s ) {
+		var t = ( typeof s === 'string' ) ? s : ( s && s.time ? s.time : '' );
+		if ( ! t ) { return ''; }
+		var p = t.split( ':' );
+		return pad( p[0] ) + ':' + pad( p[1] ) + ( p[2] ? ':' + pad( p[2] ) : ':00' );
+	}
 
-		selectedDate = dayBtn.dataset.date;
+	function slotLabel( s ) {
+		var t = ( typeof s === 'string' ) ? s : ( s && s.time ? s.time : '' );
+		if ( ! t ) { return ''; }
+		var p = t.split( ':' );
+		return pad( p[0] ) + ':' + pad( p[1] );
+	}
+
+	/* ---- fetch and render slots ---- */
+	function fetchSlots( dateStr ) {
+		if ( ! dateStr ) { return; }
+		selectedDate = dateStr;
 		selectedTime = null;
 		confirmBtn.disabled = true;
 
@@ -449,206 +450,140 @@ if ( ! $within_window ) {
 		slotsLoading.style.display = 'block';
 		slotsList.innerHTML        = '';
 		slotsEmpty.style.display   = 'none';
-		if (slotsEmpty && emptySlotsDefault) {
-			slotsEmpty.textContent = emptySlotsDefault;
-		}
 
-		var url = timeslotsUrl
-			+ '?staff_id=' + encodeURIComponent(staffId)
-			+ '&service_id=' + encodeURIComponent(serviceId)
-			+ '&date=' + encodeURIComponent(selectedDate);
+		calGrid.querySelectorAll( '.bookit-v2-day--selected' )
+			.forEach( function ( b ) { b.classList.remove( 'bookit-v2-day--selected' ); } );
+		var active = calGrid.querySelector( '[data-date="' + dateStr + '"]' );
+		if ( active ) { active.classList.add( 'bookit-v2-day--selected' ); }
 
-		fetch(url, { credentials: 'same-origin' })
-			.then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
-			.then(function (result) {
+		var url = slotsUrl
+			+ '?staff_id='   + encodeURIComponent( staffId )
+			+ '&service_id=' + encodeURIComponent( serviceId )
+			+ '&date='       + encodeURIComponent( dateStr );
+
+		fetch( url, { credentials: 'same-origin' } )
+			.then( function ( r ) { return r.json().then( function ( b ) { return { ok: r.ok, body: b }; } ); } )
+			.then( function ( res ) {
 				slotsLoading.style.display = 'none';
-				var data = result.body;
-				if (!result.ok && data && data.code) {
-					slotsEmpty.style.display = 'block';
-					slotsEmpty.textContent = (data.message) || '<?php echo esc_js( __( 'No available times on this date. Please choose another day.', 'bookit-booking-system' ) ); ?>';
-					return;
-				}
-				if (data && data.success === false) {
-					slotsEmpty.style.display = 'block';
-					slotsEmpty.textContent = (data.message) || '<?php echo esc_js( __( 'No available times on this date. Please choose another day.', 'bookit-booking-system' ) ); ?>';
-					return;
-				}
-				var slots = flattenSlotsPayload(data);
-				if (!slots.length) {
+				var slots = flatSlots( res.body );
+				if ( ! slots.length ) {
 					slotsEmpty.style.display = 'block';
 					return;
 				}
-				slots.forEach(function (slot) {
-					var timeVal = normalizeTimeForApi(slot);
-					var label   = formatSlotLabel(slot);
-					var btn     = document.createElement('button');
-					btn.type      = 'button';
-					btn.className = 'bookit-v2-slot bookit-v2-slot--available';
-					btn.textContent = label;
-					btn.dataset.time = timeVal;
-
-					btn.addEventListener('click', function () {
-						slotsList.querySelectorAll('.bookit-v2-slot--selected')
-							.forEach(function (s) { s.classList.remove('bookit-v2-slot--selected'); });
-						btn.classList.add('bookit-v2-slot--selected');
-						selectedTime = timeVal;
+				slots.forEach( function ( slot ) {
+					var tv  = slotTime( slot );
+					var lbl = slotLabel( slot );
+					var sb  = document.createElement( 'button' );
+					sb.type        = 'button';
+					sb.className   = 'bookit-v2-slot bookit-v2-slot--available';
+					sb.textContent = lbl;
+					sb.dataset.time = tv;
+					sb.addEventListener( 'click', function () {
+						slotsList.querySelectorAll( '.bookit-v2-slot--selected' )
+							.forEach( function ( s ) { s.classList.remove( 'bookit-v2-slot--selected' ); } );
+						sb.classList.add( 'bookit-v2-slot--selected' );
+						selectedTime        = tv;
 						confirmBtn.disabled = false;
-					});
-
-					slotsList.appendChild(btn);
-				});
-			})
-			.catch(function () {
+					} );
+					slotsList.appendChild( sb );
+				} );
+			} )
+			.catch( function () {
 				slotsLoading.style.display = 'none';
 				slotsEmpty.style.display   = 'block';
-				slotsEmpty.textContent     = '<?php echo esc_js( __( 'Could not load available times. Please try again.', 'bookit-booking-system' ) ); ?>';
-			});
+			} );
 	}
 
-	function selectDefaultDateForMonthAndFetch() {
-		if (!calGridEl) return;
-		var startDay = 1;
-		if (currentYear === todayYear && currentMonth === todayMonth) {
-			startDay = todayDay;
-		}
-		for (var d = startDay; d <= 31; d++) {
-			var candidate = calGridEl.querySelector('[data-date="' + formatDateStr(currentYear, currentMonth, d) + '"]');
-			if (candidate && !candidate.disabled && !candidate.classList.contains('bookit-v2-day--disabled')) {
-				selectDateAndFetch(candidate);
-				return;
-			}
+	/* ---- auto-select first available day ---- */
+	function autoSelect() {
+		var start = ( currentY === todayY && currentM === todayM ) ? todayD : 1;
+		for ( var d = start; d <= 31; d++ ) {
+			var el = calGrid.querySelector( '[data-date="' + ymd( currentY, currentM, d ) + '"]' );
+			if ( el && ! el.disabled ) { fetchSlots( el.dataset.date ); return; }
 		}
 	}
 
-	// Initialize current month/year from the server-rendered grid if present.
-	var initialDay = calendar.querySelector('.bookit-v2-calendar-grid [data-date]');
-	if (initialDay && initialDay.dataset.date && /^\d{4}-\d{2}-\d{2}$/.test(initialDay.dataset.date)) {
-		var parts = initialDay.dataset.date.split('-');
-		currentYear = parseInt(parts[0], 10);
-		currentMonth = parseInt(parts[1], 10) - 1;
-	}
-	updatePrevNavState();
-
-	if (prevMonthBtn) {
-		prevMonthBtn.addEventListener('click', function () {
-			if (prevMonthBtn.disabled) return;
-			var nextMonthVal = currentMonth - 1;
-			var nextYearVal = currentYear;
-			if (nextMonthVal < 0) {
-				nextMonthVal = 11;
-				nextYearVal = currentYear - 1;
-			}
-			if (nextYearVal < todayYear || (nextYearVal === todayYear && nextMonthVal < todayMonth)) {
-				return;
-			}
-			currentYear = nextYearVal;
-			currentMonth = nextMonthVal;
-			resetSelectionAndSlots();
-			renderCalendarGrid();
-			selectDefaultDateForMonthAndFetch();
-		});
+	/* ---- month navigation ---- */
+	if ( prevBtn ) {
+		prevBtn.addEventListener( 'click', function () {
+			if ( prevBtn.disabled ) { return; }
+			currentM--;
+			if ( currentM < 0 ) { currentM = 11; currentY--; }
+			resetSlots();
+			buildGrid();
+			autoSelect();
+		} );
 	}
 
-	if (nextMonthBtn) {
-		nextMonthBtn.addEventListener('click', function () {
-			var nextMonthVal = currentMonth + 1;
-			var nextYearVal = currentYear;
-			if (nextMonthVal > 11) {
-				nextMonthVal = 0;
-				nextYearVal = currentYear + 1;
-			}
-			currentYear = nextYearVal;
-			currentMonth = nextMonthVal;
-			resetSelectionAndSlots();
-			renderCalendarGrid();
-			selectDefaultDateForMonthAndFetch();
-		});
+	if ( nextBtn ) {
+		nextBtn.addEventListener( 'click', function () {
+			currentM++;
+			if ( currentM > 11 ) { currentM = 0; currentY++; }
+			resetSlots();
+			buildGrid();
+			autoSelect();
+		} );
 	}
 
-	function flattenSlotsPayload(data) {
-		if (!data) return [];
-		if (Array.isArray(data)) return data;
-		var raw = data.slots;
-		if (!raw) return [];
-		if (Array.isArray(raw)) return raw;
-		var out = [];
-		if (raw.morning) out = out.concat(raw.morning);
-		if (raw.afternoon) out = out.concat(raw.afternoon);
-		if (raw.evening) out = out.concat(raw.evening);
-		return out;
-	}
+	/* ---- day click (delegated) ---- */
+	calendar.addEventListener( 'click', function ( e ) {
+		var day = e.target.closest( '[data-date]' );
+		if ( ! day || day.disabled || day.classList.contains( 'bookit-v2-day--disabled' ) ) { return; }
+		fetchSlots( day.dataset.date );
+	} );
 
-	function formatSlotLabel(slot) {
-		var t = typeof slot === 'string' ? slot : (slot && slot.time ? slot.time : '');
-		if (!t) return '';
-		var parts = t.split(':');
-		if (parts.length >= 2) return parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
-		return t;
-	}
-
-	function normalizeTimeForApi(slot) {
-		var t = typeof slot === 'string' ? slot : (slot && slot.time ? slot.time : '');
-		if (!t) return '';
-		var parts = t.split(':');
-		if (parts.length === 2) return parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
-		if (parts.length >= 3) return parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0') + ':' + parts[2].padStart(2, '0');
-		return t;
-	}
-
-	calendar.addEventListener('click', function (e) {
-		var day = e.target.closest('[data-date]');
-		if (!day) return;
-		selectDateAndFetch(day);
-	});
-
-	confirmBtn.addEventListener('click', function () {
-		if (!selectedDate || !selectedTime) return;
-
+	/* ---- confirm button ---- */
+	confirmBtn.addEventListener( 'click', function () {
+		if ( ! selectedDate || ! selectedTime ) { return; }
 		confirmBtn.disabled    = true;
-		confirmBtn.textContent = '<?php echo esc_js( __( 'Rescheduling...', 'bookit-booking-system' ) ); ?>';
+		confirmBtn.textContent = 'Confirming...';
 
-		fetch(confirmBtn.dataset.restUrl, {
-			method: 'POST',
+		fetch( restUrl, {
+			method:  'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				booking_id: parseInt(confirmBtn.dataset.bookingId, 10),
-				token:      confirmBtn.dataset.token,
+			body:    JSON.stringify( {
+				booking_id: bookingId,
+				token:      token,
 				new_date:   selectedDate,
 				new_time:   selectedTime
-			})
-		})
-			.then(function (r) { return r.json(); })
-			.then(function (data) {
+			} )
+		} )
+		.then( function ( r ) { return r.json(); } )
+		.then( function ( data ) {
+			if ( data.success ) {
 				msgEl.style.display = 'block';
-				if (data.success) {
-					msgEl.className   = 'bookit-magic-message bookit-magic-message--success';
-					msgEl.textContent = '<?php echo esc_js( __( 'Your booking has been rescheduled', 'bookit-booking-system' ) ); ?> \u2713';
-					confirmBtn.disabled = false;
-					confirmBtn.textContent = confirmBtnDefault;
-					if (prevMonthBtn) prevMonthBtn.disabled = true;
-					if (nextMonthBtn) nextMonthBtn.disabled = true;
-					if (calGridEl) {
-						calGridEl.querySelectorAll('button')
-							.forEach(function (b) { b.disabled = true; });
-					}
-					setTimeout(function () {
-						window.location.href = '<?php echo esc_js( home_url( '/' ) ); ?>';
-					}, 3000);
-				} else {
-					msgEl.className      = 'bookit-magic-message bookit-magic-message--error';
-					msgEl.textContent    = (data.message) || '<?php echo esc_js( __( 'Something went wrong. Please try again.', 'bookit-booking-system' ) ); ?>';
-					confirmBtn.disabled  = false;
-					confirmBtn.textContent = confirmBtnDefault;
-				}
-			})
-			.catch(function () {
+				msgEl.className     = 'bookit-magic-message bookit-magic-message--success';
+				msgEl.textContent   = 'Your booking has been rescheduled. \u2713';
+				confirmBtn.disabled    = true;
+				confirmBtn.textContent = 'Rescheduled';
+				if ( prevBtn ) { prevBtn.disabled = true; }
+				if ( nextBtn ) { nextBtn.disabled = true; }
+				calGrid.querySelectorAll( 'button' )
+					.forEach( function ( b ) { b.disabled = true; } );
+				setTimeout( function () {
+					window.location.href = '<?php echo esc_js( home_url( '/' ) ); ?>';
+				}, 3000 );
+			} else {
 				msgEl.style.display    = 'block';
 				msgEl.className        = 'bookit-magic-message bookit-magic-message--error';
-				msgEl.textContent      = '<?php echo esc_js( __( 'A network error occurred. Please try again.', 'bookit-booking-system' ) ); ?>';
+				msgEl.textContent      = ( data.message ) || 'Something went wrong. Please try again.';
 				confirmBtn.disabled    = false;
-				confirmBtn.textContent = confirmBtnDefault;
-			});
-	});
-}());
+				confirmBtn.textContent = 'Confirm Reschedule';
+			}
+		} )
+		.catch( function () {
+			msgEl.style.display    = 'block';
+			msgEl.className        = 'bookit-magic-message bookit-magic-message--error';
+			msgEl.textContent      = 'A network error occurred. Please try again.';
+			confirmBtn.disabled    = false;
+			confirmBtn.textContent = 'Confirm Reschedule';
+		} );
+	} );
+
+	/* ---- initialise ---- */
+	updatePrev();
+	autoSelect();
+
+}() );
 </script>
 	<?php endif; ?>
