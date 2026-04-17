@@ -30,6 +30,10 @@ class Bookit_Shortcodes {
 		add_shortcode( 'bookit_reschedule_booking', array( $this, 'render_reschedule_booking' ) );
 		add_shortcode( 'bookit_confirmation', array( $this, 'bookit_confirmation_page_shortcode' ) );
 		add_shortcode( 'bookit_my_packages', array( $this, 'render_my_packages' ) );
+
+		// Prevent wptexturize from encoding JS operators in these shortcodes.
+		add_filter( 'no_texturize_shortcodes', array( $this, 'get_no_texturize_shortcodes' ) );
+
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_wizard_assets' ) );
 		add_filter( 'theme_page_templates', array( $this, 'register_wizard_v2_page_template' ), 10, 4 );
 		add_filter( 'template_include', array( $this, 'load_wizard_v2_page_template' ), 99 );
@@ -502,5 +506,17 @@ class Bookit_Shortcodes {
 			}
 		}
 		return $template;
+	}
+
+	/**
+	 * Prevent wptexturize from encoding JS operators in these shortcodes.
+	 *
+	 * @param array $shortcodes Shortcode tags to exclude from texturizing.
+	 * @return array
+	 */
+	public function get_no_texturize_shortcodes( $shortcodes ) {
+		$shortcodes[] = 'bookit_reschedule_booking';
+		$shortcodes[] = 'bookit_cancel_booking';
+		return $shortcodes;
 	}
 }
