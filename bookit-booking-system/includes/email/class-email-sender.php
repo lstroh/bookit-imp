@@ -497,6 +497,174 @@ class Booking_System_Email_Sender {
 	}
 
 	/**
+	 * Generate email change verification email HTML.
+	 *
+	 * @param array  $customer Customer row (expects id, first_name, last_name).
+	 * @param string $token Verification token.
+	 * @return string
+	 */
+	public function generate_email_change_verification_email( array $customer, string $token ): string {
+		$customer_name = trim( (string) ( $customer['first_name'] ?? '' ) . ' ' . (string) ( $customer['last_name'] ?? '' ) );
+		$verify_url    = rest_url( 'bookit/v1/wizard/verify-email-change' ) . '?token=' . rawurlencode( $token ) . '&customer_id=' . rawurlencode( (string) (int) ( $customer['id'] ?? 0 ) );
+
+		ob_start();
+		?>
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<meta charset="UTF-8">
+			<style>
+				body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+				.container { max-width: 600px; margin: 0 auto; padding: 20px; }
+				.header { background: #0073aa; color: white; padding: 20px; text-align: center; }
+				.content { background: #f9f9f9; padding: 20px; }
+				.card { background: white; padding: 16px; border-left: 4px solid #0073aa; margin: 16px 0; }
+				.btn { display: inline-block; padding: 12px 20px; background-color: #005FB8; color: #fff; text-decoration: none; border-radius: 4px; font-weight: 600; }
+				.footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+			</style>
+		</head>
+		<body>
+			<div class="container">
+				<div class="header">
+					<h1><?php esc_html_e( 'Verify your new email address', 'bookit-booking-system' ); ?></h1>
+				</div>
+				<div class="content">
+					<?php if ( ! empty( $customer_name ) ) : ?>
+						<p><?php printf( esc_html__( 'Hi %s,', 'bookit-booking-system' ), esc_html( $customer_name ) ); ?></p>
+					<?php endif; ?>
+					<p><?php esc_html_e( 'An administrator has requested an email address change for your booking account.', 'bookit-booking-system' ); ?></p>
+
+					<div class="card">
+						<p style="margin:0 0 12px;"><?php esc_html_e( 'Please verify this change by clicking the button below.', 'bookit-booking-system' ); ?></p>
+						<p style="margin:0;">
+							<a class="btn" href="<?php echo esc_url( $verify_url ); ?>">
+								<?php esc_html_e( 'Verify Email Change', 'bookit-booking-system' ); ?>
+							</a>
+						</p>
+					</div>
+
+					<p style="font-size: 13px; color:#6B7280; margin: 0;">
+						<?php esc_html_e( 'If you were not expecting this email, please contact us.', 'bookit-booking-system' ); ?>
+					</p>
+				</div>
+				<div class="footer">
+					<p><?php echo esc_html( get_bloginfo( 'name' ) ); ?></p>
+				</div>
+			</div>
+		</body>
+		</html>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Generate email change notification email HTML (sent to the old address).
+	 *
+	 * @param array $customer Customer row.
+	 * @return string
+	 */
+	public function generate_email_change_notification_email( array $customer ): string {
+		$customer_name = trim( (string) ( $customer['first_name'] ?? '' ) . ' ' . (string) ( $customer['last_name'] ?? '' ) );
+
+		ob_start();
+		?>
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<meta charset="UTF-8">
+			<style>
+				body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+				.container { max-width: 600px; margin: 0 auto; padding: 20px; }
+				.header { background: #0073aa; color: white; padding: 20px; text-align: center; }
+				.content { background: #f9f9f9; padding: 20px; }
+				.card { background: white; padding: 16px; border-left: 4px solid #0073aa; margin: 16px 0; }
+				.footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+			</style>
+		</head>
+		<body>
+			<div class="container">
+				<div class="header">
+					<h1><?php esc_html_e( 'Email change requested', 'bookit-booking-system' ); ?></h1>
+				</div>
+				<div class="content">
+					<?php if ( ! empty( $customer_name ) ) : ?>
+						<p><?php printf( esc_html__( 'Hi %s,', 'bookit-booking-system' ), esc_html( $customer_name ) ); ?></p>
+					<?php endif; ?>
+
+					<div class="card">
+						<p style="margin:0;">
+							<?php esc_html_e( 'An email change has been requested for your booking account. If you did not request this, please contact us.', 'bookit-booking-system' ); ?>
+						</p>
+					</div>
+				</div>
+				<div class="footer">
+					<p><?php echo esc_html( get_bloginfo( 'name' ) ); ?></p>
+				</div>
+			</div>
+		</body>
+		</html>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Generate email change confirmed email HTML.
+	 *
+	 * @param string $new_email New email address.
+	 * @return string
+	 */
+	public function generate_email_change_confirmed_email( string $new_email ): string {
+		$new_email = sanitize_email( $new_email );
+
+		ob_start();
+		?>
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<meta charset="UTF-8">
+			<style>
+				body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+				.container { max-width: 600px; margin: 0 auto; padding: 20px; }
+				.header { background: #0073aa; color: white; padding: 20px; text-align: center; }
+				.content { background: #f9f9f9; padding: 20px; }
+				.card { background: white; padding: 16px; border-left: 4px solid #0073aa; margin: 16px 0; }
+				.footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+			</style>
+		</head>
+		<body>
+			<div class="container">
+				<div class="header">
+					<h1><?php esc_html_e( 'Email Updated', 'bookit-booking-system' ); ?></h1>
+				</div>
+				<div class="content">
+					<div class="card">
+						<p style="margin:0 0 10px;">
+							<?php esc_html_e( 'Your booking account email has been updated. Future booking communications will be sent to your new address.', 'bookit-booking-system' ); ?>
+						</p>
+						<?php if ( ! empty( $new_email ) ) : ?>
+							<p style="margin:0; font-size:13px; color:#6B7280;">
+								<?php
+								printf(
+									/* translators: %s: email address */
+									esc_html__( 'New email: %s', 'bookit-booking-system' ),
+									esc_html( $new_email )
+								);
+								?>
+							</p>
+						<?php endif; ?>
+					</div>
+				</div>
+				<div class="footer">
+					<p><?php echo esc_html( get_bloginfo( 'name' ) ); ?></p>
+				</div>
+			</div>
+		</body>
+		</html>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
 	 * Generate customer cancellation email HTML.
 	 *
 	 * @param array $booking Booking data.

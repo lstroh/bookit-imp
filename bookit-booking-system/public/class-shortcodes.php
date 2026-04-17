@@ -28,6 +28,7 @@ class Bookit_Shortcodes {
 		add_shortcode( 'bookit_booking_confirmed_v2', array( $this, 'render_booking_confirmed_v2' ) );
 		add_shortcode( 'bookit_cancel_booking', array( $this, 'render_cancel_booking' ) );
 		add_shortcode( 'bookit_reschedule_booking', array( $this, 'render_reschedule_booking' ) );
+		add_shortcode( 'bookit_email_changed', array( $this, 'render_email_changed' ) );
 		add_shortcode( 'bookit_confirmation', array( $this, 'bookit_confirmation_page_shortcode' ) );
 		add_shortcode( 'bookit_my_packages', array( $this, 'render_my_packages' ) );
 
@@ -531,7 +532,23 @@ class Bookit_Shortcodes {
 	public function get_no_texturize_shortcodes( $shortcodes ) {
 		$shortcodes[] = 'bookit_reschedule_booking';
 		$shortcodes[] = 'bookit_cancel_booking';
+		$shortcodes[] = 'bookit_email_changed';
 		return $shortcodes;
+	}
+
+	/**
+	 * Render email changed confirmation page shortcode.
+	 *
+	 * @return string
+	 */
+	public function render_email_changed() {
+		return '
+<div class="bookit-confirmation-page bookit-magic-link-page">
+  <div class="bookit-confirmation-card">
+    <h2>Email Updated</h2>
+    <p>Your email address has been updated. Future booking communications will be sent to your new address.</p>
+  </div>
+</div>';
 	}
 
 	/**

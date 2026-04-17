@@ -222,6 +222,18 @@ class Bookit_Activator {
 				)
 			);
 		}
+
+		if ( ! get_page_by_path( 'bookit-email-changed' ) ) {
+			wp_insert_post(
+				array(
+					'post_title'   => 'Email Updated',
+					'post_name'    => 'bookit-email-changed',
+					'post_content' => '[bookit_email_changed]',
+					'post_status'  => 'publish',
+					'post_type'    => 'page',
+				)
+			);
+		}
 		global $wpdb;  // Declare global first
 
 		// Seed dashboard branding defaults if missing.

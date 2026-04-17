@@ -58,9 +58,71 @@
       </div>
 
       <div v-if="editMode" class="bg-white rounded-lg border border-gray-200 p-6">
-        <p class="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-          Email address cannot be changed here.
-        </p>
+        <div class="mb-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div class="text-sm text-gray-700">
+              <span class="font-medium text-gray-900">Email</span>
+              <span class="mx-2 text-gray-300">•</span>
+              <span class="font-mono">{{ customer.email }}</span>
+            </div>
+            <button
+              type="button"
+              class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              @click="toggleEmailForm"
+            >
+              {{ showEmailForm ? 'Close' : 'Change Email' }}
+            </button>
+          </div>
+
+          <div v-if="emailChangeSuccess" class="mt-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+            {{ emailChangeSuccess }}
+          </div>
+          <div v-if="emailChangeError" class="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {{ emailChangeError }}
+          </div>
+
+          <form v-if="showEmailForm" class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3" @submit.prevent="sendEmailChangeRequest">
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">New email address</label>
+              <input
+                v-model="newEmail"
+                type="email"
+                required
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="name@example.com"
+              />
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+              <select
+                v-model="emailReason"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                required
+              >
+                <option value="Typo fix">Typo fix</option>
+                <option value="Customer request">Customer request</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="md:col-span-2 flex gap-2">
+              <button
+                type="button"
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                :disabled="emailChangeLoading"
+                @click="cancelEmailChange"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                :disabled="emailChangeLoading"
+              >
+                {{ emailChangeLoading ? 'Sending...' : 'Send Verification' }}
+              </button>
+            </div>
+          </form>
+        </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -382,6 +444,12 @@ const saving = ref(false)
 const deleting = ref(false)
 const showDeleteModal = ref(false)
 const deleteError = ref('')
+const showEmailForm = ref(false)
+const newEmail = ref('')
+const emailReason = ref('Typo fix')
+const emailChangeLoading = ref(false)
+const emailChangeSuccess = ref(null)
+const emailChangeError = ref(null)
 const activeTab = ref('bookings')
 const customerPackages = ref([])
 const packagesLoading = ref(false)
@@ -530,6 +598,63 @@ function toggleEdit() {
 function cancelEdit() {
   fillEditForm()
   editMode.value = false
+}
+
+function toggleEmailForm() {
+  showEmailForm.value = !showEmailForm.value
+  emailChangeError.value = null
+  emailChangeSuccess.value = null
+  if (!showEmailForm.value) {
+    newEmail.value = ''
+    emailReason.value = 'Typo fix'
+  }
+}
+
+function cancelEmailChange() {
+  showEmailForm.value = false
+  newEmail.value = ''
+  emailReason.value = 'Typo fix'
+  emailChangeLoading.value = false
+  emailChangeError.value = null
+  emailChangeSuccess.value = null
+}
+
+async function sendEmailChangeRequest() {
+  if (!customer.value?.id) return
+  emailChangeLoading.value = true
+  emailChangeError.value = null
+  emailChangeSuccess.value = null
+
+  try {
+    const id = customer.value.id
+    const url = `${window.BOOKIT_DASHBOARD.apiBase}/customers/${id}/request-email-change`
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-WP-Nonce': window.BOOKIT_DASHBOARD.nonce,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        new_email: newEmail.value,
+        reason: emailReason.value
+      })
+    })
+
+    const data = await resp.json().catch(() => ({}))
+    if (!resp.ok) {
+      const message = data?.message || data?.data?.message || 'Failed to request email change.'
+      throw new Error(message)
+    }
+
+    showEmailForm.value = false
+    emailChangeSuccess.value = `Verification email sent to ${newEmail.value}. The customer must click the link to confirm the change.`
+    newEmail.value = ''
+    emailReason.value = 'Typo fix'
+  } catch (err) {
+    emailChangeError.value = err.message || 'Failed to request email change.'
+  } finally {
+    emailChangeLoading.value = false
+  }
 }
 
 async function loadCustomer() {

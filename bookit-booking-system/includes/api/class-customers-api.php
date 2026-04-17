@@ -159,6 +159,50 @@ class Bookit_Customers_API {
 				'permission_callback' => array( $this, 'check_admin_permission' ),
 			)
 		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/customers/(?P<id>\d+)/request-email-change',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'request_email_change' ),
+				'permission_callback' => array( $this, 'check_admin_permission' ),
+				'args'                => array(
+					'new_email' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_email',
+					),
+					'reason'    => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/wizard/verify-email-change',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'verify_email_change' ),
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'token'       => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'customer_id' => array(
+						'required'          => true,
+						'type'              => 'integer',
+						'sanitize_callback' => 'absint',
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -630,6 +674,311 @@ class Bookit_Customers_API {
 				'message' => __( 'Customer data has been anonymised in compliance with GDPR Article 17.', 'bookit-booking-system' ),
 			)
 		);
+	}
+
+	/**
+	 * POST /dashboard/customers/{id}/request-email-change
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function request_email_change( $request ) {
+		global $wpdb;
+
+		$customer_id = absint( $request->get_param( 'id' ) );
+		$new_email   = sanitize_email( (string) $request->get_param( 'new_email' ) );
+		$reason      = sanitize_text_field( (string) $request->get_param( 'reason' ) );
+
+		if ( $customer_id <= 0 ) {
+			return new WP_Error( 'invalid_customer_id', __( 'A valid customer ID is required.', 'bookit-booking-system' ), array( 'status' => 400 ) );
+		}
+
+		if ( empty( $new_email ) || ! is_email( $new_email ) ) {
+			return new WP_Error( 'invalid_email', __( 'A valid email address is required.', 'bookit-booking-system' ), array( 'status' => 400 ) );
+		}
+
+		if ( empty( $reason ) ) {
+			return new WP_Error( 'missing_reason', __( 'A reason is required.', 'bookit-booking-system' ), array( 'status' => 400 ) );
+		}
+
+		if ( ! class_exists( 'Bookit_Rate_Limiter' ) ) {
+			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'class-bookit-rate-limiter.php';
+		}
+
+		if ( ! class_exists( 'Bookit_Notification_Dispatcher' ) ) {
+			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'notifications/class-bookit-notification-dispatcher.php';
+		}
+
+		if ( ! class_exists( 'Booking_System_Email_Sender' ) ) {
+			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'email/class-email-sender.php';
+		}
+
+		if ( ! class_exists( 'Bookit_Auth' ) ) {
+			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'class-bookit-auth.php';
+		}
+
+		$current_staff = Bookit_Auth::get_current_staff();
+		$staff_id      = is_array( $current_staff ) && isset( $current_staff['id'] ) ? absint( $current_staff['id'] ) : 0;
+		if ( $staff_id <= 0 ) {
+			return new WP_Error( 'unauthorized', __( 'You must be logged in to access the dashboard.', 'bookit-booking-system' ), array( 'status' => 401 ) );
+		}
+
+		$rate_identifier = (string) $staff_id;
+		if ( ! Bookit_Rate_Limiter::check( 'email_change_request', $rate_identifier, 5, HOUR_IN_SECONDS ) ) {
+			return Bookit_Rate_Limiter::handle_exceeded( 'email_change_request', $rate_identifier );
+		}
+
+		$customer = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, first_name, last_name, email
+				FROM {$wpdb->prefix}bookings_customers
+				WHERE id = %d AND deleted_at IS NULL
+				LIMIT 1",
+				$customer_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $customer ) {
+			return new WP_Error( 'customer_not_found', __( 'Customer not found.', 'bookit-booking-system' ), array( 'status' => 404 ) );
+		}
+
+		$duplicate_id = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_customers WHERE email = %s AND id != %d LIMIT 1",
+				$new_email,
+				$customer_id
+			)
+		);
+
+		if ( $duplicate_id > 0 ) {
+			return new WP_Error(
+				'email_already_in_use',
+				'This email is already in use',
+				array( 'status' => 409 )
+			);
+		}
+
+		$token   = wp_generate_password( 32, false, false );
+		$expires = gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS );
+
+		$updated = $wpdb->update(
+			$wpdb->prefix . 'bookings_customers',
+			array(
+				'pending_email_change' => $new_email,
+				'email_change_token'   => $token,
+				'email_change_expires' => $expires,
+				'updated_at'           => current_time( 'mysql' ),
+			),
+			array( 'id' => $customer_id ),
+			array( '%s', '%s', '%s', '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $updated ) {
+			return new WP_Error( 'email_change_request_failed', __( 'Failed to request email change.', 'bookit-booking-system' ), array( 'status' => 500 ) );
+		}
+
+		$email_sender  = new Booking_System_Email_Sender();
+		$customer_name = trim( (string) ( $customer['first_name'] ?? '' ) . ' ' . (string) ( $customer['last_name'] ?? '' ) );
+
+		$verification_subject = 'Please verify your new email address';
+		$verification_body    = $email_sender->generate_email_change_verification_email( $customer, $token );
+		Bookit_Notification_Dispatcher::enqueue_email(
+			'email_change_verification',
+			array(
+				'email' => $new_email,
+				'name'  => $customer_name,
+			),
+			$verification_subject,
+			$verification_body
+		);
+
+		$notification_subject = 'Email change requested for your booking account';
+		$notification_body    = $email_sender->generate_email_change_notification_email( $customer );
+		Bookit_Notification_Dispatcher::enqueue_email(
+			'email_change_notification',
+			array(
+				'email' => (string) ( $customer['email'] ?? '' ),
+				'name'  => $customer_name,
+			),
+			$notification_subject,
+			$notification_body
+		);
+
+		Bookit_Audit_Logger::log(
+			'customer.email_change_requested',
+			'admin',
+			$staff_id,
+			array(
+				'customer_id' => $customer_id,
+				'new_email'   => $new_email,
+				'reason'      => $reason,
+			)
+		);
+
+		return new WP_REST_Response( array( 'success' => true ), 200 );
+	}
+
+	/**
+	 * GET /wizard/verify-email-change
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response
+	 */
+	public function verify_email_change( $request ) {
+		global $wpdb;
+
+		$token       = sanitize_text_field( (string) $request->get_param( 'token' ) );
+		$customer_id = absint( $request->get_param( 'customer_id' ) );
+
+		if ( empty( $token ) || $customer_id <= 0 ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Invalid verification link.',
+				),
+				400
+			);
+		}
+
+		$customer = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, first_name, last_name, email, pending_email_change, email_change_token, email_change_expires
+				FROM {$wpdb->prefix}bookings_customers
+				WHERE id = %d AND deleted_at IS NULL
+				LIMIT 1",
+				$customer_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $customer ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Customer not found.',
+				),
+				400
+			);
+		}
+
+		$stored_token = (string) ( $customer['email_change_token'] ?? '' );
+		if ( empty( $stored_token ) || ! hash_equals( $stored_token, (string) $token ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Invalid verification link.',
+				),
+				400
+			);
+		}
+
+		$expires_raw = (string) ( $customer['email_change_expires'] ?? '' );
+		$expires_ts  = $expires_raw ? strtotime( $expires_raw . ' UTC' ) : false;
+		if ( false === $expires_ts || $expires_ts < time() ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'This verification link has expired.',
+				),
+				400
+			);
+		}
+
+		$new_email = (string) ( $customer['pending_email_change'] ?? '' );
+		if ( empty( $new_email ) || ! is_email( $new_email ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'No pending email change found.',
+				),
+				400
+			);
+		}
+
+		if ( ! class_exists( 'Bookit_Notification_Dispatcher' ) ) {
+			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'notifications/class-bookit-notification-dispatcher.php';
+		}
+
+		if ( ! class_exists( 'Booking_System_Email_Sender' ) ) {
+			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'email/class-email-sender.php';
+		}
+
+		$old_email = (string) ( $customer['email'] ?? '' );
+
+		$updated = $wpdb->update(
+			$wpdb->prefix . 'bookings_customers',
+			array(
+				'email'                => $new_email,
+				'pending_email_change' => null,
+				'email_change_token'   => null,
+				'email_change_expires' => null,
+				'updated_at'           => current_time( 'mysql' ),
+			),
+			array( 'id' => $customer_id ),
+			array( '%s', '%s', '%s', '%s', '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $updated ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Failed to update email address.',
+				),
+				400
+			);
+		}
+
+		$email_sender = new Booking_System_Email_Sender();
+		$subject      = 'Your booking account email has been updated';
+		$html_body    = $email_sender->generate_email_change_confirmed_email( $new_email );
+		$name         = trim( (string) ( $customer['first_name'] ?? '' ) . ' ' . (string) ( $customer['last_name'] ?? '' ) );
+
+		Bookit_Notification_Dispatcher::enqueue_email(
+			'email_change_confirmed',
+			array(
+				'email' => $old_email,
+				'name'  => $name,
+			),
+			$subject,
+			$html_body
+		);
+
+		Bookit_Notification_Dispatcher::enqueue_email(
+			'email_change_confirmed',
+			array(
+				'email' => $new_email,
+				'name'  => $name,
+			),
+			$subject,
+			$html_body
+		);
+
+		Bookit_Audit_Logger::log(
+			'customer.email_change_confirmed',
+			'customer',
+			$customer_id,
+			array(
+				'old_email' => $old_email,
+				'new_email' => $new_email,
+			)
+		);
+
+		$redirect_url = home_url( '/bookit-email-changed/' );
+		if ( $this->is_test_environment() ) {
+			return new WP_REST_Response(
+				array(
+					'success'  => true,
+					'redirect' => $redirect_url,
+				),
+				200
+			);
+		}
+
+		wp_redirect( $redirect_url );
+		exit;
 	}
 
 	/**
