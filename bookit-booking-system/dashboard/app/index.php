@@ -44,6 +44,18 @@ $dashboard_js_data = array(
 // Allow extensions to enrich dashboard bootstrap payload passed to Vue.
 $dashboard_js_data = apply_filters( 'bookit_dashboard_js_data', $dashboard_js_data );
 
+// Read Vite manifest to get hashed asset filenames.
+$manifest_path = BOOKIT_PLUGIN_DIR . 'dashboard/dist/.vite/manifest.json';
+$manifest      = array();
+if ( file_exists( $manifest_path ) ) {
+	$raw      = file_get_contents( $manifest_path ); // phpcs:ignore
+	$manifest = json_decode( $raw, true ) ?? array();
+}
+$js_file  = $manifest['src/main.js']['file'] ?? 'index.js';
+$css_file = isset( $manifest['src/main.js']['css'][0] )
+	? $manifest['src/main.js']['css'][0]
+	: 'style.css';
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -52,8 +64,8 @@ $dashboard_js_data = apply_filters( 'bookit_dashboard_js_data', $dashboard_js_da
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Bookit Dashboard</title>
 
-	<?php if ( file_exists( BOOKIT_PLUGIN_DIR . 'dashboard/dist/style.css' ) ) : ?>
-		<link rel="stylesheet" href="<?php echo esc_url( BOOKIT_PLUGIN_URL . 'dashboard/dist/style.css' ); ?>">
+	<?php if ( file_exists( BOOKIT_PLUGIN_DIR . 'dashboard/dist/' . $css_file ) ) : ?>
+		<link rel="stylesheet" href="<?php echo esc_url( BOOKIT_PLUGIN_URL . 'dashboard/dist/' . $css_file ); ?>">
 	<?php endif; ?>
 
 	<?php wp_print_styles(); ?>
@@ -81,8 +93,8 @@ $dashboard_js_data = apply_filters( 'bookit_dashboard_js_data', $dashboard_js_da
 		};
 	</script>
 
-	<?php if ( file_exists( BOOKIT_PLUGIN_DIR . 'dashboard/dist/index.js' ) ) : ?>
-		<script type="module" src="<?php echo esc_url( BOOKIT_PLUGIN_URL . 'dashboard/dist/index.js' ); ?>"></script>
+	<?php if ( file_exists( BOOKIT_PLUGIN_DIR . 'dashboard/dist/' . $js_file ) ) : ?>
+		<script type="module" src="<?php echo esc_url( BOOKIT_PLUGIN_URL . 'dashboard/dist/' . $js_file ); ?>"></script>
 	<?php else : ?>
 		<script type="module" src="http://localhost:5173/@vite/client"></script>
 		<script type="module" src="http://localhost:5173/src/main.js"></script>

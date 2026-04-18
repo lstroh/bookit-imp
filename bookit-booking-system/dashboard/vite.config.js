@@ -11,14 +11,15 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    manifest: true,
     rollupOptions: {
       input: path.resolve(__dirname, 'src/main.js'),
       output: {
-        entryFileNames: 'index.js',
+        entryFileNames: 'index.[hash].js',
         chunkFileNames: 'chunks/[name]-[hash].js',
         assetFileNames: (assetInfo) => {
-          if (assetInfo.name.endsWith('.css')) {
-            return 'style.css'
+          if (assetInfo.name?.endsWith('.css')) {
+            return 'style.[hash].css'
           }
           return 'assets/[name]-[hash][extname]'
         }
