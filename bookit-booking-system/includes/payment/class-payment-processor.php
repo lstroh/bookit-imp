@@ -264,10 +264,7 @@ class Booking_System_Payment_Processor {
 					error_log( 'Pay on Arrival: Failed to send customer email - ' . $customer_result->get_error_message() );
 				}
 
-				$business_result = $email_sender->send_business_notification( $booking );
-				if ( is_wp_error( $business_result ) && self::should_log() ) {
-					error_log( 'Pay on Arrival: Failed to send business email - ' . $business_result->get_error_message() );
-				}
+				// Staff notification handled by Bookit_Staff_Notifier via bookit_after_booking_created hook.
 			}
 		} else {
 			if ( self::should_log() ) {
@@ -465,10 +462,7 @@ class Booking_System_Payment_Processor {
 					error_log( 'Pay on Arrival: Failed to send customer email - ' . $customer_result->get_error_message() );
 				}
 
-				$business_result = $email_sender->send_business_notification( $booking );
-				if ( is_wp_error( $business_result ) && self::should_log() ) {
-					error_log( 'Pay on Arrival: Failed to send business email - ' . $business_result->get_error_message() );
-				}
+				// Staff notification handled by Bookit_Staff_Notifier via bookit_after_booking_created hook.
 			}
 		} else {
 			if ( self::should_log() ) {

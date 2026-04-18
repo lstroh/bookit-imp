@@ -509,64 +509,6 @@ class Test_Payment_Success extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that business notification email is sent to admin.
-	 *
-	 * Arrange: Valid booking
-	 * Act: Call send_business_notification($booking)
-	 * Assert: Email sent to admin_email option, subject contains "New Booking"
-	 */
-	public function test_sends_business_notification_email() {
-		if ( ! $this->classes_available || ! $this->email_sender || ! $this->booking_retriever ) {
-			$this->markTestSkipped( 'Email_Sender or Booking_Retriever not implemented yet (Sprint 2, Task 5).' );
-			return;
-		}
-
-		$booking = $this->booking_retriever->get_booking_by_stripe_session( 'cs_test_session123' );
-		$this->assertNotNull( $booking );
-
-		// Remove the bypass filter so enqueue actually happens.
-		remove_filter( 'bookit_send_email', '__return_false' );
-
-		$admin_email = get_option( 'admin_email' );
-		$wp_mail_called = false;
-		$captured_to    = '';
-		$captured_subject = '';
-		add_filter(
-			'pre_wp_mail',
-			function ( $null, $atts ) use ( &$wp_mail_called, &$captured_to, &$captured_subject ) {
-				$wp_mail_called   = true;
-				$captured_to      = is_array( $atts['to'] ) ? $atts['to'][0] : $atts['to'];
-				$captured_subject = $atts['subject'];
-				return false; // Prevent actual email sending.
-			},
-			10,
-			2
-		);
-
-		$this->email_sender->send_business_notification( $booking );
-
-		remove_all_filters( 'pre_wp_mail' );
-		add_filter( 'bookit_send_email', '__return_false' ); // Re-add for other tests.
-
-		$this->assertFalse( $wp_mail_called, 'wp_mail should not be called directly' );
-
-		global $wpdb;
-		$table = $wpdb->prefix . 'bookit_email_queue';
-		$row   = $wpdb->get_row(
-			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE email_type = %s ORDER BY id DESC LIMIT 1",
-				'business_notification'
-			),
-			ARRAY_A
-		);
-
-		$this->assertIsArray( $row );
-		$this->assertSame( 'pending', $row['status'] );
-		$this->assertSame( $admin_email, $row['recipient_email'] );
-		$this->assertStringContainsString( 'New Booking', (string) $row['subject'] );
-	}
-
-	/**
 	 * Test that email send failure returns WP_Error and is handled gracefully.
 	 *
 	 * Arrange: Mock wp_mail to return false (via pre_wp_mail).

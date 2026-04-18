@@ -57,20 +57,69 @@ class Test_Notification_Dispatcher extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers Booking_System_Email_Sender::send_business_notification
-	 * @covers bookit_enqueue_email
-	 * @covers Bookit_Email_Queue::insert
+	 * Pay-on-arrival flow fires bookit_after_booking_created before customer email; staff rows use staff_new_booking_immediate.
+	 *
+	 * @covers Bookit_Staff_Notifier::on_booking_created
 	 */
-	public function test_send_business_notification_enqueues_pending_row() {
-		$email_sender = new Booking_System_Email_Sender();
-		$booking      = $this->build_minimal_booking();
+	public function test_poa_booking_created_action_enqueues_staff_notification() {
+		global $wpdb;
 
-		$result = $email_sender->send_business_notification( $booking );
-		$this->assertTrue( $result );
+		bookit_test_truncate_tables(
+			array(
+				'bookit_email_queue',
+				'bookings_audit_log',
+				'bookings',
+				'bookings_staff_services',
+				'bookings_services',
+				'bookings_staff',
+				'bookings_customers',
+			)
+		);
 
-		$row = $this->get_latest_queue_row_by_type( 'business_notification' );
+		$staff_id = $this->insert_staff_row(
+			array(
+				'email'     => 'poa-staff-notifier@example.com',
+				'is_active' => 1,
+			)
+		);
+		$service_id  = $this->insert_service_row();
+		$customer_id = $this->insert_customer_row();
+		$booking_id  = $this->insert_booking_row(
+			$customer_id,
+			$service_id,
+			$staff_id,
+			array(
+				'payment_method' => 'pay_on_arrival',
+			)
+		);
+
+		$booking_data = array(
+			'payment_method' => 'pay_on_arrival',
+		);
+
+		do_action( 'bookit_after_booking_created', $booking_id, $booking_data );
+
+		$queue_count = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}bookit_email_queue WHERE email_type = %s AND booking_id = %d",
+				'staff_new_booking_immediate',
+				$booking_id
+			)
+		);
+		$this->assertSame( 1, $queue_count );
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}bookit_email_queue WHERE email_type = %s AND booking_id = %d ORDER BY id ASC LIMIT 1",
+				'staff_new_booking_immediate',
+				$booking_id
+			),
+			ARRAY_A
+		);
+
 		$this->assertIsArray( $row );
-		$this->assertSame( 'business_notification', $row['email_type'] );
+		$this->assertSame( 'staff_new_booking_immediate', $row['email_type'] );
+		$this->assertSame( (string) $booking_id, (string) $row['booking_id'] );
 		$this->assertSame( 'pending', $row['status'] );
 	}
 
@@ -232,6 +281,170 @@ class Test_Notification_Dispatcher extends WP_UnitTestCase {
 			'payment_method'     => 'stripe',
 			'special_requests'   => '',
 		);
+	}
+
+	/**
+	 * Insert a staff row for Staff Notifier integration tests.
+	 *
+	 * @param array<string,mixed> $overrides Column overrides.
+	 * @return int Staff ID.
+	 */
+	private function insert_staff_row( array $overrides = array() ): int {
+		global $wpdb;
+
+		$defaults = array(
+			'first_name' => 'Test',
+			'last_name'  => 'Staff',
+			'email'      => 'staff-' . wp_generate_password( 8, false, false ) . '@example.com',
+			'role'       => 'staff',
+			'is_active'  => 1,
+		);
+
+		$data = wp_parse_args( $overrides, $defaults );
+
+		if ( ! isset( $data['password_hash'] ) ) {
+			$data['password_hash'] = wp_hash_password( 'x' );
+		}
+		$data['created_at'] = $data['created_at'] ?? current_time( 'mysql' );
+		$data['updated_at'] = $data['updated_at'] ?? current_time( 'mysql' );
+
+		$formats = array();
+		$insert  = array();
+
+		foreach ( $data as $key => $value ) {
+			$insert[ $key ] = $value;
+			if ( 'is_active' === $key ) {
+				$formats[] = '%d';
+			} else {
+				$formats[] = '%s';
+			}
+		}
+
+		$wpdb->insert( $wpdb->prefix . 'bookings_staff', $insert, $formats );
+		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Insert a service row.
+	 *
+	 * @param array<string,mixed> $overrides Column overrides.
+	 * @return int Service ID.
+	 */
+	private function insert_service_row( array $overrides = array() ): int {
+		global $wpdb;
+
+		$defaults = array(
+			'name'           => 'POA Test Service',
+			'duration'       => 60,
+			'price'          => 50.00,
+			'deposit_type'   => 'percentage',
+			'deposit_amount' => 100,
+			'is_active'      => 1,
+			'created_at'     => current_time( 'mysql' ),
+			'updated_at'     => current_time( 'mysql' ),
+		);
+
+		$data = wp_parse_args( $overrides, $defaults );
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_services',
+			$data,
+			array( '%s', '%d', '%f', '%s', '%f', '%d', '%s', '%s' )
+		);
+
+		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Insert a customer row.
+	 *
+	 * @param array<string,mixed> $overrides Column overrides.
+	 * @return int Customer ID.
+	 */
+	private function insert_customer_row( array $overrides = array() ): int {
+		global $wpdb;
+
+		$defaults = array(
+			'email'      => 'customer-' . wp_generate_password( 8, false, false ) . '@example.com',
+			'first_name' => 'Test',
+			'last_name'  => 'Customer',
+			'phone'      => '07700900000',
+			'created_at' => current_time( 'mysql' ),
+			'updated_at' => current_time( 'mysql' ),
+		);
+
+		$data = wp_parse_args( $overrides, $defaults );
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings_customers',
+			$data,
+			array( '%s', '%s', '%s', '%s', '%s', '%s' )
+		);
+
+		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Insert a booking row (minimal schema for Staff Notifier get_full_booking join).
+	 *
+	 * @param int                   $customer_id Customer ID.
+	 * @param int                   $service_id  Service ID.
+	 * @param int                   $staff_id    Staff ID.
+	 * @param array<string,mixed>   $overrides   Column overrides.
+	 * @return int Booking ID.
+	 */
+	private function insert_booking_row( int $customer_id, int $service_id, int $staff_id, array $overrides = array() ): int {
+		global $wpdb;
+
+		$defaults = array(
+			'booking_reference' => 'BKTEST-' . wp_generate_password( 4, false, false ),
+			'customer_id'       => $customer_id,
+			'service_id'        => $service_id,
+			'staff_id'          => $staff_id,
+			'booking_date'      => gmdate( 'Y-m-d', strtotime( '+10 days' ) ),
+			'start_time'        => '10:00:00',
+			'end_time'          => '11:00:00',
+			'duration'          => 60,
+			'status'            => 'pending_payment',
+			'total_price'       => 50.00,
+			'deposit_amount'    => 0.00,
+			'deposit_paid'      => 0.00,
+			'balance_due'       => 50.00,
+			'full_amount_paid'  => 0,
+			'payment_method'    => 'pay_on_arrival',
+			'created_at'        => current_time( 'mysql' ),
+			'updated_at'        => current_time( 'mysql' ),
+			'deleted_at'        => null,
+		);
+
+		$data = wp_parse_args( $overrides, $defaults );
+
+		$wpdb->insert(
+			$wpdb->prefix . 'bookings',
+			$data,
+			array(
+				'%s',
+				'%d',
+				'%d',
+				'%d',
+				'%s',
+				'%s',
+				'%s',
+				'%d',
+				'%s',
+				'%f',
+				'%f',
+				'%f',
+				'%f',
+				'%d',
+				'%s',
+				'%s',
+				'%s',
+				'%s',
+			)
+		);
+
+		return (int) $wpdb->insert_id;
 	}
 
 	/**

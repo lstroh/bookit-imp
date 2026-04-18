@@ -4942,8 +4942,7 @@ class Bookit_Dashboard_Bookings_API {
 
 			$email_sender = new Booking_System_Email_Sender();
 			$email_sender->send_customer_confirmation( $booking );
-			// Business notification removed Sprint 6A-8 — replaced by Bookit_Staff_Notifier
-			// which sends to all admin-role staff via their preference settings.
+			// Staff notifications handled by Bookit_Staff_Notifier via bookit_after_booking_created hook (fired above).
 		}
 
 		// Get created booking for response.

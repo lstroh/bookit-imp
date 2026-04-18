@@ -15,7 +15,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Email Sender class.
  *
- * Sends booking confirmation emails to customers and business notification emails to admin.
+ * Sends booking confirmation and customer lifecycle emails (cancellation, reschedule, etc.).
  */
 class Booking_System_Email_Sender {
 
@@ -172,55 +172,6 @@ class Booking_System_Email_Sender {
 
 		if ( self::should_log() ) {
 			error_log( 'Email Sender: Customer reschedule queued (queue_id=' . $queue_id . ') for ' . ( $booking['customer_email'] ?? '' ) );
-		}
-		return true;
-	}
-
-	/**
-	 * Send business notification email.
-	 *
-	 * @param array $booking Booking data.
-	 * @return bool|WP_Error True on success, WP_Error on failure.
-	 */
-	public function send_business_notification( $booking ) {
-		// Allow tests to bypass.
-		$bypass = apply_filters( 'bookit_send_email', true );
-		if ( $bypass === false ) {
-			return true;
-		}
-
-		$to      = get_option( 'admin_email' );
-		$subject = sprintf(
-			__( 'New Booking - %s on %s', 'booking-system' ),
-			$booking['service_name'],
-			$this->format_date( $booking['booking_date'] )
-		);
-
-		$admin_email = get_option( 'admin_email' );
-		$recipient   = array(
-			'email' => $admin_email,
-			'name'  => get_bloginfo( 'name' ),
-		);
-
-		$html_body = $this->generate_business_email( $booking );
-
-		$queue_id = bookit_enqueue_email(
-			'business_notification',
-			$recipient,
-			$subject,
-			$html_body,
-			(int) ( $booking['id'] ?? 0 )
-		);
-
-		if ( false === $queue_id ) {
-			if ( self::should_log() ) {
-				error_log( 'Email Sender: Failed to enqueue business notification' );
-			}
-			return new \WP_Error( 'email_queue_failed', 'Failed to queue business notification email' );
-		}
-
-		if ( self::should_log() ) {
-			error_log( 'Email Sender: Business notification queued (queue_id=' . $queue_id . ')' );
 		}
 		return true;
 	}
@@ -900,68 +851,6 @@ class Booking_System_Email_Sender {
 		<?php
 
 		return (string) ob_get_clean();
-	}
-
-	/**
-	 * Generate business notification email HTML.
-	 *
-	 * @param array $booking Booking data.
-	 * @return string HTML email body.
-	 */
-	public function generate_business_email( $booking ) {
-		$date_formatted = $this->format_date( $booking['booking_date'] );
-		$time_formatted = $this->format_time( $booking['start_time'] );
-
-		ob_start();
-		?>
-		<!DOCTYPE html>
-		<html>
-		<head>
-			<meta charset="UTF-8">
-		</head>
-		<body>
-			<h2><?php esc_html_e( 'New Booking Received', 'booking-system' ); ?></h2>
-
-			<p><strong><?php esc_html_e( 'Customer:', 'booking-system' ); ?></strong> <?php echo esc_html( $booking['customer_name'] ); ?></p>
-			<p><strong><?php esc_html_e( 'Email:', 'booking-system' ); ?></strong> <?php echo esc_html( $booking['customer_email'] ); ?></p>
-			<p><strong><?php esc_html_e( 'Phone:', 'booking-system' ); ?></strong> <?php echo esc_html( $booking['customer_phone'] ); ?></p>
-
-			<hr>
-
-			<p><strong><?php esc_html_e( 'Service:', 'booking-system' ); ?></strong> <?php echo esc_html( $booking['service_name'] ); ?></p>
-			<p><strong><?php esc_html_e( 'Date:', 'booking-system' ); ?></strong> <?php echo esc_html( $date_formatted ); ?></p>
-			<p><strong><?php esc_html_e( 'Time:', 'booking-system' ); ?></strong> <?php echo esc_html( $time_formatted ); ?></p>
-			<p><strong><?php esc_html_e( 'Staff:', 'booking-system' ); ?></strong> <?php echo esc_html( $booking['staff_name'] ); ?></p>
-
-			<hr>
-
-			<p><strong><?php esc_html_e( 'Payment:', 'booking-system' ); ?></strong> &pound;<?php echo esc_html( number_format( (float) $booking['deposit_paid'], 2 ) ); ?> via <?php echo esc_html( ucwords( str_replace( '_', ' ', $booking['payment_method'] ?? '' ) ) ); ?></p>
-
-			<?php if ( isset( $booking['payment_method'] ) && 'pay_on_arrival' === $booking['payment_method'] ) : ?>
-				<p style="background: #fff3cd; padding: 10px; border-left: 3px solid #ffc107;">
-					<strong><?php esc_html_e( 'Payment Due on Arrival:', 'booking-system' ); ?></strong>
-					<?php
-					printf(
-						/* translators: %s: formatted total price */
-						esc_html__( 'Customer will pay %s when they arrive.', 'booking-system' ),
-						'&pound;' . esc_html( number_format( (float) $booking['total_price'], 2 ) )
-					);
-					?>
-				</p>
-			<?php endif; ?>
-
-			<p><strong><?php esc_html_e( 'Balance Due:', 'booking-system' ); ?></strong> &pound;<?php echo esc_html( number_format( (float) $booking['balance_due'], 2 ) ); ?></p>
-
-			<?php if ( ! empty( $booking['special_requests'] ) ) : ?>
-				<hr>
-				<p><strong><?php esc_html_e( 'Special Requests:', 'booking-system' ); ?></strong></p>
-				<p><?php echo esc_html( $booking['special_requests'] ); ?></p>
-			<?php endif; ?>
-		</body>
-		</html>
-		<?php
-
-		return ob_get_clean();
 	}
 
 	/**

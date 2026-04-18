@@ -71,11 +71,7 @@ if ( ! $emails_already_sent && ! $is_pay_on_arrival ) {
 		error_log( 'Confirmation Page: Failed to send customer email - ' . $customer_result->get_error_message() );
 	}
 
-	// Send business notification.
-	$business_result = $email_sender->send_business_notification( $booking );
-	if ( is_wp_error( $business_result ) ) {
-		error_log( 'Confirmation Page: Failed to send business email - ' . $business_result->get_error_message() );
-	}
+	// Email sending intentionally omitted — notifications handled by Bookit_Staff_Notifier via bookit_after_booking_created hook fired by the payment processor.
 
 	// Mark emails as sent (24 hour transient).
 	set_transient( $email_sent_key, true, 24 * HOUR_IN_SECONDS );
