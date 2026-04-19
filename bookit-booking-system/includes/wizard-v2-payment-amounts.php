@@ -10,7 +10,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * Compute deposit and totals from a service row (same rules as booking-step-5-payment.php).
+ * Compute deposit and totals from a service row (same rules as the V2 payment step template).
  *
  * @param array $service Service row (associative).
  * @return array{ has_deposit: bool, deposit_due: float, balance_due: float, total_price: float }

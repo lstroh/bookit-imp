@@ -10,9 +10,9 @@
  *
  * Example:
  *   Plugin default: .../bookit-booking-system/public/templates/
- *                   booking-step-1-services.php
+ *                   booking-wizard-v2-step-1.php
  *   Theme override: .../themes/your-theme/bookit/
- *                   booking-step-1-services.php
+ *                   booking-wizard-v2-step-1.php
  *
  * Bookit will automatically use your override file instead of the
  * plugin default. Child themes are supported - Bookit checks the
@@ -37,7 +37,7 @@
  * loads after the theme stylesheet. Without it, the plugin's own :root
  * declarations will take precedence over theme overrides.
  *
- * Available CSS custom properties (defined in booking-wizard.css):
+ * Available CSS custom properties (defined in booking-wizard-v2.css):
  *
  *   Colours:    --bookit-primary, --bookit-primary-hover,
  *               --bookit-primary-light, --bookit-accent,
@@ -89,7 +89,7 @@ class Bookit_Template_Loader {
 	 *   2. {parent-theme}/bookit/{template-name}.php (child theme support)
 	 *   3. {plugin}/public/templates/{template-name}.php (fallback)
 	 *
-	 * @param string $template_name Filename e.g. 'booking-step-1-services.php'
+	 * @param string $template_name Filename e.g. 'booking-wizard-v2-step-1.php'
 	 * @param array  $args          Variables to extract into template scope.
 	 * @param bool   $return        If true, return HTML string; if false, echo.
 	 * @return string|void
@@ -118,7 +118,7 @@ class Bookit_Template_Loader {
 	 * Locate the template file, returning the override path if it exists,
 	 * otherwise the plugin default path.
 	 *
-	 * @param string $template_name Filename e.g. 'booking-confirmed.php'
+	 * @param string $template_name Filename e.g. 'booking-confirmed-v2.php'
 	 * @return string Absolute path to the template file.
 	 */
 	public static function locate_template( $template_name ) {

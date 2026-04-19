@@ -26,7 +26,7 @@
             <file>./tests/test-payment-success.php</file>
             <file>./tests/test-bulk-booking-actions.php</file>
             <file>./tests/unit/test-session-manager.php</file>
-            <file>./tests/unit/test-booking-shortcode.php</file>
+            <file>./tests/unit/test-my-packages-shortcode.php</file>
             <file>./tests/unit/test-booking-wizard-v2.php</file>
             <file>./tests/unit/test-booking-confirmed-v2.php</file>
             <file>./tests/unit/test-wizard-api.php</file>

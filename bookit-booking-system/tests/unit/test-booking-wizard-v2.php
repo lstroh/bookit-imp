@@ -63,14 +63,6 @@ class Test_Booking_Wizard_V2 extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers Bookit_Shortcodes::render_booking_wizard
-	 */
-	public function test_v2_shortcode_does_not_break_existing_wizard() {
-		$output = do_shortcode( '[bookit_booking_wizard]' );
-		$this->assertStringContainsString( 'bookit-wizard-container', $output );
-	}
-
-	/**
 	 * @covers Bookit_Shortcodes::enqueue_wizard_assets
 	 */
 	public function test_v2_css_enqueued_on_page_with_v2_shortcode() {
@@ -100,10 +92,6 @@ class Test_Booking_Wizard_V2 extends WP_UnitTestCase {
 	public function test_v2_css_not_enqueued_on_page_without_v2_shortcode() {
 		wp_dequeue_style( 'bookit-wizard-v2' );
 		wp_deregister_style( 'bookit-wizard-v2' );
-		wp_dequeue_style( 'bookit-wizard' );
-		wp_dequeue_script( 'bookit-wizard' );
-		wp_deregister_style( 'bookit-wizard' );
-		wp_deregister_script( 'bookit-wizard' );
 
 		$post_id = $this->factory->post->create(
 			array(
@@ -121,69 +109,6 @@ class Test_Booking_Wizard_V2 extends WP_UnitTestCase {
 
 		$styles = wp_styles();
 		$this->assertFalse( in_array( 'bookit-wizard-v2', $styles->queue, true ), 'bookit-wizard-v2 CSS should not be enqueued' );
-
-		wp_reset_postdata();
-	}
-
-	/**
-	 * @covers Bookit_Shortcodes::enqueue_wizard_assets
-	 */
-	public function test_v2_css_not_enqueued_on_page_with_only_v1_shortcode() {
-		wp_dequeue_style( 'bookit-wizard-v2' );
-		wp_deregister_style( 'bookit-wizard-v2' );
-		wp_dequeue_style( 'bookit-wizard' );
-		wp_dequeue_script( 'bookit-wizard' );
-		wp_deregister_style( 'bookit-wizard' );
-		wp_deregister_script( 'bookit-wizard' );
-
-		$post_id = $this->factory->post->create(
-			array(
-				'post_type'    => 'page',
-				'post_title'   => 'V1 Only Page',
-				'post_status'  => 'publish',
-				'post_content' => '[bookit_booking_wizard]',
-			)
-		);
-		global $post;
-		$post = get_post( $post_id );
-		setup_postdata( $post );
-
-		do_action( 'wp_enqueue_scripts' );
-
-		$styles = wp_styles();
-		$this->assertFalse( in_array( 'bookit-wizard-v2', $styles->queue, true ), 'bookit-wizard-v2 CSS should not be enqueued on v1-only page' );
-
-		wp_reset_postdata();
-	}
-
-	/**
-	 * @covers Bookit_Shortcodes::enqueue_wizard_assets
-	 */
-	public function test_v2_and_v1_can_coexist_on_same_page() {
-		wp_dequeue_style( 'bookit-wizard-v2' );
-		wp_deregister_style( 'bookit-wizard-v2' );
-		wp_dequeue_style( 'bookit-wizard' );
-		wp_dequeue_script( 'bookit-wizard' );
-		wp_deregister_style( 'bookit-wizard' );
-		wp_deregister_script( 'bookit-wizard' );
-
-		$post_id = $this->factory->post->create(
-			array(
-				'post_type'    => 'page',
-				'post_title'   => 'V1 and V2 Page',
-				'post_status'  => 'publish',
-				'post_content' => '[bookit_booking_wizard] [bookit_wizard_v2]',
-			)
-		);
-		global $post;
-		$post = get_post( $post_id );
-		setup_postdata( $post );
-
-		do_action( 'wp_enqueue_scripts' );
-
-		$styles = wp_styles();
-		$this->assertTrue( in_array( 'bookit-wizard', $styles->queue, true ), 'bookit-wizard CSS should be enqueued' );
-		$this->assertTrue( in_array( 'bookit-wizard-v2', $styles->queue, true ), 'bookit-wizard-v2 CSS should be enqueued' );
 
 		wp_reset_postdata();
 	}
@@ -991,14 +916,6 @@ class Test_Booking_Wizard_V2 extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'bookit-v2-policy-expand-btn', $output );
 
 		$wpdb->delete( $wpdb->prefix . 'bookings_settings', array( 'setting_key' => 'cancellation_policy_text' ), array( '%s' ) );
-	}
-
-	/**
-	 * @coversNothing
-	 */
-	public function test_v2_existing_wizard_all_tests_still_pass() {
-		$output = do_shortcode( '[bookit_booking_wizard]' );
-		$this->assertStringContainsString( 'bookit-wizard-container', $output );
 	}
 
 	/**

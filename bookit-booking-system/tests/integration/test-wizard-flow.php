@@ -107,8 +107,8 @@ class Test_Wizard_Flow extends WP_UnitTestCase {
 		$this->assertEquals( $step, (int) $data['data']['current_step'] );
 		$this->assertEquals( $step, (int) Bookit_Session_Manager::get( 'current_step' ) );
 
-		$output = do_shortcode( '[bookit_booking_wizard]' );
-		$this->assertStringContainsString( 'bookit-step-' . $step, $output );
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( 'bookit-v2-step--' . $step, $output );
 	}
 
 	/**
@@ -149,22 +149,19 @@ class Test_Wizard_Flow extends WP_UnitTestCase {
 	/**
 	 * Test wizard renders usable markup without JavaScript (graceful degradation).
 	 *
-	 * @covers Bookit_Shortcodes::render_booking_wizard
+	 * @covers Bookit_Shortcodes::render_booking_wizard_v2
 	 */
 	public function test_wizard_with_javascript_disabled() {
-		$output = do_shortcode( '[bookit_booking_wizard]' );
+		$output = do_shortcode( '[bookit_wizard_v2]' );
 
 		$this->assertNotEmpty( $output );
-		$this->assertStringContainsString( 'bookit-wizard-container', $output );
-		$this->assertStringContainsString( 'bookit-skip-link', $output );
-		$this->assertStringContainsString( '#main-content', $output );
-		$this->assertStringContainsString( 'bookit-progress-indicator', $output );
-		$this->assertStringContainsString( 'id="main-content"', $output );
-		$this->assertStringContainsString( 'bookit-wizard-nav', $output );
-		$this->assertStringContainsString( 'bookit-btn-next', $output );
-		$this->assertStringContainsString( 'bookit-step-1', $output );
-		// Steps 1–4 are present in progress; step 1 content loaded.
-		$this->assertStringContainsString( 'Select Service', $output );
+		$this->assertStringContainsString( 'bookit-v2-wizard-container', $output );
+		$this->assertStringContainsString( 'bookit-v2-progress', $output );
+		$this->assertStringContainsString( 'bookit-v2-step--1', $output );
+		$this->assertTrue(
+			strpos( $output, 'What would you like to book?' ) !== false || strpos( $output, 'No Services Available' ) !== false,
+			'Step 1 should render the service selection or empty state.'
+		);
 	}
 
 	/**
@@ -201,7 +198,7 @@ class Test_Wizard_Flow extends WP_UnitTestCase {
 		$request->set_body_params( array( 'current_step' => 1 ) );
 		rest_get_server()->dispatch( $request );
 		$this->assertEquals( 1, (int) Bookit_Session_Manager::get( 'current_step' ) );
-		$output = do_shortcode( '[bookit_booking_wizard]' );
-		$this->assertStringContainsString( 'bookit-step-1', $output );
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( 'bookit-v2-step--1', $output );
 	}
 }

@@ -305,26 +305,26 @@ class Test_Booking_Confirmed_V2 extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers Bookit_Shortcodes::render_booking_confirmation
+	 * @covers Bookit_Template_Loader::locate_template
 	 */
-	public function test_original_booking_confirmed_shortcode_still_works() {
+	public function test_v2_confirmation_template_resolves_in_plugin() {
+		$path = Bookit_Template_Loader::locate_template( 'booking-confirmed-v2.php' );
+
+		$this->assertStringEndsWith( 'public/templates/booking-confirmed-v2.php', $path );
+		$this->assertFileExists( $path );
+	}
+
+	/**
+	 * @covers Bookit_Template_Loader::get_template
+	 */
+	public function test_v2_confirmation_template_renders_non_empty() {
 		$this->create_booking_fixture();
 		$_GET['booking_id'] = $this->fixture_ids['booking_id'];
 
-		$output = do_shortcode( '[bookit_booking_confirmation]' );
+		$output = Bookit_Template_Loader::get_template( 'booking-confirmed-v2.php', array(), true );
 		unset( $_GET['booking_id'] );
 
 		$this->assertNotEmpty( $output );
 		$this->assertStringContainsString( 'bookit-confirmation-page', $output );
-	}
-
-	/**
-	 * @covers Bookit_Template_Loader::locate_template
-	 */
-	public function test_original_booking_confirmation_template_unchanged() {
-		$path = Bookit_Template_Loader::locate_template( 'booking-confirmed.php' );
-
-		$this->assertStringEndsWith( 'public/templates/booking-confirmed.php', $path );
-		$this->assertFileExists( $path );
 	}
 }

@@ -1,7 +1,7 @@
 /**
  * Magic-link cancel / reschedule — scoped under .bookit-magic-link-page
  *
- * Uses --bookit-* tokens from booking-wizard.css (loaded as bookit-wizard).
+ * Uses --bookit-* tokens from booking-wizard-v2.css (handle bookit-wizard-v2).
  *
  * @package Bookit_Booking_System
  */

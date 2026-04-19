@@ -7,7 +7,7 @@
  */
 
 /**
- * Test wizard navigation (session, API, template).
+ * Test wizard navigation (session, API, template) against the V2 wizard shortcode.
  */
 class Test_Wizard_Navigation extends WP_UnitTestCase {
 
@@ -52,14 +52,14 @@ class Test_Wizard_Navigation extends WP_UnitTestCase {
 	 * Test that wizard starts on step 1.
 	 *
 	 * @covers Bookit_Session_Manager::get_data
-	 * @covers Bookit_Shortcodes::render_booking_wizard
+	 * @covers Bookit_Shortcodes::render_booking_wizard_v2
 	 */
 	public function test_initial_step_is_one() {
 		Bookit_Session_Manager::clear();
 		$this->assertEquals( 1, (int) Bookit_Session_Manager::get( 'current_step', 1 ) );
 
-		$output = do_shortcode( '[bookit_booking_wizard]' );
-		$this->assertStringContainsString( 'bookit-step-1', $output );
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( 'bookit-v2-step--1', $output );
 	}
 
 	/**
@@ -103,28 +103,32 @@ class Test_Wizard_Navigation extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that back button is not shown on step 1.
+	 * Test that back control on step 1 is disabled (V2 shell).
 	 *
-	 * @covers Bookit_Shortcodes::render_booking_wizard
+	 * @covers Bookit_Shortcodes::render_booking_wizard_v2
 	 */
 	public function test_cannot_go_below_step_one() {
 		Bookit_Session_Manager::clear();
 		Bookit_Session_Manager::set( 'current_step', 1 );
-		$output = do_shortcode( '[bookit_booking_wizard]' );
-		$this->assertStringNotContainsString( 'bookit-btn-back', $output );
-		$this->assertStringNotContainsString( 'bookit-back-btn', $output );
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		// Step 1 either omits a back control (empty catalogue) or shows a disabled back (service list).
+		if ( false !== strpos( $output, 'bookit-v2-btn-back' ) ) {
+			$this->assertStringContainsString( 'bookit-v2-btn-back--disabled', $output );
+		} else {
+			$this->assertStringContainsString( 'bookit-v2-step--1', $output );
+		}
 	}
 
 	/**
 	 * Step validation blocks steps above 5.
 	 *
 	 * @covers Bookit_Wizard_API::validate_step
-	 * @covers Bookit_Shortcodes::render_booking_wizard
+	 * @covers Bookit_Shortcodes::render_booking_wizard_v2
 	 */
 	public function test_cannot_go_above_step_five() {
 		Bookit_Session_Manager::set( 'current_step', 5 );
-		$output = do_shortcode( '[bookit_booking_wizard]' );
-		$this->assertStringContainsString( 'bookit-progress-step-current', $output );
+		$output = do_shortcode( '[bookit_wizard_v2]' );
+		$this->assertStringContainsString( 'bookit-v2-step-item--active', $output );
 
 		$request = new WP_REST_Request( 'POST', '/' . $this->namespace . $this->route );
 		$request->set_header( 'X-WP-Nonce', wp_create_nonce( 'wp_rest' ) );
@@ -176,38 +180,19 @@ class Test_Wizard_Navigation extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that shortcode output includes step-based progress and navigation.
+	 * Test that shortcode output reflects the current step on the container.
 	 *
-	 * @covers Bookit_Shortcodes::render_booking_wizard
+	 * @covers Bookit_Shortcodes::render_booking_wizard_v2
 	 */
 	public function test_url_hash_updates_on_step_change() {
-		// URL hash (#step-X) is updated by JavaScript; we verify step is reflected in markup.
 		Bookit_Session_Manager::set( 'current_step', 2 );
-		$output = do_shortcode( '[bookit_booking_wizard]' );
+		$output = do_shortcode( '[bookit_wizard_v2]' );
 		$this->assertStringContainsString( 'data-step="2"', $output );
-		$this->assertStringContainsString( 'bookit-step-2', $output );
+		$this->assertStringContainsString( 'bookit-v2-step--2', $output );
 
 		Bookit_Session_Manager::set( 'current_step', 4 );
-		$output = do_shortcode( '[bookit_booking_wizard]' );
+		$output = do_shortcode( '[bookit_wizard_v2]' );
 		$this->assertStringContainsString( 'data-step="4"', $output );
 	}
 
-	/**
-	 * Test that back button is present on steps 2–3 (shell nav).
-	 * Step 4 uses the contact form's own back button; shell nav is hidden.
-	 *
-	 * @covers Bookit_Shortcodes::render_booking_wizard
-	 */
-	public function test_browser_back_button_works() {
-		foreach ( array( 2, 3 ) as $step ) {
-			Bookit_Session_Manager::set( 'current_step', $step );
-			$output = do_shortcode( '[bookit_booking_wizard]' );
-			$this->assertStringContainsString( 'bookit-btn-back', $output );
-			$this->assertStringContainsString( 'bookit-back-btn', $output );
-		}
-		// Step 4: shell nav is hidden; contact form has its own back (bookit-btn-back-step-4).
-		Bookit_Session_Manager::set( 'current_step', 4 );
-		$output = do_shortcode( '[bookit_booking_wizard]' );
-		$this->assertStringContainsString( 'Contact Details', $output );
-	}
 }

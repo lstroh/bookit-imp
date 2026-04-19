@@ -8,7 +8,7 @@
  */
 
 /**
- * Test payment success flow: booking retrieval, confirmation emails, session cleanup, confirmation page.
+ * Test payment success flow: booking retrieval, confirmation emails, session cleanup.
  *
  * @covers Booking_System_Booking_Retriever
  * @covers Booking_System_Email_Sender
@@ -592,65 +592,5 @@ class Test_Payment_Success extends WP_UnitTestCase {
 		$this->assertNull( Bookit_Session_Manager::get( 'service_id' ) );
 		$this->assertArrayHasKey( 'other_data', $_SESSION );
 		$this->assertEquals( 'preserve_me', $_SESSION['other_data'] );
-	}
-
-	// -------------------------------------------------------------------------
-	// CONFIRMATION PAGE TESTS (2)
-	// -------------------------------------------------------------------------
-
-	/**
-	 * Test that confirmation page displays booking details.
-	 *
-	 * Arrange: Valid booking retrieved
-	 * Act: Load confirmation page template / output
-	 * Assert: Page displays service name, date and time, staff name, customer name
-	 */
-	public function test_confirmation_page_displays_booking_details() {
-		$template_path = dirname( __DIR__ ) . '/public/templates/booking-confirmed.php';
-		if ( ! file_exists( $template_path ) ) {
-			$this->markTestSkipped( 'Confirmation template not implemented yet (Sprint 2, Task 5).' );
-			return;
-		}
-
-		// Template reads session_id from $_GET and uses retriever (setUp created booking with stripe_session_id = cs_test_session123).
-		$_GET['session_id'] = 'cs_test_session123';
-		ob_start();
-		include $template_path;
-		$output = ob_get_clean();
-		unset( $_GET['session_id'] );
-
-		$this->assertStringContainsString( 'Test Haircut', $output );
-		// Date formatted as "Sunday, 15 February 2026" (not raw 2026-02-15).
-		$this->assertMatchesRegularExpression( '/15\s+February\s+2026/', $output );
-		// Time formatted as "2:00 PM" (not raw 14:00).
-		$this->assertMatchesRegularExpression( '/2:00\s*(PM|pm)/', $output );
-		$this->assertStringContainsString( 'Emma Thompson', $output );
-		$this->assertStringContainsString( 'John', $output );
-		$this->assertStringContainsString( 'Smith', $output );
-	}
-
-	/**
-	 * Test that confirmation page handles missing booking (invalid session).
-	 *
-	 * Arrange: Invalid session_id (no booking found)
-	 * Act: Load confirmation page
-	 * Assert: Shows error message "Booking not found", provides link to create new booking
-	 */
-	public function test_confirmation_page_handles_missing_booking() {
-		$template_path = dirname( __DIR__ ) . '/public/templates/booking-confirmed.php';
-		if ( ! file_exists( $template_path ) ) {
-			$this->markTestSkipped( 'Confirmation template not implemented yet (Sprint 2, Task 5).' );
-			return;
-		}
-
-		// Template shows "Booking not found" when session_id empty or no booking found.
-		$_GET['session_id'] = 'invalid_session';
-		ob_start();
-		include $template_path;
-		$output = ob_get_clean();
-		unset( $_GET['session_id'] );
-
-		$this->assertStringContainsString( 'Booking Not Found', $output );
-		$this->assertMatchesRegularExpression( '/(book|create|new|start|wizard|booking)/i', $output, 'Page should offer a way to create a new booking' );
 	}
 }
