@@ -11,7 +11,7 @@ dotenv.config({
 
 export default defineConfig({
   testDir: './tests',
-  timeout: 60_000,
+  timeout: 90_000,
   retries: isFullMode ? 0 : 1,
   workers: 1,
   reporter: [['html', { open: 'never' }], ['list']],

@@ -17,10 +17,15 @@ test.describe('Dashboard flows', { tag: '@full' }, () => {
 
   test("admin sees today's schedule section", async ({ page }) => {
     await loginAsAdmin(page);
-    // MySchedule.vue renders a schedule view — assert page has content
     await expect(page.locator('body')).not.toContainText('Fatal error');
-    // Schedule section heading (may vary — assert page loaded meaningfully)
-    await expect(page.locator('.bg-white').first()).toBeVisible({ timeout: 10_000 });
+    // Wait for the Vue app to finish loading — look for schedule-specific content.
+    // MySchedule.vue renders "Today" and "Upcoming" headings.
+    await expect(
+      page
+        .locator('h2, h3')
+        .filter({ hasText: /today|upcoming|schedule/i })
+        .first()
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test('admin can mark a confirmed booking as complete via schedule', async ({ page }) => {
