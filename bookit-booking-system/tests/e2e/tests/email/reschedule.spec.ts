@@ -1,0 +1,35 @@
+import { test, expect } from '@playwright/test';
+import { completeWizardSteps1To4 } from '../../fixtures/wizard';
+import { getLatestEmail, extractLinkFromEmail, clearMailpit } from '../../fixtures/mailpit';
+
+test.describe('Reschedule email content', { tag: '@full' }, () => {
+  test('reschedule email has correct subject and action links', async ({ page }) => {
+    const testEmail = await completeWizardSteps1To4(page);
+    await page.locator('#bookit-v2-pay-person').click();
+    await page.locator('#bookit-v2-cta-btn').click();
+    await page.waitForURL('**/booking-confirmed-v2/**', { timeout: 20_000 });
+
+    const confirmEmail = await getLatestEmail(testEmail);
+    const rescheduleUrl = extractLinkFromEmail(confirmEmail.HTML, 'Reschedule');
+
+    await clearMailpit();
+    await page.goto(rescheduleUrl);
+
+    await page.waitForSelector('.bookit-v2-day--available', { timeout: 10_000 });
+    const dates = page.locator('.bookit-v2-day--available');
+    const count = await dates.count();
+    await dates.nth(count > 1 ? 1 : 0).click();
+    await page.waitForSelector('.bookit-v2-slot--available', { timeout: 10_000 });
+    await page.locator('.bookit-v2-slot--available').first().click();
+    const confirmBtn = page.locator('#bookit-reschedule-confirm');
+    if (await confirmBtn.isVisible()) {
+      await expect(confirmBtn).toBeEnabled({ timeout: 10_000 });
+      await confirmBtn.click();
+    }
+
+    const rescheduleEmail = await getLatestEmail(testEmail);
+    expect(rescheduleEmail.Subject.toLowerCase()).toContain('reschedul');
+    expect(rescheduleEmail.HTML.toLowerCase()).toContain('cancel');
+    expect(rescheduleEmail.HTML.toLowerCase()).toContain('reschedule');
+  });
+});

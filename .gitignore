@@ -40,6 +40,7 @@ booking-system/.phpunit.result.cache
 # Node
 node_modules/
 package-lock.json
+!bookit-booking-system/tests/e2e/package-lock.json
 
 # Environment
 .env
