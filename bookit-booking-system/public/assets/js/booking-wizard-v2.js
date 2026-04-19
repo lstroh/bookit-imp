@@ -295,6 +295,148 @@
 				textarea.focus();
 			} );
 		}
+
+		var form = document.getElementById( 'bookit-contact-form' );
+		if ( ! form ) {
+			return;
+		}
+
+		function clearStep4FieldErrors() {
+			form.querySelectorAll( '.bookit-v2-field-error' ).forEach( function( el ) {
+				el.textContent = '';
+			} );
+			var submitErr = form.querySelector( '.bookit-v2-step4-submit-error' );
+			if ( submitErr ) {
+				submitErr.textContent = '';
+				submitErr.style.display = 'none';
+			}
+		}
+
+		function setStep4FieldError( fieldId, message ) {
+			var el = document.getElementById( fieldId );
+			if ( el ) {
+				el.textContent = message || '';
+			}
+		}
+
+		function showStep4SubmitError( message ) {
+			var submitErr = form.querySelector( '.bookit-v2-step4-submit-error' );
+			if ( ! submitErr ) {
+				submitErr = document.createElement( 'p' );
+				submitErr.className = 'bookit-v2-step4-submit-error bookit-error';
+				submitErr.setAttribute( 'role', 'alert' );
+				form.insertBefore( submitErr, form.firstChild );
+			}
+			submitErr.textContent = message || '';
+			submitErr.style.display = message ? 'block' : 'none';
+		}
+
+		function isValidEmail( s ) {
+			if ( ! s || typeof s !== 'string' ) {
+				return false;
+			}
+			var t = s.trim();
+			if ( ! t ) {
+				return false;
+			}
+			// Practical RFC-like check without being overly strict.
+			return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test( t );
+		}
+
+		function validateStep4() {
+			clearStep4FieldErrors();
+			var ok = true;
+			var fn = ( document.getElementById( 'first-name' ) && document.getElementById( 'first-name' ).value ) ? document.getElementById( 'first-name' ).value.trim() : '';
+			var ln = ( document.getElementById( 'last-name' ) && document.getElementById( 'last-name' ).value ) ? document.getElementById( 'last-name' ).value.trim() : '';
+			var em = ( document.getElementById( 'email' ) && document.getElementById( 'email' ).value ) ? document.getElementById( 'email' ).value.trim() : '';
+			var ph = ( document.getElementById( 'phone' ) && document.getElementById( 'phone' ).value ) ? document.getElementById( 'phone' ).value.trim() : '';
+
+			if ( ! fn ) {
+				setStep4FieldError( 'first-name-error', 'Please enter your first name.' );
+				ok = false;
+			}
+			if ( ! ln ) {
+				setStep4FieldError( 'last-name-error', 'Please enter your last name.' );
+				ok = false;
+			}
+			if ( ! em ) {
+				setStep4FieldError( 'email-error', 'Please enter your email address.' );
+				ok = false;
+			} else if ( ! isValidEmail( em ) ) {
+				setStep4FieldError( 'email-error', 'Please enter a valid email address.' );
+				ok = false;
+			}
+			if ( ! ph ) {
+				setStep4FieldError( 'phone-error', 'Please enter your phone number.' );
+				ok = false;
+			}
+
+			var waiverCb = document.getElementById( 'cooling-off-waiver' );
+			var waiverGroup = document.getElementById( 'cooling-off-waiver-group' );
+			if ( waiverCb && waiverGroup ) {
+				var st = window.getComputedStyle( waiverGroup );
+				var visible = st.display !== 'none' && st.visibility !== 'hidden' && waiverGroup.offsetParent !== null;
+				if ( visible && ! waiverCb.checked ) {
+					setStep4FieldError( 'cooling-off-waiver-error', 'Please confirm the waiver to continue.' );
+					ok = false;
+				}
+			}
+
+			return ok;
+		}
+
+		form.addEventListener( 'submit', function( ev ) {
+			ev.preventDefault();
+			if ( ! validateStep4() ) {
+				return;
+			}
+
+			var w = typeof bookitWizardV2 !== 'undefined' ? bookitWizardV2 : {};
+			var nonceInput = form.querySelector( 'input[name="bookit_booking_nonce"]' );
+			var bookitNonce = nonceInput && nonceInput.value ? nonceInput.value : '';
+
+			var marketing = document.getElementById( 'marketing-consent' );
+			var waiverCb = document.getElementById( 'cooling-off-waiver' );
+			var sr = document.getElementById( 'special-requests' );
+			var payload = {
+				current_step: 4,
+				customer_first_name: document.getElementById( 'first-name' ).value.trim(),
+				customer_last_name: document.getElementById( 'last-name' ).value.trim(),
+				customer_email: document.getElementById( 'email' ).value.trim(),
+				customer_phone: document.getElementById( 'phone' ).value.trim(),
+				customer_special_requests: sr ? sr.value.trim() : '',
+				cooling_off_waiver: waiverCb && waiverCb.checked ? 1 : 0,
+				marketing_consent: marketing && marketing.checked ? 1 : 0,
+				bookit_booking_nonce: bookitNonce
+			};
+
+			var submitBtn = form.querySelector( 'button[type="submit"].bookit-v2-cta-btn' );
+			if ( submitBtn ) {
+				submitBtn.disabled = true;
+			}
+
+			postToSession( payload ).then( function( res ) {
+				if ( ! res || ! res.success ) {
+					var msg = 'Unable to save your details. Please try again.';
+					if ( res && res.message ) {
+						msg = res.message;
+					} else if ( res && res.data && res.data.message ) {
+						msg = res.data.message;
+					}
+					showStep4SubmitError( msg );
+					if ( submitBtn ) {
+						submitBtn.disabled = false;
+					}
+					return;
+				}
+				advanceStep( 4 );
+			} ).catch( function() {
+				showStep4SubmitError( 'A network error occurred. Please try again.' );
+				if ( submitBtn ) {
+					submitBtn.disabled = false;
+				}
+			} );
+		} );
 	}
 
 	function updateCtaLabel( value ) {

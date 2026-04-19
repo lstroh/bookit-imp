@@ -333,6 +333,29 @@ class Bookit_Wizard_API {
 			$update_data['payment_method'] = sanitize_text_field( $params['payment_method'] );
 		}
 
+		// Step 4 contact fields (V2 wizard; flat session keys used by templates and complete_booking).
+		if ( isset( $params['customer_first_name'] ) ) {
+			$update_data['customer_first_name'] = sanitize_text_field( $params['customer_first_name'] );
+		}
+		if ( isset( $params['customer_last_name'] ) ) {
+			$update_data['customer_last_name'] = sanitize_text_field( $params['customer_last_name'] );
+		}
+		if ( isset( $params['customer_email'] ) ) {
+			$update_data['customer_email'] = sanitize_email( $params['customer_email'] );
+		}
+		if ( isset( $params['customer_phone'] ) ) {
+			$update_data['customer_phone'] = sanitize_text_field( $params['customer_phone'] );
+		}
+		if ( isset( $params['customer_special_requests'] ) ) {
+			$update_data['customer_special_requests'] = sanitize_textarea_field( $params['customer_special_requests'] );
+		}
+		if ( isset( $params['cooling_off_waiver'] ) ) {
+			$update_data['cooling_off_waiver'] = ! empty( $params['cooling_off_waiver'] ) ? 1 : 0;
+		}
+		if ( isset( $params['marketing_consent'] ) ) {
+			$update_data['marketing_consent'] = ! empty( $params['marketing_consent'] ) ? 1 : 0;
+		}
+
 		if ( isset( $params['customer'] ) && is_array( $params['customer'] ) ) {
 			$current_customer = Bookit_Session_Manager::get( 'customer', array() );
 			$update_data['customer'] = array_merge( $current_customer, $params['customer'] );
