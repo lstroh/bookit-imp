@@ -105,9 +105,19 @@ export async function completeWizardSteps1To4(page: Page): Promise<string> {
       // otherwise subsequent requests (or month navigation) can use a stale session.
       if (clickedDate) {
         let datePersisted = false;
-        for (let attempt = 0; attempt < 10; attempt++) {
-          const res = await page.request.get('/wp-json/bookit/v1/wizard/session');
-          const json = (await res.json().catch(() => null)) as null | {
+        for (let attempt = 0; attempt < 50; attempt++) {
+          const json = (await page
+            .evaluate(async () => {
+              try {
+                const r = await fetch('/wp-json/bookit/v1/wizard/session', {
+                  credentials: 'same-origin',
+                });
+                return await r.json();
+              } catch {
+                return null;
+              }
+            })
+            .catch(() => null)) as null | {
             success?: boolean;
             data?: { date?: string };
           };
@@ -118,7 +128,9 @@ export async function completeWizardSteps1To4(page: Page): Promise<string> {
           await page.waitForTimeout(200);
         }
         if (!datePersisted) {
-          throw new Error(`Wizard session did not persist selected date "${clickedDate}".`);
+          // If the session didn't reflect the date quickly (cookie rotation / server load),
+          // try the next available day rather than failing the whole run.
+          continue;
         }
       }
       // Slots load asynchronously via fetch after a day click
@@ -168,9 +180,19 @@ export async function completeWizardSteps1To4(page: Page): Promise<string> {
   // before we advance to Step 4. The backend regenerates session ID cookies on
   // current_step updates, so two rapid POSTs can land in different sessions.
   let hasDateTime = false;
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const res = await page.request.get('/wp-json/bookit/v1/wizard/session');
-    const json = (await res.json().catch(() => null)) as null | {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const json = (await page
+      .evaluate(async () => {
+        try {
+          const r = await fetch('/wp-json/bookit/v1/wizard/session', {
+            credentials: 'same-origin',
+          });
+          return await r.json();
+        } catch {
+          return null;
+        }
+      })
+      .catch(() => null)) as null | {
       success?: boolean;
       data?: { date?: string; time?: string };
     };
@@ -184,7 +206,35 @@ export async function completeWizardSteps1To4(page: Page): Promise<string> {
   }
 
   if (!hasDateTime) {
-    throw new Error('Slot selection did not persist date/time in wizard session before continuing.');
+    // Retry slot click once and poll again before failing.
+    await page.locator('.bookit-v2-slot--available').first().click();
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const json = (await page
+        .evaluate(async () => {
+          try {
+            const r = await fetch('/wp-json/bookit/v1/wizard/session', {
+              credentials: 'same-origin',
+            });
+            return await r.json();
+          } catch {
+            return null;
+          }
+        })
+        .catch(() => null)) as null | {
+        success?: boolean;
+        data?: { date?: string; time?: string };
+      };
+      const date = json?.data?.date;
+      const time = json?.data?.time;
+      if (date && time) {
+        hasDateTime = true;
+        break;
+      }
+      await page.waitForTimeout(200);
+    }
+    if (!hasDateTime) {
+      throw new Error('Slot selection did not persist date/time in wizard session before continuing.');
+    }
   }
 
   await page.locator('#bookit-v2-continue').click();

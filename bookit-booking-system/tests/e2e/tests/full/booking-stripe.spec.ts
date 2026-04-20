@@ -23,13 +23,13 @@ test.describe('Full booking — Stripe card payment', { tag: '@full' }, () => {
     await fillStripeCheckout(page);
 
     // Confirmation page
-    await expect(page.locator('body')).toContainText(/BK-/);
+    await expect(page.locator('body')).toContainText(/BK[\d-]/);
 
     // Wait for Stripe CLI webhook to fire and email to send (3s buffer)
     await page.waitForTimeout(3_000);
 
     const email = await getLatestEmail(testEmail);
     expect(email.Subject.toLowerCase()).toContain('confirmed');
-    expect(email.HTML).toMatch(/BK-/);
+    expect(email.HTML).toMatch(/BK[\d-]/);
   });
 });

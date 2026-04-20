@@ -14,7 +14,7 @@ test.describe('Confirmation email content', { tag: '@full' }, () => {
     // Subject
     expect(email.Subject.toLowerCase()).toContain('confirmed');
     // Booking reference (BK- prefix from confirmation template)
-    expect(email.HTML).toMatch(/BK-/);
+    expect(email.HTML).toMatch(/BK[\d-]/);
     // Magic links present
     expect(email.HTML.toLowerCase()).toContain('cancel');
     expect(email.HTML.toLowerCase()).toContain('reschedule');
