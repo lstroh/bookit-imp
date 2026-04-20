@@ -83,75 +83,77 @@ export async function completeWizardSteps1To4(page: Page): Promise<string> {
   // Page is now on Step 3. Do NOT click Continue here.
 
   // -----------------------------------------------------------------------
-  // Step 3: Find an available day (navigate months if needed), pick a slot
-  // Month nav arrows are <a href> links — must waitForNavigation with click
+  // Step 3: Find an available day, pick a slot, confirm session write
+  // Uses waitForResponse on the slot POST — avoids cookie rotation race
   // -----------------------------------------------------------------------
   await page.waitForSelector('.bookit-v2-calendar', { timeout: 15_000 });
 
   let slotPicked = false;
 
   for (let month = 0; month < 3; month++) {
-    // Try each available day in this month until one has slots
     const availableDays = page.locator('.bookit-v2-day--available');
     const dayCount = await availableDays.count();
 
     for (let i = 0; i < Math.min(dayCount, 8); i++) {
       const dayBtn = availableDays.nth(i);
-      const clickedDate = await dayBtn.getAttribute('data-date');
-      await dayBtn.click();
 
-      // Day click posts current_step/date and regenerates the session cookie.
-      // Wait until the server session reflects the clicked date before continuing,
-      // otherwise subsequent requests (or month navigation) can use a stale session.
-      if (clickedDate) {
-        let datePersisted = false;
-        for (let attempt = 0; attempt < 50; attempt++) {
-          const json = (await page
-            .evaluate(async () => {
-              try {
-                const r = await fetch('/wp-json/bookit/v1/wizard/session', {
-                  credentials: 'same-origin',
-                });
-                return await r.json();
-              } catch {
-                return null;
-              }
-            })
-            .catch(() => null)) as null | {
-            success?: boolean;
-            data?: { date?: string };
-          };
-          if (json?.data?.date === clickedDate) {
-            datePersisted = true;
-            break;
-          }
-          await page.waitForTimeout(200);
-        }
-        if (!datePersisted) {
-          // If the session didn't reflect the date quickly (cookie rotation / server load),
-          // try the next available day rather than failing the whole run.
-          continue;
-        }
+      // Click the day and wait for the day's session POST to complete.
+      // The day click posts {current_step:3, date:X} to the session API.
+      const [dayResponse] = await Promise.all([
+        page.waitForResponse(
+          (r) =>
+            r.url().includes('/wp-json/bookit/v1/wizard/session') &&
+            r.request().method() === 'POST',
+          { timeout: 10_000 }
+        ),
+        dayBtn.click(),
+      ]);
+
+      // Check the day POST succeeded
+      const dayJson = await dayResponse.json().catch(() => null);
+      if (!dayJson?.success) {
+        // Day POST failed — try the next day
+        continue;
       }
-      // Slots load asynchronously via fetch after a day click
+
+      // Wait for slots to appear (loaded asynchronously via fetch after day POST)
       const slotVisible = await page
         .locator('.bookit-v2-slot--available')
         .first()
-        .isVisible({ timeout: 3_000 })
+        .isVisible({ timeout: 5_000 })
         .catch(() => false);
 
-      if (slotVisible) {
-        await page.locator('.bookit-v2-slot--available').first().click();
-        slotPicked = true;
-        break;
+      if (!slotVisible) {
+        // No slots on this day — try next day
+        continue;
       }
-      // This day has no slots — try the next available day
+
+      // Click a slot and wait for the slot's session POST to complete.
+      // The slot POST contains {current_step:3, date:X, time:Y}.
+      // Reading the POST response directly avoids cookie-rotation race.
+      const [slotResponse] = await Promise.all([
+        page.waitForResponse(
+          (r) =>
+            r.url().includes('/wp-json/bookit/v1/wizard/session') &&
+            r.request().method() === 'POST',
+          { timeout: 10_000 }
+        ),
+        page.locator('.bookit-v2-slot--available').first().click(),
+      ]);
+
+      const slotJson = await slotResponse.json().catch(() => null);
+      if (!slotJson?.success) {
+        // Slot POST failed — try next day
+        continue;
+      }
+
+      slotPicked = true;
+      break;
     }
 
     if (slotPicked) break;
 
     // No slots found this month — navigate to next month via <a href> link
-    // Must waitForNavigation because clicking the link causes a full page load
     if (month < 2) {
       await Promise.all([
         page.waitForNavigation({ waitUntil: 'load', timeout: 15_000 }),
@@ -170,72 +172,14 @@ export async function completeWizardSteps1To4(page: Page): Promise<string> {
     );
   }
 
-  // Continue is enabled once a slot is selected
-  await page.waitForFunction(() => {
-    const btn = document.querySelector<HTMLButtonElement>('#bookit-v2-continue');
-    return btn !== null && !btn.disabled;
-  });
-
-  // Ensure the slot POST has actually persisted date/time in the *current* session
-  // before we advance to Step 4. The backend regenerates session ID cookies on
-  // current_step updates, so two rapid POSTs can land in different sessions.
-  let hasDateTime = false;
-  for (let attempt = 0; attempt < 50; attempt++) {
-    const json = (await page
-      .evaluate(async () => {
-        try {
-          const r = await fetch('/wp-json/bookit/v1/wizard/session', {
-            credentials: 'same-origin',
-          });
-          return await r.json();
-        } catch {
-          return null;
-        }
-      })
-      .catch(() => null)) as null | {
-      success?: boolean;
-      data?: { date?: string; time?: string };
-    };
-    const date = json?.data?.date;
-    const time = json?.data?.time;
-    if (date && time) {
-      hasDateTime = true;
-      break;
-    }
-    await page.waitForTimeout(200);
-  }
-
-  if (!hasDateTime) {
-    // Retry slot click once and poll again before failing.
-    await page.locator('.bookit-v2-slot--available').first().click();
-    for (let attempt = 0; attempt < 50; attempt++) {
-      const json = (await page
-        .evaluate(async () => {
-          try {
-            const r = await fetch('/wp-json/bookit/v1/wizard/session', {
-              credentials: 'same-origin',
-            });
-            return await r.json();
-          } catch {
-            return null;
-          }
-        })
-        .catch(() => null)) as null | {
-        success?: boolean;
-        data?: { date?: string; time?: string };
-      };
-      const date = json?.data?.date;
-      const time = json?.data?.time;
-      if (date && time) {
-        hasDateTime = true;
-        break;
-      }
-      await page.waitForTimeout(200);
-    }
-    if (!hasDateTime) {
-      throw new Error('Slot selection did not persist date/time in wizard session before continuing.');
-    }
-  }
+  // Wait for Continue button to be enabled (JS enables it in the slot POST .then())
+  await page.waitForFunction(
+    () => {
+      const btn = document.querySelector<HTMLButtonElement>('#bookit-v2-continue');
+      return btn !== null && !btn.disabled;
+    },
+    { timeout: 10_000 }
+  );
 
   await page.locator('#bookit-v2-continue').click();
 
