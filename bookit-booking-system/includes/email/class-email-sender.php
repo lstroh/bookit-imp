@@ -236,6 +236,12 @@ class Booking_System_Email_Sender {
 							<span class="label"><?php esc_html_e( 'Staff:', 'booking-system' ); ?></span>
 							<span class="value"><?php echo esc_html( $booking['staff_name'] ); ?></span>
 						</div>
+						<?php if ( ! empty( $booking['booking_reference'] ) ) : ?>
+						<div class="detail-row">
+							<span class="label"><?php esc_html_e( 'Booking ref:', 'booking-system' ); ?></span>
+							<span class="value"><?php echo esc_html( $booking['booking_reference'] ); ?></span>
+						</div>
+						<?php endif; ?>
 					</div>
 
 					<?php if ( ! empty( $booking['cooling_off_waiver_given'] ) ) : ?>

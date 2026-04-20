@@ -189,6 +189,38 @@ class Test_Notification_Dispatcher extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @covers Booking_System_Email_Sender::generate_customer_email
+	 */
+	public function test_confirmation_email_contains_booking_reference(): void {
+		$email_sender = new Booking_System_Email_Sender();
+		$booking      = $this->build_minimal_booking();
+
+		// Add a booking reference in the format produced by
+		// Bookit_Reference_Generator::generate() — BK + YYMM + hyphen + 4 chars
+		$booking['booking_reference'] = 'BK2504-TEST';
+
+		$html = $email_sender->generate_customer_email( $booking );
+
+		$this->assertStringContainsString( 'BK2504-TEST', $html );
+		$this->assertStringContainsString( 'Booking ref', $html );
+	}
+
+	/**
+	 * @covers Booking_System_Email_Sender::generate_customer_email
+	 */
+	public function test_confirmation_email_omits_ref_row_when_reference_empty(): void {
+		$email_sender = new Booking_System_Email_Sender();
+		$booking      = $this->build_minimal_booking();
+
+		// No booking_reference key — should not render an empty row
+		unset( $booking['booking_reference'] );
+
+		$html = $email_sender->generate_customer_email( $booking );
+
+		$this->assertStringNotContainsString( 'Booking ref', $html );
+	}
+
+	/**
 	 * @covers Bookit_Notification_Dispatcher::process_email_queue_item
 	 * @covers Bookit_WP_Mail_Fallback_Provider::send
 	 */

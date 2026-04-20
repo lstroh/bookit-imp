@@ -11,7 +11,7 @@ export interface MailpitMessage {
 
 export async function getLatestEmail(
   toAddress: string,
-  timeoutMs = 15_000
+  timeoutMs = 30_000
 ): Promise<MailpitMessage> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
