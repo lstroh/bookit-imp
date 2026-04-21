@@ -19,9 +19,16 @@ test.describe('Confirmation email content', { tag: '@full' }, () => {
       page.locator('#bookit-v2-cta-btn').click(),
     ]);
 
-    const completeJson = await completeResponse.json().catch(() => null);
+    // Read body immediately — page may navigate before .json() resolves
+    const responseBody = await completeResponse.text().catch(() => '{}');
+    let completeJson: any = null;
+    try {
+      completeJson = JSON.parse(responseBody);
+    } catch {
+      completeJson = null;
+    }
     if (!completeJson?.success) {
-      throw new Error(`wizard/complete failed: ${JSON.stringify(completeJson)}`);
+      throw new Error(`wizard/complete failed: ${responseBody}`);
     }
     await page.waitForURL('**/booking-confirmed-v2/**', { timeout: 20_000 });
 

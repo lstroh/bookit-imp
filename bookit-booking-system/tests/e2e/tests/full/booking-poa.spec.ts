@@ -30,8 +30,15 @@ test.describe('Full booking — Pay on Arrival', { tag: '@full' }, () => {
         page.locator('#bookit-v2-cta-btn').click(),
       ]);
 
-      const completeJson = await completeResponse.json().catch(() => null);
-      lastCompleteJson = completeJson;
+      // Read body immediately — page may navigate before .json() resolves
+      const responseBody = await completeResponse.text().catch(() => '{}');
+      let completeJson: any = null;
+      try {
+        completeJson = JSON.parse(responseBody);
+      } catch {
+        completeJson = null;
+      }
+      lastCompleteJson = completeJson ?? responseBody;
 
       if (completeJson?.success) {
         break;
@@ -41,11 +48,17 @@ test.describe('Full booking — Pay on Arrival', { tag: '@full' }, () => {
         continue;
       }
 
-      throw new Error(`wizard/complete failed: ${JSON.stringify(completeJson)}`);
+      throw new Error(`wizard/complete failed: ${responseBody}`);
     }
 
-    if (!lastCompleteJson?.success) {
-      throw new Error(`wizard/complete failed after retries: ${JSON.stringify(lastCompleteJson)}`);
+    if (typeof lastCompleteJson === 'object' && lastCompleteJson?.success) {
+      // ok
+    } else {
+      throw new Error(
+        `wizard/complete failed after retries: ${
+          typeof lastCompleteJson === 'string' ? lastCompleteJson : JSON.stringify(lastCompleteJson)
+        }`
+      );
     }
 
     // Assert confirmation page loaded
