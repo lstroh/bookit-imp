@@ -15,8 +15,34 @@ test.describe('Full booking — Pay on Arrival', { tag: '@full' }, () => {
     for (let attempt = 0; attempt < 2; attempt++) {
       testEmail = await completeWizardSteps1To4(page);
 
-      // Step 5: select Pay in Person
-      await page.locator('#bookit-v2-pay-person').click();
+      // Step 5: select Pay in Person (writes payment_method to session)
+      const payPersonRadio = page.locator(
+        'input[name="bookit_v2_payment_choice"][value="person"]'
+      );
+      const payPersonAlreadySelected =
+        (await payPersonRadio.count()) > 0 && (await payPersonRadio.isChecked());
+
+      if (!payPersonAlreadySelected) {
+        const [paymentRowResponse] = await Promise.all([
+          page.waitForResponse(
+            r =>
+              r.request().method() === 'POST' &&
+              (r.url().includes('wizard/session') ||
+                r.url().includes('wizard%2Fsession') ||
+                r.url().includes('bookit/v1/wizard/session') ||
+                r.url().includes('bookit%2Fv1%2Fwizard%2Fsession')),
+            { timeout: 15_000 }
+          ),
+          payPersonRadio.check(),
+        ]);
+
+        const paymentRowJson = await paymentRowResponse.json().catch(() => null);
+        if (!paymentRowJson?.success) {
+          throw new Error(
+            `Payment method session POST failed: ${JSON.stringify(paymentRowJson)}`
+          );
+        }
+      }
 
       // CTA triggers: POST /wizard/session then POST /wizard/complete
       // Intercept wizard/complete response to confirm it succeeded
@@ -38,7 +64,7 @@ test.describe('Full booking — Pay on Arrival', { tag: '@full' }, () => {
         continue;
       }
 
-      throw new Error(`wizard/complete failed with: ${JSON.stringify(completeJson)}`);
+      throw new Error(`wizard/complete failed: ${JSON.stringify(completeJson)}`);
     }
 
     if (!testEmail) {
