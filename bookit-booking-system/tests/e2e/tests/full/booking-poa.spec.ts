@@ -10,12 +10,40 @@ import { getLatestEmail } from '../../fixtures/mailpit';
 
 test.describe('Full booking — Pay on Arrival', { tag: '@full' }, () => {
   test('completes wizard Steps 1–5 POA, shows confirmation, delivers email', async ({ page }) => {
-    const testEmail = await completeWizardSteps1To4(page);
+    let testEmail: string | null = null;
 
-    // Step 5: select Pay in Person
-    await page.locator('#bookit-v2-pay-person').click();
-    // CTA label updates to "Confirm booking" — click it
-    await page.locator('#bookit-v2-cta-btn').click();
+    for (let attempt = 0; attempt < 2; attempt++) {
+      testEmail = await completeWizardSteps1To4(page);
+
+      // Step 5: select Pay in Person
+      await page.locator('#bookit-v2-pay-person').click();
+
+      // CTA triggers: POST /wizard/session then POST /wizard/complete
+      // Intercept wizard/complete response to confirm it succeeded
+      const [completeResponse] = await Promise.all([
+        page.waitForResponse(
+          r => r.url().includes('/wizard/complete') && r.request().method() === 'POST',
+          { timeout: 15_000 }
+        ),
+        page.locator('#bookit-v2-cta-btn').click(),
+      ]);
+
+      const completeJson = await completeResponse.json().catch(() => null);
+      if (completeJson?.success) {
+        break;
+      }
+
+      if (completeJson?.code === 'slot_unavailable' && attempt === 0) {
+        // Slot was taken between selection and completion; retry once.
+        continue;
+      }
+
+      throw new Error(`wizard/complete failed with: ${JSON.stringify(completeJson)}`);
+    }
+
+    if (!testEmail) {
+      throw new Error('Failed to create booking (no test email returned)');
+    }
 
     // Assert confirmation page loaded
     await page.waitForURL('**/booking-confirmed-v2/**', { timeout: 20_000 });
