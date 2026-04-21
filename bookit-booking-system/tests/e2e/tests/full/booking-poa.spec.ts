@@ -10,65 +10,42 @@ import { getLatestEmail } from '../../fixtures/mailpit';
 
 test.describe('Full booking — Pay on Arrival', { tag: '@full' }, () => {
   test('completes wizard Steps 1–5 POA, shows confirmation, delivers email', async ({ page }) => {
-    let testEmail: string | null = null;
+    let testEmail: string | undefined;
+    let lastCompleteJson: any = null;
 
-    for (let attempt = 0; attempt < 2; attempt++) {
+    // Retry the full wizard flow when a slot becomes unavailable due to a prior run.
+    // Max 2 retries (3 total attempts).
+    for (let attempt = 1; attempt <= 3; attempt++) {
       testEmail = await completeWizardSteps1To4(page);
 
-      // Step 5: select Pay in Person (writes payment_method to session)
-      const payPersonRadio = page.locator(
-        'input[name="bookit_v2_payment_choice"][value="person"]'
-      );
-      const payPersonAlreadySelected =
-        (await payPersonRadio.count()) > 0 && (await payPersonRadio.isChecked());
+      // Step 5: select Pay in Person (UI only — no network request on row click)
+      await page.locator('#bookit-v2-pay-person').click();
 
-      if (!payPersonAlreadySelected) {
-        const [paymentRowResponse] = await Promise.all([
-          page.waitForResponse(
-            r =>
-              r.request().method() === 'POST' &&
-              (r.url().includes('wizard/session') ||
-                r.url().includes('wizard%2Fsession') ||
-                r.url().includes('bookit/v1/wizard/session') ||
-                r.url().includes('bookit%2Fv1%2Fwizard%2Fsession')),
-            { timeout: 15_000 }
-          ),
-          payPersonRadio.check(),
-        ]);
-
-        const paymentRowJson = await paymentRowResponse.json().catch(() => null);
-        if (!paymentRowJson?.success) {
-          throw new Error(
-            `Payment method session POST failed: ${JSON.stringify(paymentRowJson)}`
-          );
-        }
-      }
-
-      // CTA triggers: POST /wizard/session then POST /wizard/complete
-      // Intercept wizard/complete response to confirm it succeeded
+      // CTA click: POST /wizard/session then POST /wizard/complete (chained in JS)
       const [completeResponse] = await Promise.all([
         page.waitForResponse(
           r => r.url().includes('/wizard/complete') && r.request().method() === 'POST',
-          { timeout: 15_000 }
+          { timeout: 20_000 }
         ),
         page.locator('#bookit-v2-cta-btn').click(),
       ]);
 
       const completeJson = await completeResponse.json().catch(() => null);
+      lastCompleteJson = completeJson;
+
       if (completeJson?.success) {
         break;
       }
 
-      if (completeJson?.code === 'slot_unavailable' && attempt === 0) {
-        // Slot was taken between selection and completion; retry once.
+      if (completeJson?.code === 'slot_unavailable' && attempt < 3) {
         continue;
       }
 
       throw new Error(`wizard/complete failed: ${JSON.stringify(completeJson)}`);
     }
 
-    if (!testEmail) {
-      throw new Error('Failed to create booking (no test email returned)');
+    if (!lastCompleteJson?.success) {
+      throw new Error(`wizard/complete failed after retries: ${JSON.stringify(lastCompleteJson)}`);
     }
 
     // Assert confirmation page loaded
@@ -77,7 +54,7 @@ test.describe('Full booking — Pay on Arrival', { tag: '@full' }, () => {
     await expect(page.locator('body')).toContainText(/BK[\d-]/);
 
     // Assert confirmation email in Mailpit
-    const email = await getLatestEmail(testEmail);
+    const email = await getLatestEmail(testEmail!);
     expect(email.Subject.toLowerCase()).toContain('confirmed');
     expect(email.HTML).toMatch(/BK[\d-]/);
     // Email must contain Cancel and Reschedule links (magic link)

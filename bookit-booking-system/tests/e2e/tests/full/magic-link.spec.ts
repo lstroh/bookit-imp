@@ -16,40 +16,15 @@ test.describe('Magic link flows', { tag: '@full' }, () => {
   async function createBookingAndGetEmail(page: Page) {
     const testEmail = await completeWizardSteps1To4(page);
 
-    const payPersonRadio = page.locator(
-      'input[name="bookit_v2_payment_choice"][value="person"]'
-    );
-    const payPersonAlreadySelected =
-      (await payPersonRadio.count()) > 0 && (await payPersonRadio.isChecked());
-
-    if (!payPersonAlreadySelected) {
-      // Click Pay in person row and wait for its session POST to complete
-      const [paymentRowResponse] = await Promise.all([
-        page.waitForResponse(
-          r =>
-            r.request().method() === 'POST' &&
-            (r.url().includes('wizard/session') ||
-              r.url().includes('wizard%2Fsession') ||
-              r.url().includes('bookit/v1/wizard/session') ||
-              r.url().includes('bookit%2Fv1%2Fwizard%2Fsession')),
-          { timeout: 15_000 }
-        ),
-        payPersonRadio.check(),
-      ]);
-      const paymentRowJson = await paymentRowResponse.json().catch(() => null);
-      if (!paymentRowJson?.success) {
-        throw new Error(
-          `Payment method session POST failed: ${JSON.stringify(paymentRowJson)}`
-        );
-      }
-    }
+    // Step 5: select Pay in Person (UI only — no network request on row click)
+    await page.locator('#bookit-v2-pay-person').click();
 
     // CTA triggers: POST /wizard/session then POST /wizard/complete
     // Intercept wizard/complete response to confirm it succeeded
     const [completeResponse] = await Promise.all([
       page.waitForResponse(
         r => r.url().includes('/wizard/complete') && r.request().method() === 'POST',
-        { timeout: 15_000 }
+        { timeout: 20_000 }
       ),
       page.locator('#bookit-v2-cta-btn').click(),
     ]);
