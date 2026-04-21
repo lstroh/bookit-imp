@@ -2,80 +2,55 @@ import { test, expect } from '@playwright/test';
 import { completeWizardSteps1To4 } from '../../fixtures/wizard';
 import { getLatestEmail } from '../../fixtures/mailpit';
 
-// Step 5 selectors from booking-wizard-v2-step-5.php:
-//   Pay in person row:  #bookit-v2-pay-person  (data-value="person")
-//   CTA button:         #bookit-v2-cta-btn
-//   After confirm:      redirects to /booking-confirmed-v2/?...
-//   Booking ref:        text matching /BK[\d-]/
-
 test.describe('Full booking — Pay on Arrival', { tag: '@full' }, () => {
   test('completes wizard Steps 1–5 POA, shows confirmation, delivers email', async ({ page }) => {
-    let testEmail: string | undefined;
-    let lastCompleteJson: any = null;
+    const testEmail = await completeWizardSteps1To4(page);
 
-    // Retry the full wizard flow when a slot becomes unavailable due to a prior run.
-    // Max 2 retries (3 total attempts).
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      testEmail = await completeWizardSteps1To4(page);
+    // Intercept wizard/complete at network level BEFORE clicking CTA
+    let capturedBody: string | null = null;
+    await page.route('**/wizard/complete', async (route) => {
+      const response = await route.fetch();
+      capturedBody = await response.text();
+      await route.fulfill({ response });
+    });
 
-      // Step 5: select Pay in Person (UI only — no network request on row click)
-      await page.locator('#bookit-v2-pay-person').click();
+    // Step 5: select Pay in Person (UI only — no network request on row click)
+    await page.locator('#bookit-v2-pay-person').click();
 
-      // CTA click: POST /wizard/session then POST /wizard/complete (chained in JS)
-      const [completeResponse] = await Promise.all([
-        page.waitForResponse(
-          r => r.url().includes('/wizard/complete') && r.request().method() === 'POST',
-          { timeout: 20_000 }
-        ),
-        page.locator('#bookit-v2-cta-btn').click(),
-      ]);
+    // CTA click: fires POST /wizard/session then POST /wizard/complete
+    await page.locator('#bookit-v2-cta-btn').click();
 
-      let completeJson: any = null;
-      let completeBodyText = '';
-      try {
-        // Use Playwright's buffered response body (safe even if the page navigates immediately).
-        const body = await completeResponse.body();
-        completeBodyText = body.toString();
-        completeJson = JSON.parse(completeBodyText);
-      } catch {
-        completeJson = null;
-      }
-      lastCompleteJson = completeJson ?? completeBodyText;
-
-      if (completeJson?.success) {
-        break;
-      }
-
-      if (completeJson?.code === 'slot_unavailable' && attempt < 3) {
-        continue;
-      }
-
-      throw new Error(`wizard/complete failed: ${completeBodyText || JSON.stringify(completeJson)}`);
+    // Wait for route handler to capture the body
+    const deadline = Date.now() + 15_000;
+    while (capturedBody === null && Date.now() < deadline) {
+      await page.waitForTimeout(100);
     }
 
-    if (typeof lastCompleteJson === 'object' && lastCompleteJson?.success) {
-      // ok
-    } else {
-      throw new Error(
-        `wizard/complete failed after retries: ${
-          typeof lastCompleteJson === 'string' ? lastCompleteJson : JSON.stringify(lastCompleteJson)
-        }`
-      );
+    let completeJson: any = null;
+    try {
+      if (capturedBody) completeJson = JSON.parse(capturedBody);
+    } catch { /* ignore */ }
+
+    if (!completeJson?.success) {
+      throw new Error(`wizard/complete failed: ${capturedBody}`);
     }
 
-    // Assert confirmation page loaded
+    // Confirmation page
     await page.waitForURL('**/booking-confirmed-v2/**', { timeout: 20_000 });
-    // Booking reference format is BK- (from booking-confirmed-v2.php)
     await expect(page.locator('body')).toContainText(/BK[\d-]/);
 
-    // Assert confirmation email in Mailpit
-    const email = await getLatestEmail(testEmail!);
+   // Visiting the dashboard triggers Action Scheduler to process the email queue.
+// On local sites this is more reliable than /?doing_wp_cron.
+const baseUrl = process.env.BASE_URL || 'http://plugin-test-1.local';
+await page.goto(`${baseUrl}/wp-admin/`, { waitUntil: 'commit', timeout: 10_000 })
+  .catch(() => {/* best effort */});
+
+    // Email
+    const email = await getLatestEmail(testEmail);
     expect(email.Subject.toLowerCase()).toContain('confirmed');
     expect(email.HTML).toMatch(/BK[\d-]/);
-    // Email must contain Cancel and Reschedule links (magic link)
     expect(email.HTML.toLowerCase()).toContain('cancel');
     expect(email.HTML.toLowerCase()).toContain('reschedule');
-    // Add to calendar button
     expect(email.HTML.toLowerCase()).toContain('calendar');
   });
 });
