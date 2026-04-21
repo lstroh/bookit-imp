@@ -27,17 +27,19 @@ test.describe('Full booking — Stripe card payment', { tag: '@full' }, () => {
       page.locator('#bookit-v2-cta-btn').click(),
     ]);
 
-    // Read body immediately — page may navigate before .json() resolves
-    const responseBody = await completeResponse.text().catch(() => '{}');
     let completeJson: any = null;
+    let completeBodyText = '';
     try {
-      completeJson = JSON.parse(responseBody);
+      // Use Playwright's buffered response body (safe even if the page navigates immediately).
+      const body = await completeResponse.body();
+      completeBodyText = body.toString();
+      completeJson = JSON.parse(completeBodyText);
     } catch {
       completeJson = null;
     }
 
     if (!completeJson?.success) {
-      throw new Error(`wizard/complete failed with: ${responseBody}`);
+      throw new Error(`wizard/complete failed with: ${completeBodyText || JSON.stringify(completeJson)}`);
     }
 
     // Fill Stripe hosted checkout (headed mode — set in playwright.config.ts for full mode)

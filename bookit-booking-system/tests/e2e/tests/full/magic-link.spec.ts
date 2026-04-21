@@ -29,16 +29,18 @@ test.describe('Magic link flows', { tag: '@full' }, () => {
       page.locator('#bookit-v2-cta-btn').click(),
     ]);
 
-    // Read body immediately — page may navigate before .json() resolves
-    const responseBody = await completeResponse.text().catch(() => '{}');
     let completeJson: any = null;
+    let completeBodyText = '';
     try {
-      completeJson = JSON.parse(responseBody);
+      // Use Playwright's buffered response body (safe even if the page navigates immediately).
+      const body = await completeResponse.body();
+      completeBodyText = body.toString();
+      completeJson = JSON.parse(completeBodyText);
     } catch {
       completeJson = null;
     }
     if (!completeJson?.success) {
-      throw new Error(`wizard/complete failed: ${responseBody}`);
+      throw new Error(`wizard/complete failed: ${completeBodyText || JSON.stringify(completeJson)}`);
     }
     await page.waitForURL('**/booking-confirmed-v2/**', { timeout: 20_000 });
     return { testEmail, email: await getLatestEmail(testEmail) };

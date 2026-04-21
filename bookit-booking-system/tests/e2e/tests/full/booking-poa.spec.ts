@@ -30,15 +30,17 @@ test.describe('Full booking — Pay on Arrival', { tag: '@full' }, () => {
         page.locator('#bookit-v2-cta-btn').click(),
       ]);
 
-      // Read body immediately — page may navigate before .json() resolves
-      const responseBody = await completeResponse.text().catch(() => '{}');
       let completeJson: any = null;
+      let completeBodyText = '';
       try {
-        completeJson = JSON.parse(responseBody);
+        // Use Playwright's buffered response body (safe even if the page navigates immediately).
+        const body = await completeResponse.body();
+        completeBodyText = body.toString();
+        completeJson = JSON.parse(completeBodyText);
       } catch {
         completeJson = null;
       }
-      lastCompleteJson = completeJson ?? responseBody;
+      lastCompleteJson = completeJson ?? completeBodyText;
 
       if (completeJson?.success) {
         break;
@@ -48,7 +50,7 @@ test.describe('Full booking — Pay on Arrival', { tag: '@full' }, () => {
         continue;
       }
 
-      throw new Error(`wizard/complete failed: ${responseBody}`);
+      throw new Error(`wizard/complete failed: ${completeBodyText || JSON.stringify(completeJson)}`);
     }
 
     if (typeof lastCompleteJson === 'object' && lastCompleteJson?.success) {
