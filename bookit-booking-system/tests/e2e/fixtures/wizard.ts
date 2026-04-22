@@ -97,6 +97,15 @@ export async function completeWizardSteps1To4(page: Page): Promise<string> {
     for (let i = 0; i < Math.min(dayCount, 8); i++) {
       const dayBtn = availableDays.nth(i);
 
+      // Skip today — same-day bookings may be past the cancellation window
+      // and cause cancellation/reschedule tests to fail.
+      // Always book at least one day ahead for reliable test behaviour.
+      const dayDate = await dayBtn.getAttribute('data-date');
+      const today = new Date().toISOString().split('T')[0];
+      if (dayDate === today) {
+        continue;
+      }
+
       // Wait for the timeslots GET that fires automatically after the
       // session POST resolves client-side. This guarantees slots in the
       // DOM are for the currently selected day — not stale slots from
