@@ -97,6 +97,23 @@ export async function completeWizardSteps1To4(page: Page): Promise<string> {
     for (let i = 0; i < Math.min(dayCount, 8); i++) {
       const dayBtn = availableDays.nth(i);
 
+      // Wait for the timeslots GET that fires automatically after the
+      // session POST resolves client-side. This guarantees slots in the
+      // DOM are for the currently selected day — not stale slots from
+      // a previous day selection.
+      //
+      // IMPORTANT: set up waitForResponse BEFORE the session POST
+      // resolves, so we don't miss the timeslots GET firing in the
+      // JS .then() callback. Use a separate promise registered before
+      // the day click resolves.
+      const timeslotsPromise = page
+        .waitForResponse(
+          (r) =>
+            r.url().includes('/wizard/timeslots') && r.request().method() === 'GET',
+          { timeout: 10_000 }
+        )
+        .catch(() => null);
+
       // Click the day and wait for the day's session POST to complete.
       // The day click posts {current_step:3, date:X} to the session API.
       const [dayResponse] = await Promise.all([
@@ -116,21 +133,22 @@ export async function completeWizardSteps1To4(page: Page): Promise<string> {
         continue;
       }
 
-      // Wait for slots to appear (loaded asynchronously via fetch after day POST)
-      const slotVisible = await page
-        .locator('.bookit-v2-slot--available')
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      if (!slotVisible) {
-        // No slots on this day — try next day
+      // The timeslots GET fires automatically after dayResponse — no
+      // additional click needed. Just await the promise.
+      const timeslotsResponse = await timeslotsPromise;
+      if (!timeslotsResponse) {
+        // Timeslots fetch timed out — try next day
         continue;
       }
 
-      // Click a slot and wait for the slot's session POST to complete.
-      // The slot POST contains {current_step:3, date:X, time:Y}.
-      // Reading the POST response directly avoids cookie-rotation race.
+      const timeslotsJson = await timeslotsResponse.json().catch(() => null);
+      if (!timeslotsJson?.success || !timeslotsJson?.available) {
+        // No slots available on this day
+        continue;
+      }
+
+      // Slots are now guaranteed to be in the DOM for the selected day.
+      // Click the first available slot and wait for its session POST.
       const [slotResponse] = await Promise.all([
         page.waitForResponse(
           (r) =>

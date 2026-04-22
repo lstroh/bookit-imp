@@ -251,6 +251,8 @@ class Bookit_DateTime_Model {
 		// Build query to get booked slots, excluding current booking if editing.
 		if ( $exclude_booking_id ) {
 			// Exclude the booking being edited from conflict check.
+			// Flush wpdb cache to ensure we read fresh booking data.
+			$wpdb->flush();
 			$existing_bookings = $wpdb->get_results(
 				$wpdb->prepare(
 					"SELECT start_time, end_time
@@ -268,6 +270,8 @@ class Bookit_DateTime_Model {
 			);
 		} else {
 			// Normal query without exclusion (for new bookings).
+			// Flush wpdb cache to ensure we read fresh booking data.
+			$wpdb->flush();
 			$existing_bookings = $wpdb->get_results(
 				$wpdb->prepare(
 					"SELECT start_time, end_time
@@ -291,7 +295,7 @@ class Bookit_DateTime_Model {
 			'existing_bookings'  => count( $existing_bookings ),
 		) );
 
-		$available_slots = $this->filter_booked_slots( $all_slots, $existing_bookings, $total_time_needed );
+		$available_slots = $this->filter_booked_slots( $all_slots, $existing_bookings, $total_time_needed, $date );
 
 		if ( $date === gmdate( 'Y-m-d' ) ) {
 			$available_slots = $this->filter_past_slots( $available_slots, $date );
@@ -353,19 +357,21 @@ class Bookit_DateTime_Model {
 	 * @param array<int, string> $slots              Slot start times (H:i:s).
 	 * @param array<int, array>   $existing_bookings  Rows with start_time, end_time.
 	 * @param int                 $duration_needed   Slot length in minutes.
+	 * @param string              $date              Date prefix (Y-m-d) to ensure correct timestamps for future dates.
 	 * @return array<int, string> Available slots.
 	 */
-	private function filter_booked_slots( $slots, $existing_bookings, $duration_needed ) {
+	private function filter_booked_slots( $slots, $existing_bookings, $duration_needed, $date = '' ) {
 		$available = array();
 
 		foreach ( $slots as $slot ) {
-			$slot_start = strtotime( $slot );
+			$prefix     = $date ? $date . ' ' : '';
+			$slot_start = strtotime( $prefix . $slot );
 			$slot_end   = $slot_start + ( $duration_needed * 60 );
 			$is_available = true;
 
 			foreach ( $existing_bookings as $booking ) {
-				$b_start = strtotime( $booking['start_time'] );
-				$b_end   = strtotime( $booking['end_time'] );
+				$b_start = strtotime( $prefix . $booking['start_time'] );
+				$b_end   = strtotime( $prefix . $booking['end_time'] );
 				if ( ! ( $slot_end <= $b_start || $slot_start >= $b_end ) ) {
 					$is_available = false;
 					break;
