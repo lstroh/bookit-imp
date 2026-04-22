@@ -68,7 +68,7 @@ test.describe('Full booking — Pay on Arrival', { tag: '@full' }, () => {
       .catch(() => {/* best effort */});
 
     // Email
-    const email = await getLatestEmail(testEmail);
+    const email = await getLatestEmail(testEmail, page);
     expect(email.Subject.toLowerCase()).toContain('confirmed');
     expect(email.HTML).toMatch(/BK[\d-]/);
     expect(email.HTML.toLowerCase()).toContain('cancel');

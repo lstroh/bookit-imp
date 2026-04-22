@@ -34,7 +34,7 @@ test.describe('Cancellation email content', { tag: '@full' }, () => {
     }
     await page.waitForURL('**/booking-confirmed-v2/**', { timeout: 20_000 });
 
-    const confirmEmail = await getLatestEmail(testEmail);
+    const confirmEmail = await getLatestEmail(testEmail, page);
     const cancelUrl = extractLinkFromEmail(confirmEmail.HTML, 'Cancel Booking');
 
     await clearMailpit();
@@ -42,7 +42,7 @@ test.describe('Cancellation email content', { tag: '@full' }, () => {
     const confirmBtn = page.locator('#bookit-cancel-confirm');
     if (await confirmBtn.isVisible()) await confirmBtn.click();
 
-    const cancelEmail = await getLatestEmail(testEmail);
+    const cancelEmail = await getLatestEmail(testEmail, page);
     expect(cancelEmail.Subject.toLowerCase()).toContain('cancel');
     // Should contain the service name booked
     expect(cancelEmail.HTML.length).toBeGreaterThan(0);

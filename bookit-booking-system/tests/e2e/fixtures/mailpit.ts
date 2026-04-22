@@ -11,10 +11,22 @@ export interface MailpitMessage {
 
 export async function getLatestEmail(
   toAddress: string,
-  timeoutMs = 30_000
+  page: import('@playwright/test').Page,
+  timeoutMs = 60_000
 ): Promise<MailpitMessage> {
+  const baseUrl = process.env.BASE_URL || 'http://plugin-test-1.local';
   const deadline = Date.now() + timeoutMs;
+  let attempt = 0;
+
   while (Date.now() < deadline) {
+    // Every 2 attempts, visit wp-admin to trigger Action Scheduler
+    if (attempt % 2 === 0) {
+      await page.goto(`${baseUrl}/wp-admin/`, {
+        waitUntil: 'commit',
+        timeout: 10_000,
+      }).catch(() => {/* best effort */});
+    }
+
     const res = await fetch(`${MAILPIT_URL}/api/v1/messages`);
     if (!res.ok) throw new Error(`Mailpit API error: ${res.status}. Is Mailpit running?`);
     const data = await res.json();
@@ -26,8 +38,11 @@ export async function getLatestEmail(
       const full = await fetch(`${MAILPIT_URL}/api/v1/message/${match.ID}`);
       return (await full.json()) as MailpitMessage;
     }
-    await new Promise((r) => setTimeout(r, 500));
+
+    await page.waitForTimeout(1_500);
+    attempt++;
   }
+
   throw new Error(`No email found for ${toAddress} within ${timeoutMs}ms. Is Mailpit running?`);
 }
 

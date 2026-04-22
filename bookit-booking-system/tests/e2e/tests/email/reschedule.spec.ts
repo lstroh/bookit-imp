@@ -34,7 +34,7 @@ test.describe('Reschedule email content', { tag: '@full' }, () => {
     }
     await page.waitForURL('**/booking-confirmed-v2/**', { timeout: 20_000 });
 
-    const confirmEmail = await getLatestEmail(testEmail);
+    const confirmEmail = await getLatestEmail(testEmail, page);
     const rescheduleUrl = extractLinkFromEmail(confirmEmail.HTML, 'Reschedule');
 
     await clearMailpit();
@@ -52,7 +52,7 @@ test.describe('Reschedule email content', { tag: '@full' }, () => {
       await confirmBtn.click();
     }
 
-    const rescheduleEmail = await getLatestEmail(testEmail);
+    const rescheduleEmail = await getLatestEmail(testEmail, page);
     expect(rescheduleEmail.Subject.toLowerCase()).toContain('reschedul');
     expect(rescheduleEmail.HTML.toLowerCase()).toContain('cancel');
     expect(rescheduleEmail.HTML.toLowerCase()).toContain('reschedule');

@@ -51,7 +51,7 @@ test.describe('Full booking — Stripe card payment', { tag: '@full' }, () => {
     // Wait for Stripe CLI webhook to fire and email to send (3s buffer)
     await page.waitForTimeout(3_000);
 
-    const email = await getLatestEmail(testEmail);
+    const email = await getLatestEmail(testEmail, page);
     expect(email.Subject.toLowerCase()).toContain('confirmed');
     expect(email.HTML).toMatch(/BK[\d-]/);
   });

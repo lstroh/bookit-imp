@@ -34,7 +34,7 @@ test.describe('Confirmation email content', { tag: '@full' }, () => {
     }
     await page.waitForURL('**/booking-confirmed-v2/**', { timeout: 20_000 });
 
-    const email = await getLatestEmail(testEmail);
+    const email = await getLatestEmail(testEmail, page);
 
     // Subject
     expect(email.Subject.toLowerCase()).toContain('confirmed');

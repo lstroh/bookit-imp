@@ -62,7 +62,7 @@ test.describe('Magic link flows', { tag: '@full' }, () => {
     }
 
     // Cancellation email
-    const cancelEmail = await getLatestEmail(testEmail);
+    const cancelEmail = await getLatestEmail(testEmail, page);
     expect(cancelEmail.Subject.toLowerCase()).toContain('cancel');
   });
 
