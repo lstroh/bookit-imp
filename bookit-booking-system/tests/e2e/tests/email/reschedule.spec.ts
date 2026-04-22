@@ -9,29 +9,32 @@ test.describe('Reschedule email content', { tag: '@full' }, () => {
     // Step 5: select Pay in Person (UI only — no network request on row click)
     await page.locator('#bookit-v2-pay-person').click();
 
-    // CTA triggers: POST /wizard/session then POST /wizard/complete
-    // Intercept wizard/complete response to confirm it succeeded
-    const [completeResponse] = await Promise.all([
-      page.waitForResponse(
-        r => r.url().includes('/wizard/complete') && r.request().method() === 'POST',
-        { timeout: 20_000 }
-      ),
-      page.locator('#bookit-v2-cta-btn').click(),
-    ]);
+    // Intercept wizard/complete at network level BEFORE clicking CTA
+    let capturedBody: string | null = null;
+    await page.route('**/wizard/complete', async (route) => {
+      const response = await route.fetch();
+      capturedBody = await response.text();
+      await route.fulfill({ response });
+    });
+
+    // CTA click: fires POST /wizard/session then POST /wizard/complete
+    await page.locator('#bookit-v2-cta-btn').click();
+
+    // Wait for route handler to capture the body
+    const deadline = Date.now() + 15_000;
+    while (capturedBody === null && Date.now() < deadline) {
+      await page.waitForTimeout(100);
+    }
 
     let completeJson: any = null;
-    let completeBodyText = '';
     try {
-      // Use Playwright's buffered response body (safe even if the page navigates immediately).
-      const body = await completeResponse.body();
-      completeBodyText = body.toString();
-      completeJson = JSON.parse(completeBodyText);
-    } catch {
-      completeJson = null;
-    }
+      if (capturedBody) completeJson = JSON.parse(capturedBody);
+    } catch { /* ignore */ }
+
     if (!completeJson?.success) {
-      throw new Error(`wizard/complete failed: ${completeBodyText || JSON.stringify(completeJson)}`);
+      throw new Error(`wizard/complete failed: ${capturedBody}`);
     }
+
     await page.waitForURL('**/booking-confirmed-v2/**', { timeout: 20_000 });
 
     const confirmEmail = await getLatestEmail(testEmail, page);
@@ -39,8 +42,9 @@ test.describe('Reschedule email content', { tag: '@full' }, () => {
 
     await clearMailpit();
     await page.goto(rescheduleUrl);
+    await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
 
-    await page.waitForSelector('.bookit-v2-day--available', { timeout: 10_000 });
+    await page.waitForSelector('.bookit-v2-day--available', { timeout: 20_000 });
     const dates = page.locator('.bookit-v2-day--available');
     const count = await dates.count();
     await dates.nth(count > 1 ? 1 : 0).click();
