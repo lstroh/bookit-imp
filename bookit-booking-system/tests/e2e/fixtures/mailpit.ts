@@ -57,5 +57,8 @@ export function extractLinkFromEmail(html: string, linkText: string): string {
   const regex = new RegExp(`<a[^>]+href="([^"]+)"[^>]*>\\s*${escaped}\\s*<\\/a>`, 'i');
   const match = html.match(regex);
   if (!match) throw new Error(`Link "${linkText}" not found in email HTML`);
-  return match[1];
+  // Decode HTML entities in the URL (e.g. &#038; → &, &amp; → &)
+  return match[1]
+    .replace(/&#038;/g, '&')
+    .replace(/&amp;/g, '&');
 }

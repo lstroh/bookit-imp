@@ -60,9 +60,9 @@ test.describe('Magic link flows', { tag: '@full' }, () => {
     await expect(page.locator('body')).not.toContainText('Fatal error');
 
     const confirmBtn = page.locator('#bookit-cancel-confirm');
-    if (await confirmBtn.isVisible()) {
-      await confirmBtn.click();
-    }
+    await expect(confirmBtn).toBeVisible({ timeout: 10_000 });
+    await confirmBtn.click();
+    await page.waitForTimeout(10_000);
 
     // Cancellation email
     const cancelEmail = await getLatestEmail(testEmail, page);

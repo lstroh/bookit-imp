@@ -41,13 +41,29 @@ test.describe('Cancellation email content', { tag: '@full' }, () => {
     const cancelUrl = extractLinkFromEmail(confirmEmail.HTML, 'Cancel Booking');
 
     await clearMailpit();
-    await page.goto(cancelUrl, { waitUntil: 'networkidle', timeout: 15_000 });
-    const confirmBtn = page.locator('#bookit-cancel-confirm');
-    if (await confirmBtn.isVisible()) await confirmBtn.click();
 
-    const cancelEmail = await getLatestEmail(testEmail, page);
-    expect(cancelEmail.Subject.toLowerCase()).toContain('cancel');
-    // Should contain the service name booked
-    expect(cancelEmail.HTML.length).toBeGreaterThan(0);
+await page.goto(cancelUrl, { waitUntil: 'networkidle', timeout: 15_000 });
+
+// Log what the page says after navigation
+const pageText = await page.locator('body').innerText();
+
+const confirmBtn = page.locator('#bookit-cancel-confirm');
+await expect(confirmBtn).toBeVisible({ timeout: 10_000 });
+await confirmBtn.click();
+await page.waitForTimeout(10_000);
+
+// Log page after clicking confirm
+const pageTextAfter = await page.locator('body').innerText();
+
+// Trigger Action Scheduler
+const baseUrl = process.env.BASE_URL || 'http://plugin-test-1.local';
+await page.goto(`${baseUrl}/wp-admin/`, {
+  waitUntil: 'commit',
+  timeout: 10_000,
+}).catch(() => {});
+
+const cancelEmail = await getLatestEmail(testEmail, page);
+expect(cancelEmail.Subject.toLowerCase()).toContain('cancel');
+expect(cancelEmail.HTML.length).toBeGreaterThan(0);
   });
 });
