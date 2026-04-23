@@ -84,6 +84,7 @@
             <file>./tests/unit/test-package-expiry-cron.php</file>
             <file>./tests/unit/test-package-email.php</file>
             <file>./tests/unit/test-email-change-workflow.php</file>
+            <file>./tests/unit/test-cancelled-slot-fix.php</file>
             <file>./tests/unit/test-provider-interfaces.php</file>
             <file>./tests/unit/test-brevo-email-provider.php</file>
             <file>./tests/unit/test-notification-queue.php</file>

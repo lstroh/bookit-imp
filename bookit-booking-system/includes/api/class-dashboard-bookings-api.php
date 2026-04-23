@@ -2901,13 +2901,19 @@ class Bookit_Dashboard_Bookings_API {
 		}
 
 		$current_timestamp = strtotime( current_time( 'Y-m-d' ) . ' ' . $current_time );
-		$start_timestamp   = strtotime( current_time( 'Y-m-d' ) . ' ' . $start_time );
 
-		$time_until_start = ( $start_timestamp - $current_timestamp ) / 60; // minutes.
-		$is_starting_soon = $time_until_start > 0 && $time_until_start <= 15;
+		$is_starting_soon = false;
+		$has_passed       = false;
 
-		// Calculate if booking has passed.
-		$has_passed = $current_timestamp > strtotime( current_time( 'Y-m-d' ) . ' ' . $booking['end_time'] );
+		if ( ! empty( $start_time ) ) {
+			$start_timestamp = strtotime( current_time( 'Y-m-d' ) . ' ' . $start_time );
+			$time_until_start = ( $start_timestamp - $current_timestamp ) / 60; // minutes.
+			$is_starting_soon = $time_until_start > 0 && $time_until_start <= 15;
+		}
+
+		if ( ! empty( $booking['end_time'] ) ) {
+			$has_passed = $current_timestamp > strtotime( current_time( 'Y-m-d' ) . ' ' . $booking['end_time'] );
+		}
 
 		$response = array(
 			'id'               => (int) $booking['id'],
@@ -2916,8 +2922,8 @@ class Bookit_Dashboard_Bookings_API {
 			'service_id'       => isset( $booking['service_id'] ) ? (int) $booking['service_id'] : null,
 			'staff_id'         => isset( $booking['staff_id'] ) ? (int) $booking['staff_id'] : null,
 			'booking_date'     => $booking['booking_date'],
-			'start_time'       => substr( $booking['start_time'], 0, 5 ), // HH:MM format.
-			'end_time'         => substr( $booking['end_time'], 0, 5 ),
+			'start_time'       => $booking['start_time'] ? substr( $booking['start_time'], 0, 5 ) : null, // HH:MM format.
+			'end_time'         => $booking['end_time'] ? substr( $booking['end_time'], 0, 5 ) : null,
 			'duration'         => (int) $booking['duration'],
 			'status'           => $booking['status'],
 			'total_price'      => (float) $booking['total_price'],
@@ -3220,7 +3226,7 @@ class Bookit_Dashboard_Bookings_API {
 		foreach ( $booking_ids as $booking_id ) {
 			$booking = $wpdb->get_row(
 				$wpdb->prepare(
-					"SELECT id, staff_id, status, deleted_at FROM {$wpdb->prefix}bookings WHERE id = %d",
+					"SELECT id, staff_id, status, deleted_at, start_time, end_time FROM {$wpdb->prefix}bookings WHERE id = %d",
 					$booking_id
 				),
 				ARRAY_A
@@ -3281,8 +3287,16 @@ class Bookit_Dashboard_Bookings_API {
 			$formats = array( '%s', '%s' );
 
 			if ( 'cancel' === $action ) {
-				$update_data['deleted_at'] = current_time( 'mysql' );
-				$formats[]                 = '%s';
+				$update_data['deleted_at']           = current_time( 'mysql' );
+				$update_data['cancelled_start_time'] = $booking['start_time'] ?? null;
+				$update_data['cancelled_end_time']   = $booking['end_time'] ?? null;
+				$update_data['start_time']           = null;
+				$update_data['end_time']             = null;
+				$formats[]                           = '%s'; // deleted_at
+				$formats[]                           = '%s'; // cancelled_start_time
+				$formats[]                           = '%s'; // cancelled_end_time
+				$formats[]                           = '%s'; // start_time
+				$formats[]                           = '%s'; // end_time
 			}
 
 			$result = $wpdb->update(
@@ -4580,6 +4594,15 @@ class Bookit_Dashboard_Bookings_API {
 			$update_data['staff_notes'] = $existing_notes . $cancellation_note;
 			$format[] = '%s';
 		}
+
+		$update_data['cancelled_start_time'] = $existing['start_time'];
+		$update_data['cancelled_end_time']   = $existing['end_time'];
+		$update_data['start_time']           = null;
+		$update_data['end_time']             = null;
+		$format[]                            = '%s'; // cancelled_start_time
+		$format[]                            = '%s'; // cancelled_end_time
+		$format[]                            = '%s'; // start_time (NULL serialised as %s in wpdb)
+		$format[]                            = '%s'; // end_time
 
 		// Notify extensions before a booking is cancelled.
 		do_action( 'bookit_before_booking_cancelled', $booking_id, $existing );

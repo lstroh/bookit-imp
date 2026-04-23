@@ -12,6 +12,10 @@
  * Dropped table: wp_bookings_working_hours (superseded by
  *   wp_bookings_staff_working_hours)
  * Migration file: database/migrations/0011-drop-working-hours-table.php
+ *
+ * Migration 20: Nullable booking times + cancelled time audit columns
+ * Sprint: 6E
+ * Migration file: database/migrations/0020-nullable-booking-times-cancelled-audit.php
  */
 
 -- ============================================
@@ -151,8 +155,10 @@ CREATE TABLE wp_bookings (
 	service_id BIGINT UNSIGNED NOT NULL,
 	staff_id BIGINT UNSIGNED NOT NULL,
 	booking_date DATE NOT NULL,
-	start_time TIME NOT NULL,
-	end_time TIME NOT NULL,
+	start_time TIME NULL DEFAULT NULL,
+	end_time TIME NULL DEFAULT NULL,
+	cancelled_start_time TIME NULL DEFAULT NULL,
+	cancelled_end_time TIME NULL DEFAULT NULL,
 	duration INT UNSIGNED NOT NULL COMMENT 'Duration in minutes (cached from service)',
 	status ENUM('pending','pending_payment','confirmed','completed','cancelled','no_show') NOT NULL DEFAULT 'pending_payment',
 	total_price DECIMAL(10,2) NOT NULL,

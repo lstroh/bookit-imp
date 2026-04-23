@@ -881,7 +881,7 @@ class Bookit_Wizard_API {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$booking = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT id, status, booking_date, start_time, customer_id, magic_link_token
+				"SELECT id, status, booking_date, start_time, end_time, customer_id, magic_link_token
 				FROM {$wpdb->prefix}bookings
 				WHERE id = %d AND deleted_at IS NULL",
 				$booking_id
@@ -931,9 +931,13 @@ class Bookit_Wizard_API {
 				'cancellation_reason'   => $reason,
 				'updated_at'            => current_time( 'mysql' ),
 				'deleted_at'            => current_time( 'mysql' ),
+				'cancelled_start_time'  => $booking['start_time'],
+				'cancelled_end_time'    => $booking['end_time'],
+				'start_time'            => null,
+				'end_time'              => null,
 			),
 			array( 'id' => $booking_id ),
-			array( '%s', '%s', '%s', '%s', '%s', '%s' ),
+			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ),
 			array( '%d' )
 		);
 
