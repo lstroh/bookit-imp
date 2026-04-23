@@ -2,6 +2,78 @@ import { test, expect, Page } from '@playwright/test';
 import { completeWizardSteps1To4 } from '../../fixtures/wizard';
 import { getLatestEmail, extractLinkFromEmail, clearMailpit } from '../../fixtures/mailpit';
 
+/**
+ * On the reschedule page, find a date that actually has slots available
+ * and click the first slot. Retries across up to 3 months.
+ *
+ * The reschedule calendar marks all non-past days as .bookit-v2-day--available
+ * regardless of staff working hours — so we must check the timeslots API
+ * response, not just the DOM class, to find a bookable day.
+ *
+ * Unlike the wizard fixture (which waits for a session POST after each day
+ * click), the reschedule page fires only a timeslots GET on day click.
+ * We intercept that GET to check availability before touching the DOM.
+ */
+async function pickRescheduleSlot(page: Page): Promise<void> {
+  let slotPicked = false;
+
+  for (let month = 0; month < 3; month++) {
+    await page.waitForSelector('.bookit-v2-day--available', { timeout: 15_000 });
+
+    const availableDays = page.locator('.bookit-v2-day--available');
+    const dayCount = await availableDays.count();
+
+    for (let i = 0; i < dayCount; i++) {
+      const dayBtn = availableDays.nth(i);
+
+      // Register the timeslots response promise BEFORE clicking,
+      // so we don't miss the GET that fires immediately on click.
+      const timeslotsPromise = page
+        .waitForResponse(
+          (r) =>
+            r.url().includes('/wizard/timeslots') && r.request().method() === 'GET',
+          { timeout: 10_000 }
+        )
+        .catch(() => null);
+
+      await dayBtn.click();
+
+      const timeslotsResponse = await timeslotsPromise;
+      if (!timeslotsResponse) continue; // GET timed out — try next day
+
+      const timeslotsJson: any = await timeslotsResponse.json().catch(() => null);
+      if (!timeslotsJson?.success || !timeslotsJson?.available) continue; // no slots
+
+      // Slots are now in the DOM — click the first one.
+      await page.waitForSelector('.bookit-v2-slot--available', { timeout: 5_000 });
+      await page.locator('.bookit-v2-slot--available').first().click();
+      slotPicked = true;
+      break;
+    }
+
+    if (slotPicked) break;
+
+    // No slots found this month — click the next-month button and rebuild.
+    // The reschedule calendar uses JS to rebuild the grid on next/prev click
+    // (class-shortcodes.php buildGrid() function), so wait for the grid to
+    // update rather than a navigation event.
+    const nextBtn = page.locator('#bookit-reschedule-next-month');
+    if (await nextBtn.isVisible()) {
+      await nextBtn.click();
+      await page.waitForTimeout(500); // allow JS grid rebuild
+    } else {
+      break; // no next-month button — can't advance
+    }
+  }
+
+  if (!slotPicked) {
+    throw new Error(
+      'pickRescheduleSlot: no bookable slot found in 3 months. ' +
+        'Ensure the test staff member has working hours configured.'
+    );
+  }
+}
+
 // Magic link pages from cancel/reschedule shortcodes:
 //   /bookit-cancel/?booking_id=X&token=Y
 //   /bookit-reschedule/?booking_id=X&token=Y
@@ -77,15 +149,7 @@ test.describe('Magic link flows', { tag: '@full' }, () => {
     await page.goto(rescheduleUrl);
     await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
 
-    // Reschedule page renders calendar (same .bookit-v2-day--available class)
-    await page.waitForSelector('.bookit-v2-day--available', { timeout: 20_000 });
-    // Select a different date (second available, to avoid same slot)
-    const dates = page.locator('.bookit-v2-day--available');
-    const count = await dates.count();
-    await dates.nth(count > 1 ? 1 : 0).click();
-
-    await page.waitForSelector('.bookit-v2-slot--available', { timeout: 10_000 });
-    await page.locator('.bookit-v2-slot--available').first().click();
+    await pickRescheduleSlot(page);
 
     const confirmBtn = page.locator('#bookit-reschedule-confirm');
     if (await confirmBtn.isVisible()) {
