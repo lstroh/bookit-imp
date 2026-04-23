@@ -12,6 +12,7 @@ import { getLatestEmail } from '../../fixtures/mailpit';
 
 test.describe('Full booking — Stripe card payment', { tag: '@full' }, () => {
   test('completes wizard with Stripe, webhook fires, confirmation email delivered', async ({ page }) => {
+    test.skip(true, 'Stripe test — run manually with Stripe CLI. Requires: stripe listen, test keys configured in plugin settings, idempotency table cleared.');
     const testEmail = await completeWizardSteps1To4(page);
 
     // Step 5: select card payment
