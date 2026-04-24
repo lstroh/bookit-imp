@@ -435,6 +435,25 @@ class Bookit_Dashboard_Bookings_API {
 			)
 		);
 
+		// Upload staff photo.
+		register_rest_route(
+			self::NAMESPACE,
+			'/dashboard/staff/(?P<id>\d+)/photo',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'upload_staff_photo' ),
+				'permission_callback' => array( $this, 'check_dashboard_permission' ),
+				'args'                => array(
+					'id' => array(
+						'required'          => true,
+						'validate_callback' => function ( $param ) {
+							return is_numeric( $param ) && (int) $param > 0;
+						},
+					),
+				),
+			)
+		);
+
 		// Create new staff.
 		register_rest_route(
 			self::NAMESPACE,
@@ -2443,6 +2462,171 @@ class Bookit_Dashboard_Bookings_API {
 				'success' => true,
 				'message' => 'Staff member updated successfully.',
 				'staff'   => $staff_response->data['staff'],
+			)
+		);
+	}
+
+	/**
+	 * Upload a staff member's profile photo.
+	 *
+	 * Accepts multipart/form-data with a file field named 'photo'.
+	 * Validates type (image only) and size (5MB max).
+	 * Inserts into WordPress media library and updates photo_url.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function upload_staff_photo( WP_REST_Request $request ) {
+		global $wpdb;
+
+		$staff_id      = (int) $request->get_param( 'id' );
+		$current_staff = Bookit_Auth::get_current_staff();
+
+		if ( ! $current_staff ) {
+			return new WP_Error(
+				'unauthorized',
+				'Could not retrieve staff information.',
+				array( 'status' => 401 )
+			);
+		}
+
+		// Staff can only upload their own photo; admin can upload for anyone.
+		if ( 'staff' === $current_staff['role'] && (int) $current_staff['id'] !== $staff_id ) {
+			return new WP_Error(
+				'forbidden',
+				'You can only upload a photo for your own account.',
+				array( 'status' => 403 )
+			);
+		}
+
+		// Verify the target staff member exists and is not deleted.
+		$target = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}bookings_staff
+				 WHERE id = %d AND deleted_at IS NULL",
+				$staff_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! $target ) {
+			return new WP_Error(
+				'staff_not_found',
+				'Staff member not found.',
+				array( 'status' => 404 )
+			);
+		}
+
+		// Get uploaded file from request.
+		$files = $request->get_file_params();
+		$file  = $files['photo'] ?? null;
+
+		if ( ! $file || empty( $file['tmp_name'] ) ) {
+			return new WP_Error(
+				'no_file',
+				'No file uploaded. Send an image in the "photo" field.',
+				array( 'status' => 400 )
+			);
+		}
+
+		// Validate mime type using finfo (server-side, not client-reported).
+		$allowed_types = array( 'image/jpeg', 'image/png', 'image/gif', 'image/webp' );
+		$finfo         = new finfo( FILEINFO_MIME_TYPE );
+		$mime          = $finfo->file( $file['tmp_name'] );
+
+		if ( ! in_array( $mime, $allowed_types, true ) ) {
+			return new WP_Error(
+				'invalid_type',
+				'File must be an image (JPG, PNG, GIF, or WebP).',
+				array( 'status' => 400 )
+			);
+		}
+
+		// Validate file size (5MB max).
+		if ( $file['size'] > 5 * 1024 * 1024 ) {
+			return new WP_Error(
+				'file_too_large',
+				'File must be 5MB or less.',
+				array( 'status' => 400 )
+			);
+		}
+
+		// Load WordPress upload/media helpers.
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+
+		// Move file to uploads directory.
+		$overrides = array( 'test_form' => false );
+		$upload    = wp_handle_upload( $file, $overrides );
+
+		if ( isset( $upload['error'] ) ) {
+			return new WP_Error(
+				'upload_failed',
+				$upload['error'],
+				array( 'status' => 500 )
+			);
+		}
+
+		// Register in WordPress media library.
+		$attachment_id = wp_insert_attachment(
+			array(
+				'post_mime_type' => $upload['type'],
+				'post_title'     => sanitize_file_name( $file['name'] ),
+				'post_content'   => '',
+				'post_status'    => 'inherit',
+			),
+			$upload['file']
+		);
+
+		if ( is_wp_error( $attachment_id ) ) {
+			return new WP_Error(
+				'attachment_failed',
+				'Could not register file in media library.',
+				array( 'status' => 500 )
+			);
+		}
+
+		wp_update_attachment_metadata(
+			$attachment_id,
+			wp_generate_attachment_metadata( $attachment_id, $upload['file'] )
+		);
+
+		$url = wp_get_attachment_url( $attachment_id );
+
+		// Update staff photo_url.
+		$result = $wpdb->update(
+			$wpdb->prefix . 'bookings_staff',
+			array(
+				'photo_url'  => $url,
+				'updated_at' => current_time( 'mysql' ),
+			),
+			array( 'id' => $staff_id ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
+
+		if ( false === $result ) {
+			return new WP_Error(
+				'db_update_failed',
+				'File uploaded but failed to update staff record.',
+				array( 'status' => 500 )
+			);
+		}
+
+		Bookit_Audit_Logger::log(
+			'staff.photo_uploaded',
+			'staff',
+			$staff_id,
+			array(
+				'notes' => 'Photo uploaded via dashboard',
+			)
+		);
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'url'     => $url,
 			)
 		);
 	}

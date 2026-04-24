@@ -61,23 +61,52 @@
                 </div>
               </div>
               <div class="flex-1">
-                <button
-                  type="button"
-                  @click="openMediaLibrary"
-                  class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  {{ formData.photo_url ? 'Change Photo' : 'Upload Photo' }}
-                </button>
-                <button
-                  v-if="formData.photo_url"
-                  type="button"
-                  @click="formData.photo_url = ''"
-                  class="ml-2 px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700"
-                >
-                  Remove
-                </button>
+                <!-- Hidden file input — triggered by the button below -->
+                <input
+                  ref="photoInput"
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  class="hidden"
+                  @change="onPhotoSelected"
+                />
+
+                <!-- Upload button (editing only — photo upload requires a staff ID) -->
+                <template v-if="isEditing">
+                  <button
+                    type="button"
+                    @click="photoInput.click()"
+                    :disabled="uploadingPhoto"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border
+                           border-gray-300 rounded-lg hover:bg-gray-50
+                           disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span v-if="uploadingPhoto">Uploading...</span>
+                    <span v-else>{{ formData.photo_url ? 'Change Photo' : 'Upload Photo' }}</span>
+                  </button>
+
+                  <button
+                    v-if="formData.photo_url"
+                    type="button"
+                    @click="formData.photo_url = ''"
+                    class="ml-2 px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+
+                  <p v-if="photoUploadError" class="text-xs text-red-600 mt-1">
+                    {{ photoUploadError }}
+                  </p>
+                </template>
+
+                <!-- New staff: photo upload requires saving first -->
+                <template v-else>
+                  <p class="text-xs text-gray-500">
+                    Save the staff member first, then add a photo.
+                  </p>
+                </template>
+
                 <p class="text-xs text-gray-500 mt-1">
-                  JPG, PNG or GIF. Max 5MB.
+                  JPG, PNG, GIF or WebP. Max 5MB.
                 </p>
               </div>
             </div>
@@ -643,6 +672,7 @@ const emit = defineEmits(['close', 'saved'])
 
 const modalRef = ref(null)
 const previousActiveElement = ref(null)
+const photoInput = ref(null)
 
 const getFocusableElements = () => {
   if (!modalRef.value) return []
@@ -685,6 +715,8 @@ const trapFocus = (e) => {
 const saving = ref(false)
 const loadingDetails = ref(false)
 const errorMessage = ref('')
+const uploadingPhoto = ref(false)
+const photoUploadError = ref('')
 const services = ref([])
 const selectedServices = ref([])
 const customPrices = ref({})
@@ -817,29 +849,62 @@ const onServiceToggle = (service) => {
   }
 }
 
-// Open WordPress media library for photo selection.
-// wp.media() requires wp_enqueue_media() on the dashboard page; that was removed (Sprint 6C hotfix) to fix Vue mount.
-// Until replaced (e.g. file input + REST upload, or lazy wp_enqueue_media), the fallback prompt below applies.
-const openMediaLibrary = () => {
-  if (typeof wp !== 'undefined' && wp.media) {
-    const mediaFrame = wp.media({
-      title: 'Select Profile Photo',
-      button: { text: 'Use this photo' },
-      multiple: false,
-      library: { type: 'image' }
-    })
+// Handle photo file selection and upload.
+const onPhotoSelected = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
 
-    mediaFrame.on('select', () => {
-      const attachment = mediaFrame.state().get('selection').first().toJSON()
-      formData.value.photo_url = attachment.url
-    })
+  // Client-side validation before uploading.
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    photoUploadError.value = 'Please select a JPG, PNG, GIF, or WebP image.'
+    event.target.value = ''
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    photoUploadError.value = 'Image must be 5MB or less.'
+    event.target.value = ''
+    return
+  }
 
-    mediaFrame.open()
-  } else {
-    const url = prompt('WordPress media library not available.\nEnter image URL manually:')
-    if (url) {
-      formData.value.photo_url = url
+  photoUploadError.value = ''
+  uploadingPhoto.value = true
+
+  try {
+    const formPayload = new FormData()
+    formPayload.append('photo', file)
+
+    // Use fetch directly — axios sets Content-Type: application/json by default.
+    // Multipart requires the browser to set Content-Type with the correct boundary,
+    // which only works when no Content-Type header is set manually.
+    const response = await fetch(
+      `${window.BOOKIT_DASHBOARD.apiBase}/staff/${props.staffMember?.id}/photo`,
+      {
+        method: 'POST',
+        headers: {
+          'X-WP-Nonce': window.BOOKIT_DASHBOARD.nonce,
+          // Do NOT set Content-Type here — let the browser set it with the boundary.
+        },
+        body: formPayload,
+        credentials: 'include',
+      }
+    )
+
+    const data = await response.json()
+
+    if (data.success && data.url) {
+      formData.value.photo_url = data.url
+      photoUploadError.value = ''
+    } else {
+      photoUploadError.value = data.message || 'Upload failed. Please try again.'
     }
+  } catch (err) {
+    photoUploadError.value = 'Upload failed. Please try again.'
+    console.error('Photo upload error:', err)
+  } finally {
+    uploadingPhoto.value = false
+    // Reset input so the same file can be re-selected if needed.
+    event.target.value = ''
   }
 }
 

@@ -72,6 +72,19 @@ class Bookit_Audit_Logger {
 
 			$table = $wpdb->prefix . 'bookings_audit_log';
 
+			// Avoid noisy DB errors in environments where the audit table isn't installed yet.
+			$exists = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM information_schema.TABLES
+					 WHERE TABLE_SCHEMA = DATABASE()
+					 AND TABLE_NAME = %s",
+					$table
+				)
+			);
+			if ( ! $exists ) {
+				return;
+			}
+
 			$inserted = $wpdb->insert(
 				$table,
 				array(
