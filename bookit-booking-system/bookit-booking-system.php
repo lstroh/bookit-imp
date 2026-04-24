@@ -3,7 +3,7 @@
  * Plugin Name:       Bookit Booking System
  * Plugin URI:        https://example.com/bookit-booking-system
  * Description:       Professional appointment booking system for UK service businesses
- * Version:           1.0.0
+ * Version:           1.5.0
  * Author:            Liron
  * Author URI:        https://example.com
  * License:           GPL-2.0+
@@ -24,7 +24,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Current plugin version.
  */
-define( 'BOOKIT_VERSION', '1.0.0' );
+define( 'BOOKIT_VERSION', '1.5.0' );
 
 /**
  * Absolute path to the main plugin file.
