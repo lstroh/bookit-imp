@@ -61,7 +61,7 @@ class Bookit_Public {
 				'bookit-confirmation',
 				BOOKIT_PLUGIN_URL . 'public/assets/css/confirmation-page.css',
 				array(),
-				'1.5.0'
+				'1.5.1'
 			);
 		}
 	}

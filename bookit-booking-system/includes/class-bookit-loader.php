@@ -36,7 +36,7 @@ class Bookit_Loader {
 	 * @return void
 	 */
 	public function __construct() {
-		$this->version     = defined( 'BOOKIT_VERSION' ) ? BOOKIT_VERSION : '1.5.0';
+		$this->version     = defined( 'BOOKIT_VERSION' ) ? BOOKIT_VERSION : '1.5.1';
 		$this->plugin_name = 'bookit-booking-system';
 
 		$this->load_dependencies();
