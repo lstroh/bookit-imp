@@ -4240,7 +4240,7 @@ class Bookit_Dashboard_Bookings_API {
 	 * @return array Formatted booking.
 	 */
 	private function format_schedule_booking( $row, $today ) {
-		return array(
+		$formatted = array(
 			'id'               => (int) $row['id'],
 			'booking_reference' => $row['booking_reference'] ?? '',
 			'booking_date'     => $row['booking_date'],
@@ -4256,6 +4256,14 @@ class Bookit_Dashboard_Bookings_API {
 			'special_requests' => $row['special_requests'],
 			'is_today'         => $row['booking_date'] === $today,
 		);
+
+		$formatted = apply_filters(
+			'bookit_schedule_booking_response',
+			$formatted,
+			(int) $row['id']
+		);
+
+		return $formatted;
 	}
 
 	/**

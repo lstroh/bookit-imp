@@ -49,6 +49,124 @@ class Test_Sprint7_Extension_Api extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Minimal DB row shape for Bookit_Dashboard_Bookings_API::format_schedule_booking().
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function sample_schedule_booking_row(): array {
+		return array(
+			'id'                    => 202,
+			'booking_reference'     => 'SCH-REF-7',
+			'booking_date'          => '2026-06-20',
+			'start_time'            => '14:00:00',
+			'end_time'              => '15:00:00',
+			'status'                => 'confirmed',
+			'service_name'          => 'Follow-up',
+			'duration'              => 60,
+			'customer_first_name'   => 'Alex',
+			'customer_last_name'    => 'Rivera',
+			'total_price'           => 99.5,
+			'deposit_paid'          => 0,
+			'staff_notes'           => 'Window seat',
+			'special_requests'      => 'Quiet room',
+		);
+	}
+
+	/**
+	 * Invoke private format_schedule_booking via reflection.
+	 *
+	 * @param array<string, mixed> $row   Raw DB row.
+	 * @param string                 $today YYYY-MM-DD.
+	 * @return array<string, mixed>
+	 */
+	private function invoke_format_schedule_booking( array $row, string $today ): array {
+		$api    = new Bookit_Dashboard_Bookings_API();
+		$method = new ReflectionMethod( Bookit_Dashboard_Bookings_API::class, 'format_schedule_booking' );
+		$method->setAccessible( true );
+		$out = $method->invoke( $api, $row, $today );
+
+		return is_array( $out ) ? $out : array();
+	}
+
+	/**
+	 * @covers Bookit_Dashboard_Bookings_API::format_schedule_booking
+	 */
+	public function test_schedule_booking_response_filter_fires_with_correct_params(): void {
+		$captured = array();
+
+		$cb = static function ( array $formatted, int $booking_id ) use ( &$captured ) {
+			$captured = array(
+				'formatted'  => $formatted,
+				'booking_id' => $booking_id,
+			);
+			return $formatted;
+		};
+
+		add_filter( 'bookit_schedule_booking_response', $cb, 10, 2 );
+
+		$row   = $this->sample_schedule_booking_row();
+		$today = '2026-06-21';
+		$this->invoke_format_schedule_booking( $row, $today );
+
+		remove_filter( 'bookit_schedule_booking_response', $cb, 10 );
+
+		$this->assertArrayHasKey( 'formatted', $captured );
+		$this->assertIsArray( $captured['formatted'] );
+		$this->assertArrayHasKey( 'booking_id', $captured );
+		$this->assertIsInt( $captured['booking_id'] );
+		$this->assertSame( 202, $captured['booking_id'] );
+	}
+
+	/**
+	 * @covers Bookit_Dashboard_Bookings_API::format_schedule_booking
+	 */
+	public function test_schedule_booking_response_filter_can_add_fields(): void {
+		$cb = static function ( array $formatted ) {
+			$formatted['meeting_link'] = 'https://meet.example.com/abc';
+			return $formatted;
+		};
+
+		add_filter( 'bookit_schedule_booking_response', $cb, 10, 2 );
+
+		$out = $this->invoke_format_schedule_booking( $this->sample_schedule_booking_row(), '2026-06-20' );
+
+		remove_filter( 'bookit_schedule_booking_response', $cb, 10 );
+
+		$this->assertArrayHasKey( 'meeting_link', $out );
+		$this->assertSame( 'https://meet.example.com/abc', $out['meeting_link'] );
+	}
+
+	/**
+	 * @covers Bookit_Dashboard_Bookings_API::format_schedule_booking
+	 */
+	public function test_schedule_booking_response_filter_must_return_array(): void {
+		$row   = $this->sample_schedule_booking_row();
+		$today = '2026-06-20';
+
+		$expected = array(
+			'id'                 => 202,
+			'booking_reference'  => 'SCH-REF-7',
+			'booking_date'       => '2026-06-20',
+			'start_time'         => '14:00',
+			'end_time'           => '15:00',
+			'status'             => 'confirmed',
+			'service_name'       => 'Follow-up',
+			'duration'           => 60,
+			'customer_name'      => 'Alex Rivera',
+			'total_price'        => 99.5,
+			'deposit_paid'       => 0.0,
+			'staff_notes'        => 'Window seat',
+			'special_requests'   => 'Quiet room',
+			'is_today'           => true,
+		);
+
+		$out = $this->invoke_format_schedule_booking( $row, $today );
+
+		$this->assertIsArray( $out );
+		$this->assertSame( $expected, $out );
+	}
+
+	/**
 	 * @covers Bookit_Staff_Notifier::build_html_body
 	 */
 	public function test_staff_email_meeting_section_filter_fires_with_correct_params(): void {
