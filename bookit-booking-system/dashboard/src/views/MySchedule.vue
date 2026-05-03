@@ -66,6 +66,7 @@
           <div
             v-for="booking in todayBookings"
             :key="booking.id"
+            :data-booking-id="booking.id"
             class="bg-white rounded-lg shadow p-4"
           >
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -133,6 +134,7 @@
                 <div
                   v-for="booking in day.bookings"
                   :key="booking.id"
+                  :data-booking-id="booking.id"
                   class="bg-white rounded-lg shadow p-4"
                 >
                   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -202,6 +204,7 @@
           <div
             v-for="booking in upcomingBookings"
             :key="booking.id"
+            :data-booking-id="booking.id"
             class="bg-white rounded-lg shadow p-4"
           >
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
