@@ -78,6 +78,65 @@ $retriever->clear_booking_session();
  */
 do_action( 'bookit_after_booking_confirmed', $booking['id'], $booking );
 
+// Re-fetch booking so bookit_confirmation_meeting_section receives
+// fields written by bookit_after_booking_confirmed action callbacks
+// (e.g. a meeting link generated and stored by an extension).
+global $wpdb;
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+$refreshed = $wpdb->get_row(
+	$wpdb->prepare(
+		"SELECT
+				b.id,
+				b.booking_reference,
+				b.customer_id,
+				b.service_id,
+				b.staff_id,
+				b.booking_date,
+				b.start_time,
+				b.end_time,
+				b.duration,
+				b.status,
+				b.total_price,
+				b.deposit_amount,
+				b.deposit_paid,
+				b.balance_due,
+				b.full_amount_paid,
+				b.payment_method,
+				b.payment_intent_id,
+				b.stripe_session_id,
+				b.special_requests,
+				b.cooling_off_waiver_given,
+				b.cooling_off_waiver_at,
+				b.magic_link_token,
+				b.created_at,
+				b.updated_at,
+				b.deleted_at,
+				c.first_name AS customer_first_name,
+				c.last_name AS customer_last_name,
+				c.email AS customer_email,
+				c.phone AS customer_phone,
+				s.name AS service_name,
+				s.duration AS service_duration,
+				s.price AS service_price,
+				st.first_name AS staff_first_name,
+				st.last_name AS staff_last_name,
+				st.email AS staff_email
+			FROM {$wpdb->prefix}bookings b
+			LEFT JOIN {$wpdb->prefix}bookings_customers c ON b.customer_id = c.id
+			LEFT JOIN {$wpdb->prefix}bookings_services s ON b.service_id = s.id
+			LEFT JOIN {$wpdb->prefix}bookings_staff st ON b.staff_id = st.id
+			WHERE b.id = %d
+			LIMIT 1",
+		$booking['id']
+	),
+	ARRAY_A
+);
+if ( $refreshed ) {
+	$booking                    = $refreshed;
+	$booking['staff_name']      = trim( ( $booking['staff_first_name'] ?? '' ) . ' ' . ( $booking['staff_last_name'] ?? '' ) );
+	$booking['customer_name'] = trim( ( $booking['customer_first_name'] ?? '' ) . ' ' . ( $booking['customer_last_name'] ?? '' ) );
+}
+
 // Format date and time for display.
 $date_formatted = $retriever->format_date( $booking['booking_date'] );
 $time_formatted = $retriever->format_time( $booking['start_time'] );
