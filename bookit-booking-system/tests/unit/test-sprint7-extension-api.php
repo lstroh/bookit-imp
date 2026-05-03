@@ -12,6 +12,64 @@
 class Test_Sprint7_Extension_Api extends WP_UnitTestCase {
 
 	/**
+	 * Temporary migration directories for migration-runner tests.
+	 *
+	 * @var string[]
+	 */
+	private array $temp_migration_dirs = array();
+
+	/**
+	 * Temporary tables created by migration-runner tests.
+	 *
+	 * @var string[]
+	 */
+	private array $temp_migration_tables = array();
+
+	/**
+	 * Set up each test.
+	 */
+	public function setUp(): void {
+		parent::setUp();
+
+		global $wpdb;
+
+		Bookit_Migration_Runner::create_migrations_table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_migrations" );
+	}
+
+	/**
+	 * Tear down each test.
+	 */
+	public function tearDown(): void {
+		global $wpdb;
+
+		foreach ( array_unique( $this->temp_migration_tables ) as $table_name ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$wpdb->query( "DROP TABLE IF EXISTS {$table_name}" );
+		}
+
+		foreach ( array_unique( $this->temp_migration_dirs ) as $dir ) {
+			$files = glob( $dir . DIRECTORY_SEPARATOR . '*.php' );
+			if ( is_array( $files ) ) {
+				foreach ( $files as $file ) {
+					if ( is_string( $file ) && file_exists( $file ) ) {
+						unlink( $file );
+					}
+				}
+			}
+			if ( is_dir( $dir ) ) {
+				rmdir( $dir );
+			}
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}bookings_migrations" );
+
+		parent::tearDown();
+	}
+
+	/**
 	 * Minimal booking row shape used by Bookit_Staff_Notifier::build_html_body().
 	 *
 	 * @return array<string, mixed>
@@ -302,5 +360,100 @@ class Test_Sprint7_Extension_Api extends WP_UnitTestCase {
 		}
 
 		remove_action( 'bookit_dashboard_extension_content', $cb, 10 );
+	}
+
+	/**
+	 * Temp migration file whose class name does not follow filename-derived convention.
+	 *
+	 * @return array{dir:string,migration_id:string,table_name:string,plugin_slug:string}
+	 */
+	private function create_temp_nonstandard_class_migration_artifacts(): array {
+		global $wpdb;
+
+		$suffix         = strtolower( wp_generate_password( 8, false, false ) );
+		$migration_id   = '0099-test-nonstandard';
+		$plugin_slug    = 'bookit-sprint7-ext-' . $suffix;
+		$class_name     = 'Bookit_Migration_Custom_Nonstandard_' . $suffix;
+		$table_name     = $wpdb->prefix . 'bookings_sprint7_nmig_' . $suffix;
+		$base_tmp       = trailingslashit( sys_get_temp_dir() ) . 'bookit-tests-migrations';
+
+		if ( ! is_dir( $base_tmp ) ) {
+			wp_mkdir_p( $base_tmp );
+		}
+
+		$dir = trailingslashit( $base_tmp ) . 'sprint7-nmig-' . $suffix;
+		wp_mkdir_p( $dir );
+
+		$php = <<<PHP
+<?php
+class {$class_name} extends Bookit_Migration_Base {
+	public function migration_id(): string {
+		return '{$migration_id}';
+	}
+
+	public function plugin_slug(): string {
+		return '{$plugin_slug}';
+	}
+
+	public function up(): void {
+		global \$wpdb;
+		\$wpdb->query( "CREATE TABLE IF NOT EXISTS {$table_name} (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci" );
+	}
+
+	public function down(): void {
+		global \$wpdb;
+		\$wpdb->query( "DROP TABLE IF EXISTS {$table_name}" );
+	}
+}
+PHP;
+
+		file_put_contents( trailingslashit( $dir ) . $migration_id . '.php', $php );
+
+		$this->temp_migration_dirs[]   = $dir;
+		$this->temp_migration_tables[] = $table_name;
+
+		return array(
+			'dir'            => $dir,
+			'migration_id'   => $migration_id,
+			'table_name'     => $table_name,
+			'plugin_slug'    => $plugin_slug,
+		);
+	}
+
+	/**
+	 * @covers Bookit_Migration_Runner::run_pending
+	 * @covers Bookit_Migration_Runner::has_run
+	 */
+	public function test_migration_runner_finds_class_by_migration_id_not_filename(): void {
+		$migration = $this->create_temp_nonstandard_class_migration_artifacts();
+
+		Bookit_Migration_Runner::register_migration_path( $migration['plugin_slug'], $migration['dir'] );
+		Bookit_Migration_Runner::run_pending( $migration['plugin_slug'] );
+
+		$this->assertTrue(
+			Bookit_Migration_Runner::has_run( $migration['migration_id'], $migration['plugin_slug'] )
+		);
+	}
+
+	/**
+	 * @covers Bookit_Migration_Runner::rollback_last
+	 * @covers Bookit_Migration_Runner::run_pending
+	 * @covers Bookit_Migration_Runner::has_run
+	 */
+	public function test_migration_runner_rollback_finds_class_by_migration_id(): void {
+		global $wpdb;
+
+		$migration = $this->create_temp_nonstandard_class_migration_artifacts();
+
+		Bookit_Migration_Runner::register_migration_path( $migration['plugin_slug'], $migration['dir'] );
+		Bookit_Migration_Runner::run_pending( $migration['plugin_slug'] );
+
+		$this->assertTrue( Bookit_Migration_Runner::rollback_last( $migration['plugin_slug'] ) );
+		$this->assertFalse(
+			Bookit_Migration_Runner::has_run( $migration['migration_id'], $migration['plugin_slug'] )
+		);
+
+		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '{$migration['table_name']}'" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$this->assertNull( $table_exists );
 	}
 }

@@ -70,9 +70,15 @@ class Bookit_Migration_Runner {
 			try {
 				require_once $path . $file;
 
-				$class_name = self::class_name_from_filename( $migration_id );
-				if ( ! class_exists( $class_name ) ) {
-					throw new RuntimeException( sprintf( 'Migration class not found: %s', $class_name ) );
+				$class_name = self::find_migration_class( $migration_id, $plugin_slug );
+				if ( null === $class_name ) {
+					throw new RuntimeException(
+						sprintf(
+							"No migration class found for migration_id '%s' in plugin '%s'",
+							$migration_id,
+							$plugin_slug
+						)
+					);
 				}
 
 				$migration = new $class_name();
@@ -229,6 +235,36 @@ class Bookit_Migration_Runner {
 	}
 
 	/**
+	 * Find a migration class that was just loaded from a file.
+	 *
+	 * After requiring a migration file, scan all declared classes for one
+	 * that: (a) extends Bookit_Migration_Base, (b) returns the expected
+	 * migration_id() and plugin_slug() values.
+	 *
+	 * @param string $expected_migration_id The migration ID to match.
+	 * @param string $plugin_slug           The plugin slug to match.
+	 * @return string|null Class name, or null if not found.
+	 */
+	private static function find_migration_class(
+		string $expected_migration_id,
+		string $plugin_slug
+	): ?string {
+		foreach ( get_declared_classes() as $class ) {
+			if ( ! is_subclass_of( $class, Bookit_Migration_Base::class ) ) {
+				continue;
+			}
+			$instance = new $class();
+			if (
+				$instance->migration_id() === $expected_migration_id &&
+				$instance->plugin_slug() === $plugin_slug
+			) {
+				return $class;
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Resolve migration path for the requested plugin.
 	 *
 	 * @param string $plugin_slug Plugin slug.
@@ -291,9 +327,15 @@ class Bookit_Migration_Runner {
 		try {
 			require_once $file_path;
 
-			$class_name = self::class_name_from_filename( $migration_id );
-			if ( ! class_exists( $class_name ) ) {
-				throw new RuntimeException( sprintf( 'Migration class not found: %s', $class_name ) );
+			$class_name = self::find_migration_class( $migration_id, $plugin_slug );
+			if ( null === $class_name ) {
+				throw new RuntimeException(
+					sprintf(
+						"No migration class found for migration_id '%s' in plugin '%s'",
+						$migration_id,
+						$plugin_slug
+					)
+				);
 			}
 
 			$migration = new $class_name();
