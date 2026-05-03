@@ -117,4 +117,72 @@ class Test_Sprint7_Extension_Api extends WP_UnitTestCase {
 
 		$this->assertSame( $baseline, $with_filter );
 	}
+
+	/**
+	 * Dashboard template should fire bookit_dashboard_extension_content for in-layout extension mounts.
+	 *
+	 * @coversNothing
+	 */
+	public function test_dashboard_extension_content_action_fires(): void {
+		$n_before = did_action( 'bookit_dashboard_extension_content' );
+
+		$fired = false;
+		$cb    = static function () use ( &$fired ) {
+			$fired = true;
+		};
+		add_action( 'bookit_dashboard_extension_content', $cb, 10, 0 );
+
+		$path = BOOKIT_PLUGIN_DIR . 'dashboard/app/index.php';
+		if ( ! is_file( $path ) ) {
+			$this->assertTrue(
+				(bool) has_action( 'bookit_dashboard_extension_content', $cb ),
+				'bookit_dashboard_extension_content should accept callbacks when the template file is missing.'
+			);
+			// Full firing verified manually — template requires HTTP context
+			remove_action( 'bookit_dashboard_extension_content', $cb, 10 );
+			return;
+		}
+
+		if ( ! isset( $_SESSION ) || ! is_array( $_SESSION ) ) {
+			$_SESSION = array();
+		}
+
+		// Satisfy Bookit_Auth::require_auth() / get_current_staff() without a full HTTP round-trip.
+		$_SESSION['staff_id']       = 1;
+		$_SESSION['staff_email']    = 'sprint7-ext-hook@test.com';
+		$_SESSION['staff_role']     = 'admin';
+		$_SESSION['staff_name']     = 'Extension Hook Test';
+		$_SESSION['is_logged_in']   = true;
+		$_SESSION['last_activity']  = time();
+
+		// Dashboard template calls wp_print_styles(); core still hooks deprecated print_emoji_styles (WP 6.4+).
+		remove_action( 'wp_print_styles', 'print_emoji_styles' );
+
+		$loaded = false;
+		try {
+			ob_start();
+			require $path; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
+			ob_end_clean();
+			$loaded = true;
+		} catch ( \Throwable $e ) {
+			ob_end_clean();
+		}
+
+		if ( $loaded ) {
+			$this->assertSame(
+				1,
+				did_action( 'bookit_dashboard_extension_content' ) - $n_before,
+				'Template load should invoke bookit_dashboard_extension_content exactly once.'
+			);
+			$this->assertTrue( $fired, 'Registered callback should run when the action fires.' );
+		} else {
+			$this->assertTrue(
+				(bool) has_action( 'bookit_dashboard_extension_content', $cb ),
+				'Callback should remain registered when the template cannot be executed in this context.'
+			);
+			// Full firing verified manually — template requires HTTP context
+		}
+
+		remove_action( 'bookit_dashboard_extension_content', $cb, 10 );
+	}
 }

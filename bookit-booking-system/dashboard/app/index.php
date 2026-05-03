@@ -73,6 +73,17 @@ $css_file = isset( $manifest['src/main.js']['css'][0] )
 <body>
 	<div id="app"></div>
 
+	<?php
+	/**
+	 * Allow extensions to inject mount points inside the dashboard layout.
+	 * Extension Vue apps should add their <div id="bookit-{slug}-app"> here
+	 * rather than via wp_footer, which places content outside the layout.
+	 *
+	 * @since 1.5.1
+	 */
+	do_action( 'bookit_dashboard_extension_content' );
+	?>
+
 	<!-- Inject session data for Vue -->
 	<script>
 		window.BOOKIT_DASHBOARD = {
