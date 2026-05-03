@@ -92,6 +92,7 @@
             <file>./tests/unit/test-notification-dispatcher.php</file>
             <file>./tests/unit/test-notification-settings-api.php</file>
             <file>./tests/unit/test-staff-notifier.php</file>
+            <file>./tests/unit/test-sprint7-extension-api.php</file>
             <file>./tests/unit/test-google-calendar-sync.php</file>
             <file>./tests/unit/test-coverage-gaps.php</file>
             <file>./tests/unit/test-google-calendar-hook-listeners.php</file>

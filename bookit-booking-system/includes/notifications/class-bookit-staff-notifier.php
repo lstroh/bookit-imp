@@ -148,7 +148,7 @@ class Bookit_Staff_Notifier {
 				'name'  => trim( $staff['first_name'] . ' ' . $staff['last_name'] ),
 			);
 			$subject   = self::build_subject( $email_type, $booking_full );
-			$html_body = self::build_html_body( $email_type, $booking_full );
+			$html_body = self::build_html_body( $email_type, $booking_full, $staff_id );
 
 			$params = array(
 				'service_name'      => (string) ( $booking_full['service_name'] ?? '' ),
@@ -258,7 +258,7 @@ class Bookit_Staff_Notifier {
 		}
 	}
 
-	private static function build_html_body( string $email_type, array $booking ): string {
+	private static function build_html_body( string $email_type, array $booking, int $staff_id = 0 ): string {
 		$customer = esc_html( trim( (string) ( $booking['customer_first_name'] ?? '' ) . ' ' . (string) ( $booking['customer_last_name'] ?? '' ) ) );
 		$service  = esc_html( (string) ( $booking['service_name'] ?? '' ) );
 		$date_raw = (string) ( $booking['booking_date'] ?? '' );
@@ -296,19 +296,32 @@ class Bookit_Staff_Notifier {
 				break;
 		}
 
-		return implode(
-			"\n",
-			array(
-				'<p>' . esc_html( $intro ) . '</p>',
-				'<p><strong>Customer:</strong> ' . $customer . '<br />' .
-					'<strong>Service:</strong> ' . $service . '<br />' .
-					'<strong>Date:</strong> ' . $date . '<br />' .
-					'<strong>Time:</strong> ' . $time . '<br />' .
-					'<strong>Reference:</strong> ' . $ref . '</p>',
-				'<p><a href="' . esc_url( $dashboard_url ) . '">View in dashboard</a></p>',
-				'<p>You\'re receiving this because you\'re set to immediate notifications. <a href="' . esc_url( $preferences_url ) . '">Change your preferences</a></p>',
-			)
+		ob_start();
+		echo '<p>' . esc_html( $intro ) . "</p>\n";
+		echo '<p><strong>Customer:</strong> ' . $customer . '<br />' .
+			'<strong>Service:</strong> ' . $service . '<br />' .
+			'<strong>Date:</strong> ' . $date . '<br />' .
+			'<strong>Time:</strong> ' . $time . '<br />' .
+			'<strong>Reference:</strong> ' . $ref . "</p>\n";
+
+		$bookit_staff_email_meeting_html = apply_filters(
+			'bookit_staff_email_meeting_section',
+			'',
+			$booking,
+			$staff_id
 		);
+		if ( '' !== $bookit_staff_email_meeting_html ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			echo wp_kses_post( $bookit_staff_email_meeting_html );
+			echo "\n";
+		}
+
+		echo '<p><a href="' . esc_url( $dashboard_url ) . '">View in dashboard</a></p>' . "\n";
+		echo '<p>You\'re receiving this because you\'re set to immediate notifications. <a href="' . esc_url( $preferences_url ) . '">Change your preferences</a></p>';
+
+		$body = ob_get_clean();
+
+		return false !== $body ? $body : '';
 	}
 
 	private static function insert_digest_queue( int $staff_id, string $event_type, int $booking_id ): void {
