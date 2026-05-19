@@ -715,6 +715,9 @@ const loadBooking = async () => {
     if (response.data.success) {
       booking.value = response.data.booking
       localLockVersion.value = response.data.booking?.lock_version || ''
+      window.dispatchEvent(new CustomEvent('bookit:booking-modal-opened', {
+        detail: { bookingId: props.bookingId }
+      }))
     } else {
       throw new Error(response.data.message || 'Failed to load booking')
     }
@@ -1088,6 +1091,9 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  window.dispatchEvent(new CustomEvent('bookit:booking-modal-closed', {
+    detail: { bookingId: props.bookingId }
+  }))
   document.removeEventListener('keydown', trapFocus)
   if (previousActiveElement.value && previousActiveElement.value.focus) {
     previousActiveElement.value.focus()
